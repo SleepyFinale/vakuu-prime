@@ -1,189 +1,189 @@
-# STS2 反编译源码架构 — 模拟器实现指南
+# STS2 Decompiled Source Architecture — Simulator Implementation Guide
 
-本文档基于对 `sts2.dll` 反编译后 C# 源码的深度分析，记录构建 Headless 模拟器所需的核心游戏机制。
+This document is based on a deep analysis of decompiled C# source from `sts2.dll` and records the core game mechanics needed to build a headless simulator.
 
 ---
 
-## 1. 关键命名空间导航
+## 1. Key Namespace Navigation
 
-```
+```text
 extraction/decompiled/
-├── MegaCrit.Sts2.Core.Combat/              战斗管理器、战斗状态、阵营
-├── MegaCrit.Sts2.Core.Commands/            底层命令（伤害、格挡、卡牌、状态效果）
-│   └── Builders/                           AttackCommand 构建器模式
-├── MegaCrit.Sts2.Core.GameActions/         高层动作（打牌、结束回合）
-├── MegaCrit.Sts2.Core.Entities.Creatures/  Creature 基类（HP、Block、Powers）
-├── MegaCrit.Sts2.Core.Entities.Players/    PlayerCombatState（能量、星星、牌堆）
-├── MegaCrit.Sts2.Core.Entities.Cards/      TargetType、CardKeyword、PileType
-├── MegaCrit.Sts2.Core.Hooks/              Hook 静态类（中央事件分发）
-├── MegaCrit.Sts2.Core.Models/             基类：AbstractModel、CardModel、MonsterModel、PowerModel、RelicModel
-├── MegaCrit.Sts2.Core.Models.Cards/       全部卡牌实现（~576 张）
-├── MegaCrit.Sts2.Core.Models.Monsters/    全部怪物 AI 实现（~111 个）
-├── MegaCrit.Sts2.Core.Models.Powers/      全部状态效果实现（~260 个）
-├── MegaCrit.Sts2.Core.Models.Relics/      全部遗物实现（~289 个）
-├── MegaCrit.Sts2.Core.Models.Encounters/  遭遇定义（怪物分组）
-├── MegaCrit.Sts2.Core.Models.Acts/        幕定义（Overgrowth, Underdocks, Hive, Glory）
-├── MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine/  怪物 AI 状态机
-├── MegaCrit.Sts2.Core.MonsterMoves.Intents/                  意图类型
-├── MegaCrit.Sts2.Core.Map/               地图生成（StandardActMap, MapPoint）
-└── MegaCrit.Sts2.Core.ValueProps/        ValueProp 标志位
+├── MegaCrit.Sts2.Core.Combat/              Combat manager, combat state, sides
+├── MegaCrit.Sts2.Core.Commands/            Low-level commands (damage, block, cards, powers)
+│   └── Builders/                           AttackCommand builder pattern
+├── MegaCrit.Sts2.Core.GameActions/         High-level actions (play card, end turn)
+├── MegaCrit.Sts2.Core.Entities.Creatures/  Creature base (HP, Block, Powers)
+├── MegaCrit.Sts2.Core.Entities.Players/    PlayerCombatState (energy, stars, piles)
+├── MegaCrit.Sts2.Core.Entities.Cards/      TargetType, CardKeyword, PileType
+├── MegaCrit.Sts2.Core.Hooks/              Hook static class (central event dispatch)
+├── MegaCrit.Sts2.Core.Models/             Base types: AbstractModel, CardModel, MonsterModel, PowerModel, RelicModel
+├── MegaCrit.Sts2.Core.Models.Cards/       All card implementations (~576)
+├── MegaCrit.Sts2.Core.Models.Monsters/    All monster AI implementations (~111)
+├── MegaCrit.Sts2.Core.Models.Powers/      All power implementations (~260)
+├── MegaCrit.Sts2.Core.Models.Relics/      All relic implementations (~289)
+├── MegaCrit.Sts2.Core.Models.Encounters/  Encounter definitions (monster groups)
+├── MegaCrit.Sts2.Core.Models.Acts/        Act definitions (Overgrowth, Underdocks, Hive, Glory)
+├── MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine/  Monster AI state machine
+├── MegaCrit.Sts2.Core.MonsterMoves.Intents/                  Intent types
+├── MegaCrit.Sts2.Core.Map/               Map generation (StandardActMap, MapPoint)
+└── MegaCrit.Sts2.Core.ValueProps/        ValueProp flags
 ```
 
 ---
 
-## 2. 战斗系统
+## 2. Combat System
 
-### 2.1 核心类关系
+### 2.1 Core class relationships
 
-```
-CombatManager (单例)
+```text
+CombatManager (singleton)
   └── CombatState
        ├── CombatSide (Player / Enemy)
-       ├── RoundNumber (从 1 开始)
+       ├── RoundNumber (starts at 1)
        ├── PlayerCombatState
        │    ├── Energy / MaxEnergy
-       │    ├── Stars (STS2 新资源)
+       │    ├── Stars (STS2 new resource)
        │    ├── Hand, DrawPile, DiscardPile, ExhaustPile, PlayPile
-       │    └── HasEnoughResourcesFor(card) — 检查能量+星星
-       └── Creatures[] (怪物列表)
+       │    └── HasEnoughResourcesFor(card) — checks energy + stars
+       └── Creatures[] (monster list)
             ├── HP / MaxHP / Block
-            └── Powers[] (状态效果列表)
+            └── Powers[] (power list)
 ```
 
-### 2.2 回合流程
+### 2.2 Turn flow
 
-```
+```text
 StartCombat()
-  └── Hook.BeforeCombatStart (遗物触发，如 Anchor 获得 10 格挡)
+  └── Hook.BeforeCombatStart (relic triggers, e.g. Anchor grants 10 block)
 
-循环每回合 {
-  ┌─ 玩家回合 ────────────────────────────────────────┐
-  │ StartTurn()                                        │
-  │   ├── 清除格挡 (第 1 回合除外，受 Hook.ShouldClearBlock 控制) │
-  │   ├── ResetEnergy() → 能量回满 MaxEnergy            │
-  │   ├── Hook.ModifyHandDraw → 决定抽牌数量 (默认 5)    │
-  │   └── 抽牌                                         │
-  │                                                    │
-  │ 玩家操作阶段（打牌 / 使用药水 / 结束回合）              │
-  │                                                    │
-  │ EndPlayerTurnPhaseOne()                            │
-  │   ├── 弃置虚无(Ethereal)牌                          │
-  │   └── 触发回合结束效果                               │
-  │ EndPlayerTurnPhaseTwo()                            │
-  │   ├── 弃置手牌 (保留 Retain 牌)                     │
-  │   └── 状态效果 tick down                            │
-  └────────────────────────────────────────────────────┘
+Each round {
+  ┌─ Player turn ──────────────────────────────────────────────────────────┐
+  │ StartTurn()                                                            │
+  │   ├── Clear block (except turn 1; controlled by Hook.ShouldClearBlock) │
+  │   ├── ResetEnergy() → refill to MaxEnergy                              │
+  │   ├── Hook.ModifyHandDraw → draw count (default 5)                     │
+  │   └── Draw cards                                                       │
+  │                                                                        │
+  │ Player action phase (play cards / use potions / end turn)              │
+  │                                                                        │
+  │ EndPlayerTurnPhaseOne()                                                │
+  │   ├── Discard Ethereal cards                                           │
+  │   └── Trigger end-of-turn effects                                      │
+  │ EndPlayerTurnPhaseTwo()                                                │
+  │   ├── Discard hand (keep Retain cards)                                 │
+  │   └── Powers tick down                                                 │
+  └────────────────────────────────────────────────────────────────────────┘
 
-  ┌─ 敌方回合 ────────────────────────────────────────┐
-  │ SwitchFromPlayerToEnemySide()                      │
-  │ ExecuteEnemyTurn()                                 │
-  │   ├── 每个怪物清除格挡                               │
-  │   ├── 每个怪物执行当前招式                            │
-  │   └── 每个怪物滚动下一招式 (RollMove)                │
-  │ EndEnemyTurn()                                     │
-  │   └── 状态效果 tick down (Vulnerable, Weak, Frail)  │
-  └────────────────────────────────────────────────────┘
+  ┌─ Enemy turn ─────────────────────────────────────┐
+  │ SwitchFromPlayerToEnemySide()                    │
+  │ ExecuteEnemyTurn()                               │
+  │   ├── Each monster clears block                  │
+  │   ├── Each monster executes current move         │
+  │   └── Each monster rolls next move (RollMove)    │
+  │ EndEnemyTurn()                                   │
+  │   └── Powers tick down (Vulnerable, Weak, Frail) │
+  └──────────────────────────────────────────────────┘
 
   SwitchSides() → RoundNumber++
 }
 ```
 
-### 2.3 牌堆管理
+### 2.3 Pile management
 
-```
-5 个牌堆：
-  Hand          — 手牌
-  DrawPile      — 抽牌堆（打乱顺序）
-  DiscardPile   — 弃牌堆
-  ExhaustPile   — 消耗堆
-  PlayPile      — 正在打出的牌（临时）
+```text
+5 piles:
+  Hand          — hand
+  DrawPile      — draw pile (shuffled)
+  DiscardPile   — discard pile
+  ExhaustPile   — exhaust pile
+  PlayPile      — cards being played (temporary)
 
-抽牌流程：
-  DrawPile 空时 → DiscardPile 洗入 DrawPile → 继续抽
+Draw flow:
+  When DrawPile empty → shuffle DiscardPile into DrawPile → continue drawing
 
-打牌后去向：
-  默认 → DiscardPile
-  有 Exhaust 关键词 → ExhaustPile
-  状态牌(Status)/诅咒(Curse) → 取决于卡牌定义
+After playing a card:
+  Default → DiscardPile
+  Has Exhaust keyword → ExhaustPile
+  Status / Curse cards → depends on card definition
 ```
 
 ---
 
-## 3. 伤害计算公式
+## 3. Damage Calculation
 
-### 3.1 攻击伤害管线 (`Hook.ModifyDamageInternal`)
+### 3.1 Attack damage pipeline (`Hook.ModifyDamageInternal`)
 
 ```python
 def calculate_damage(base_damage, dealer, target, card_source, value_props):
     damage = base_damage
 
-    # 第 1 步：附魔修正（加法 → 乘法）
+    # Step 1: enchantment modifiers (additive → multiplicative)
     if card_source and card_source.enchantment:
         damage += enchantment.additive_modifier
         damage *= enchantment.multiplicative_modifier
 
-    # 第 2 步：加法修正（遍历所有 hook listeners）
-    # 例如：StrengthPower → 攻击者拥有力量时 damage += strength.amount
-    # 仅对 "powered attack" 生效 (有 Move 标志 且 非 Unpowered)
+    # Step 2: additive modifiers (iterate all hook listeners)
+    # e.g. StrengthPower → when attacker has Strength, damage += strength.amount
+    # Only applies to "powered attack" (has Move flag and not Unpowered)
     for listener in iterate_hook_listeners():
         damage += listener.modify_damage_additive(dealer, target, value_props)
 
-    # 第 3 步：乘法修正（遍历所有 hook listeners）
-    # 例如：VulnerablePower → 目标有易伤时 damage *= 1.5
-    #       WeakPower → 攻击者有虚弱时 damage *= 0.75
+    # Step 3: multiplicative modifiers (iterate all hook listeners)
+    # e.g. VulnerablePower → when target has Vulnerable, damage *= 1.5
+    #       WeakPower → when attacker has Weak, damage *= 0.75
     for listener in iterate_hook_listeners():
         damage *= listener.modify_damage_multiplicative(dealer, target, value_props)
 
-    # 第 4 步：伤害上限检查
-    # 例如：IntangiblePower → 将伤害限制为 1
+    # Step 4: damage cap
+    # e.g. IntangiblePower → cap damage at 1
     for listener in iterate_hook_listeners():
         damage = listener.modify_damage_cap(damage, dealer, target)
 
-    # 第 5 步：下限 0
+    # Step 5: floor at 0
     damage = max(0, floor(damage))
 
     return damage
 ```
 
-### 3.2 伤害结算 (`CreatureCmd.Damage`)
+### 3.2 Damage resolution (`CreatureCmd.Damage`)
 
 ```python
 def apply_damage(creature, damage, value_props):
-    # 计算最终伤害
+    # Compute final damage
     final_damage = Hook.ModifyDamage(damage, dealer, creature, card_source, value_props)
 
-    # 减去格挡（除非 Unblockable）
+    # Subtract block (unless Unblockable)
     if not value_props.has(Unblockable):
         blocked = min(creature.block, final_damage)
         creature.block -= blocked
         final_damage -= blocked
 
-    # Osty 宠物重定向（STS2 新机制）
+    # Osty pet redirect (STS2 new mechanic)
     final_damage = Hook.ModifyHpLostBeforeOsty(final_damage)
 
-    # 其他未格挡伤害重定向
+    # Other unblocked damage redirect
     final_damage = Hook.ModifyUnblockedDamageTarget(final_damage)
 
-    # 最终 HP 修正
+    # Final HP adjustment
     final_damage = Hook.ModifyHpLostAfterOsty(final_damage)
 
-    # 扣血
+    # Lose HP
     creature.lose_hp(final_damage)
 ```
 
-### 3.3 格挡计算 (`Hook.ModifyBlock`)
+### 3.3 Block calculation (`Hook.ModifyBlock`)
 
 ```python
 def calculate_block(base_block, creature, card_source, value_props):
     block = base_block
 
-    # 加法修正
-    # 例如：DexterityPower → block += dexterity.amount
+    # Additive modifiers
+    # e.g. DexterityPower → block += dexterity.amount
     for listener in iterate_hook_listeners():
         block += listener.modify_block_additive(creature, value_props)
 
-    # 乘法修正
-    # 例如：FrailPower → block *= 0.75
+    # Multiplicative modifiers
+    # e.g. FrailPower → block *= 0.75
     for listener in iterate_hook_listeners():
         block *= listener.modify_block_multiplicative(creature, value_props)
 
@@ -191,61 +191,61 @@ def calculate_block(base_block, creature, card_source, value_props):
     return block
 ```
 
-### 3.4 ValueProp 标志位
+### 3.4 ValueProp flags
 
+```text
+Move       (0x8)  — from card or monster move
+Unpowered  (0x4)  — not affected by Strength / Weak / Vulnerable
+Unblockable(0x2)  — bypasses block
+
+IsPoweredAttack() = has Move flag AND does not have Unpowered flag
 ```
-Move       (0x8)  — 来自卡牌或怪物招式
-Unpowered  (0x4)  — 不受力量/虚弱/易伤影响
-Unblockable(0x2)  — 绕过格挡
 
-IsPoweredAttack() = 有 Move 标志 AND 没有 Unpowered 标志
-```
-
-只有 `IsPoweredAttack()` 为 true 时，Strength、Weak、Vulnerable 才生效。
+Strength, Weak, and Vulnerable only apply when `IsPoweredAttack()` is true.
 
 ---
 
-## 4. 核心状态效果实现
+## 4. Core Power Implementations
 
-### 4.1 伤害/格挡修正类
+### 4.1 Damage / block modifier powers
 
-| 状态效果 | 类型 | Hook 方法 | 修正值 | 说明 |
-|----------|------|-----------|--------|------|
-| **Strength** | Buff | `ModifyDamageAdditive` | `+Amount` | 仅对攻击者的 powered attack 生效；允许负值 |
-| **Dexterity** | Buff | `ModifyBlockAdditive` | `+Amount` | 允许负值 |
-| **Vulnerable** | Debuff | `ModifyDamageMultiplicative` | `×1.5` | 目标受到更多伤害；可被 PaperPhrog 遗物增强为 +0.25 (即 ×1.75) |
-| **Weak** | Debuff | `ModifyDamageMultiplicative` | `×0.75` | 攻击者造成更少伤害；可被 PaperKrane 遗物增强 |
-| **Frail** | Debuff | `ModifyBlockMultiplicative` | `×0.75` | 获得更少格挡 |
-| **Intangible** | Buff | `ModifyDamageCap` | 上限 1 | 所有伤害被限制为 1 |
+| Power | Type | Hook method | Modifier | Notes |
+| ----- | ---- | ----------- | -------- | ----- |
+| **Strength** | Buff | `ModifyDamageAdditive` | `+Amount` | Only on attacker’s powered attacks; negative values allowed |
+| **Dexterity** | Buff | `ModifyBlockAdditive` | `+Amount` | Negative values allowed |
+| **Vulnerable** | Debuff | `ModifyDamageMultiplicative` | `×1.5` | Target takes more damage; Paper Phrog relic can add +0.25 (i.e. ×1.75) |
+| **Weak** | Debuff | `ModifyDamageMultiplicative` | `×0.75` | Attacker deals less damage; can be enhanced by Paper Krane relic |
+| **Frail** | Debuff | `ModifyBlockMultiplicative` | `×0.75` | Gain less block |
+| **Intangible** | Buff | `ModifyDamageCap` | cap 1 | All damage capped at 1 |
 
-### 4.2 状态效果的生命周期
+### 4.2 Power lifecycle
 
-```
+```text
 Vulnerable, Weak, Frail:
-  - 类型: Counter（计数器叠加）
-  - 消退时机: AfterTurnEnd on CombatSide.Enemy（敌方回合结束时 -1）
-  - 实际效果: 持续整个玩家回合 + 敌方回合结束时才消退
+  - Type: Counter (stacking counter)
+  - Decay: AfterTurnEnd on CombatSide.Enemy (-1 at end of enemy turn)
+  - Effective duration: entire player turn + enemy turn; decays when enemy turn ends
 
 Strength, Dexterity:
-  - 类型: Counter（计数器叠加）
-  - 允许负值
-  - 永久持续（不会自然消退）
+  - Type: Counter (stacking counter)
+  - Negative values allowed
+  - Permanent (no natural decay)
 
 Intangible:
-  - 通常每回合消退
+  - Usually decays each turn
 ```
 
-### 4.3 Power 基类结构
+### 4.3 Power base class structure
 
 ```csharp
 abstract class PowerModel : AbstractModel
 {
     PowerType Type;                    // Buff / Debuff / None
     PowerStackType StackType;          // Counter / Single / None
-    bool AllowNegative;                // 是否允许负值叠加
-    int Amount;                        // 当前叠加层数
+    bool AllowNegative;                // whether negative stacks are allowed
+    int Amount;                        // current stack amount
 
-    // ~100+ 可重写的 hook 方法（与 AbstractModel 共享）:
+    // ~100+ overridable hook methods (shared with AbstractModel):
     virtual ModifyDamageAdditive(...)
     virtual ModifyDamageMultiplicative(...)
     virtual ModifyDamageCap(...)
@@ -256,43 +256,45 @@ abstract class PowerModel : AbstractModel
     virtual BeforeAttack(...)
     virtual AfterDamageGiven(...)
     virtual OnDeath(...)
-    // ... 更多
+    // ... more
 }
 ```
 
 ---
 
-## 5. 怪物 AI 系统
+## 5. Monster AI System
 
-### 5.1 架构概览
+### 5.1 Architecture overview
 
-```
-MonsterModel (抽象基类)
-  ├── GenerateMoveStateMachine() → 定义 AI 行为
-  ├── 属性: MinInitialHp, MaxInitialHp (普通/高难分别定义)
-  ├── 伤害值: XxxDamage => AscensionHelper.GetValueIfAscension(level, asc, normal)
-  └── 招式: PerformMove(targets) 异步委托
+```text
+MonsterModel (abstract base)
+  ├── GenerateMoveStateMachine() → defines AI behavior
+  ├── Properties: MinInitialHp, MaxInitialHp (separate normal / ascension values)
+  ├── Damage: XxxDamage => AscensionHelper.GetValueIfAscension(level, asc, normal)
+  └── Moves: PerformMove(targets) async delegate
 
 MonsterMoveStateMachine
   └── Dictionary<string, MonsterState>
-       ├── MoveState          — 实际招式（有 Intent[] 和 PerformMove 委托）
-       ├── RandomBranchState  — 加权随机选择
-       └── ConditionalBranchState — 条件分支（取第一个匹配）
+       ├── MoveState          — actual move (Intent[] and PerformMove delegate)
+       ├── RandomBranchState  — weighted random choice
+       └── ConditionalBranchState — conditional branch (first match)
 ```
 
-### 5.2 状态机节点类型
+### 5.2 State machine node types
 
-**MoveState（招式节点）**：
+**MoveState (move node)**:
+
 ```python
 MoveState(
-    name="Thrash",                    # 招式名
-    intents=[SingleAttackIntent(...)], # 意图显示
-    perform_move=lambda targets: ..., # 执行逻辑
-    follow_up_state="NextState"       # 固定后继状态（可选）
+    name="Thrash",                    # move name
+    intents=[SingleAttackIntent(...)], # intent display
+    perform_move=lambda targets: ..., # execution logic
+    follow_up_state="NextState"       # fixed next state (optional)
 )
 ```
 
-**RandomBranchState（随机分支）**：
+**RandomBranchState (random branch)**:
+
 ```python
 RandomBranchState(
     branches=[
@@ -302,16 +304,18 @@ RandomBranchState(
 )
 ```
 
-重复规则：
-- `CannotRepeat` — 不能连续选同一招
-- `CanRepeatXTimes(n)` — 最多连续 n 次
-- `UseOnlyOnce` — 整场战斗只用一次
-- `CanRepeatForever` — 无限制
-- Cooldown 冷却回合数
+Repeat rules:
 
-权重在选择时会根据 `StateLog`（历史记录）动态调整。
+- `CannotRepeat` — cannot pick the same move twice in a row
+- `CanRepeatXTimes(n)` — at most n consecutive picks
+- `UseOnlyOnce` — once per combat
+- `CanRepeatForever` — no limit
+- Cooldown — cooldown in turns
 
-**ConditionalBranchState（条件分支）**：
+Weights are adjusted dynamically based on `StateLog` (history).
+
+**ConditionalBranchState (conditional branch)**:
+
 ```python
 ConditionalBranchState(
     branches=[
@@ -321,158 +325,162 @@ ConditionalBranchState(
 )
 ```
 
-### 5.3 招式选择流程 (`RollMove`)
+### 5.3 Move selection flow (`RollMove`)
 
 ```python
 def roll_move(state_machine):
     current = state_machine.current_state
 
-    # 沿着状态链前进，直到到达一个 MoveState
+    # Walk the state chain until reaching a MoveState
     while True:
         next_state = current.get_next_state()
         if isinstance(next_state, MoveState):
             state_machine.current_move = next_state
             return
         elif isinstance(next_state, RandomBranchState):
-            # 按权重随机选择，考虑重复约束和冷却
+            # Weighted random select, respecting repeat rules and cooldowns
             current = weighted_random_select(next_state.branches, state_log)
         elif isinstance(next_state, ConditionalBranchState):
-            # 取第一个条件为 true 的分支
+            # First branch with true condition
             current = first_matching_branch(next_state.branches)
 ```
 
-### 5.4 怪物 AI 模式示例
+### 5.4 Monster AI pattern examples
 
-**固定循环型（Crusher Boss）**：
-```
-Thrash → Enlarging Strike → Bug Sting → Adapt → Guarded Strike → (循环)
-实现方式：每个 MoveState 的 follow_up_state 指向下一个
+**Fixed cycle (Crusher Boss)**:
+
+```text
+Thrash → Enlarging Strike → Bug Sting → Adapt → Guarded Strike → (loop)
+Implementation: each MoveState’s follow_up_state points to the next
 ```
 
-**交替型（Chomper）**：
-```
+**Alternating (Chomper)**:
+
+```text
 Clamp → Screech → Clamp → Screech → ...
-实现方式：A.follow_up = B, B.follow_up = A
+Implementation: A.follow_up = B, B.follow_up = A
 ```
 
-**随机型（TwoTailedRat）**：
-```
+**Random (TwoTailedRat)**:
+
+```text
 RandomBranch:
-  75% → Summon (条件: can_summon(), UseOnlyOnce)
+  75% → Summon (condition: can_summon(), UseOnlyOnce)
   25% → Bite (CanRepeatForever)
   50% → Scratch (CannotRepeat)
 ```
 
-**条件型**：
-```
+**Conditional**:
+
+```text
 ConditionalBranch:
-  HP < 50% → 使用治疗招式
-  有小怪存活 → 使用增益招式
-  default → 普通攻击
+  HP < 50% → healing move
+  minions alive → buff move
+  default → normal attack
 ```
 
-### 5.5 高难度 (Ascension) 修正
+### 5.5 Ascension modifiers
 
 ```python
-# HP 使用 AscensionLevel.ToughEnemies
+# HP uses AscensionLevel.ToughEnemies
 min_hp = AscensionHelper.GetValueIfAscension(
     AscensionLevel.ToughEnemies, ascension_value, normal_value
 )
 
-# 伤害使用 AscensionLevel.DeadlyEnemies
+# Damage uses AscensionLevel.DeadlyEnemies
 damage = AscensionHelper.GetValueIfAscension(
     AscensionLevel.DeadlyEnemies, ascension_value, normal_value
 )
 ```
 
-### 5.6 意图系统 (Intents)
+### 5.6 Intent system (Intents)
 
-```
-SingleAttackIntent(damage)        — 单次攻击
-MultiAttackIntent(damage, count)  — 多段攻击
-BlockIntent(block)                — 获得格挡
-BuffIntent                        — 增益
-DebuffIntent                      — 减益
-StrategicIntent                   — 策略（召唤、特殊）
-EscapeIntent                      — 逃跑
-SleepIntent                       — 休眠
-UnknownIntent                     — 未知意图
+```text
+SingleAttackIntent(damage)        — single attack
+MultiAttackIntent(damage, count)  — multi-hit attack
+BlockIntent(block)                — gain block
+BuffIntent                        — buff
+DebuffIntent                      — debuff
+StrategicIntent                   — strategic (summon, special)
+EscapeIntent                      — escape
+SleepIntent                       — sleep
+UnknownIntent                     — unknown intent
 ```
 
 ---
 
-## 6. 遗物触发系统
+## 6. Relic Trigger System
 
-### 6.1 架构
+### 6.1 Architecture
 
-```
+```text
 RelicModel : AbstractModel
-  ├── DynamicVars (参数化数值，如 BlockVar(10m))
-  ├── Flash() — 触发视觉效果
+  ├── DynamicVars (parameterized values, e.g. BlockVar(10m))
+  ├── Flash() — trigger visual effect
   ├── Rarity: Starter, Common, Uncommon, Rare, Shop, Event, Ancient, None
-  └── 重写 AbstractModel 的 hook 方法来实现触发逻辑
+  └── Override AbstractModel hook methods for trigger logic
 ```
 
-### 6.2 Hook 触发时机分类
+### 6.2 Hook trigger timing
 
-| 时机 | Hook 方法 | 示例遗物 |
-|------|-----------|---------|
-| 战斗开始 | `BeforeCombatStart` | Anchor（获得 10 格挡） |
-| 回合开始 | `AfterSideTurnStart` | Akabeko（第 1 回合获得 8 活力） |
-| 打牌前 | `BeforeCardPlayed` | — |
-| 打牌后 | `AfterCardPlayed` | — |
-| 攻击前 | `BeforeAttack` | — |
-| 造成伤害后 | `AfterDamageGiven` | — |
-| 受到伤害后 | `AfterDamageTaken` | — |
-| 伤害加法修正 | `ModifyDamageAdditive` | — |
-| 伤害乘法修正 | `ModifyDamageMultiplicative` | PaperPhrog（Vulnerable ×1.75 而非 ×1.5） |
-| 格挡修正 | `ModifyBlock` | — |
-| 抽牌数修正 | `ModifyHandDraw` | — |
-| 格挡清除决定 | `ShouldClearBlock` | — |
-| 死亡时 | `OnDeath` | — |
-| 治疗时 | `ModifyHeal` | — |
-| 获得金币时 | `ModifyGoldGain` | — |
+| Timing | Hook method | Example relic |
+| ------ | ----------- | --------- |
+| Combat start | `BeforeCombatStart` | Anchor (gain 10 block) |
+| Turn start | `AfterSideTurnStart` | Akabeko (gain 8 Vigor on turn 1) |
+| Before card played | `BeforeCardPlayed` | — |
+| After card played | `AfterCardPlayed` | — |
+| Before attack | `BeforeAttack` | — |
+| After damage dealt | `AfterDamageGiven` | — |
+| After damage taken | `AfterDamageTaken` | — |
+| Damage additive | `ModifyDamageAdditive` | — |
+| Damage multiplicative | `ModifyDamageMultiplicative` | Paper Phrog (Vulnerable ×1.75 instead of ×1.5) |
+| Block modifier | `ModifyBlock` | — |
+| Hand draw modifier | `ModifyHandDraw` | — |
+| Block clear decision | `ShouldClearBlock` | — |
+| On death | `OnDeath` | — |
+| On heal | `ModifyHeal` | — |
+| On gold gain | `ModifyGoldGain` | — |
 
-### 6.3 中央事件分发机制 (`Hook` 静态类)
+### 6.3 Central event dispatch (`Hook` static class)
 
 ```python
-# 所有 AbstractModel 的子类（卡牌、遗物、状态效果、怪物、修饰符）
-# 都可以注册为 hook listener
+# All AbstractModel subclasses (cards, relics, powers, monsters, modifiers)
+# can register as hook listeners
 
 def hook_modify_damage(base, dealer, target, card_source, value_props):
     damage = base
-    # 遍历所有已注册的 hook listeners
+    # Iterate all registered hook listeners
     for listener in CombatState.iterate_hook_listeners():
-        # listener 可以是任何 AbstractModel 子类
+        # listener can be any AbstractModel subclass
         damage += listener.modify_damage_additive(dealer, target, value_props)
     for listener in CombatState.iterate_hook_listeners():
         damage *= listener.modify_damage_multiplicative(dealer, target, value_props)
     return damage
 ```
 
-关键洞察：**卡牌、遗物、状态效果、怪物** 全部通过同一个 Hook 系统交互，它们都是 `AbstractModel` 的子类，共享相同的 ~100+ 虚方法。
+Key insight: **cards, relics, powers, and monsters** all interact through the same Hook system. They are `AbstractModel` subclasses sharing the same ~100+ virtual methods.
 
 ---
 
-## 7. 卡牌效果系统
+## 7. Card Effect System
 
-### 7.1 卡牌基类结构
+### 7.1 Card base class structure
 
 ```csharp
 abstract class CardModel : AbstractModel
 {
-    // 构造函数
+    // Constructor
     base(energyCost, CardType, CardRarity, TargetType)
 
-    // 核心属性
+    // Core properties
     CardType Type;        // Attack, Skill, Power, Status, Curse, Quest
     TargetType Target;    // None, Self, AnyEnemy, AllEnemies, RandomEnemy, AnyAlly, AllAllies...
     CardRarity Rarity;    // Basic, Common, Uncommon, Rare, Ancient, Event, Token, Status, Curse, Quest
     int EnergyCost;
-    int? StarCost;        // STS2 新资源消耗
-    DynamicVars Vars;     // DamageVar, BlockVar, CardsVar 等
+    int? StarCost;        // STS2 star cost
+    DynamicVars Vars;     // DamageVar, BlockVar, CardsVar, etc.
 
-    // 核心方法
+    // Core methods
     abstract OnPlay(PlayerChoiceContext ctx, CardPlay cardPlay);
     virtual OnUpgrade();
     virtual CanPlay();
@@ -480,11 +488,12 @@ abstract class CardModel : AbstractModel
 }
 ```
 
-### 7.2 效果实现模式
+### 7.2 Effect implementation patterns
 
-**攻击牌**：
+**Attack cards**:
+
 ```csharp
-// Strike 类
+// Strike-style
 OnPlay(ctx, cardPlay) {
     DamageCmd.Attack(dynamicVars.Damage)
         .FromCard(this)
@@ -494,190 +503,198 @@ OnPlay(ctx, cardPlay) {
 }
 ```
 
-**防御牌**：
+**Block cards**:
+
 ```csharp
-// Defend 类
+// Defend-style
 OnPlay(ctx, cardPlay) {
     CreatureCmd.GainBlock(owner.Creature, dynamicVars.Block, cardPlay);
 }
 ```
 
-**状态效果牌**：
+**Power application cards**:
+
 ```csharp
-// 施加力量
+// Apply Strength
 OnPlay(ctx, cardPlay) {
     PowerCmd.Apply<StrengthPower>(creature, amount, applier, cardSource);
 }
 ```
 
-**抽牌**：
+**Draw**:
+
 ```csharp
 CardPileCmd.Draw(ctx, count, owner);
 ```
 
-**生成状态牌**：
+**Generate status cards**:
+
 ```csharp
-// 给敌人弃牌堆加 Dazed
+// Add Dazed to enemy discard pile
 CardPileCmd.AddToCombatAndPreview<Dazed>(targets, PileType.DiscardPile, count);
 ```
 
-**X 费牌**：
+**X-cost cards**:
+
 ```csharp
-int x = ResolveEnergyXValue();  // 消耗所有能量
-// 用 x 作为重复次数或效果倍率
+int x = ResolveEnergyXValue();  // spend all energy
+// use x as repeat count or effect multiplier
 for (int i = 0; i < x; i++) { ... }
 ```
 
-### 7.3 打牌完整流程 (`PlayCardAction`)
+### 7.3 Full play flow (`PlayCardAction`)
 
 ```python
 def play_card(card, target, ctx):
-    # 1. 验证
+    # 1. Validate
     assert card.can_play()
     assert card.is_valid_target(target)
 
-    # 2. 消耗资源
-    card.spend_resources()  # 扣能量 + 扣星星
+    # 2. Spend resources
+    card.spend_resources()  # energy + stars
 
-    # 3. 执行
+    # 3. Execute
     Hook.before_card_played(card, target)
     card.on_play(ctx, card_play)
     if card.enchantment:
         card.enchantment.on_play(ctx, card_play)
     Hook.after_card_played(card, target)
 
-    # 4. 检查重复打出（如 Double Tap 效果）
+    # 4. Extra plays (e.g. Double Tap)
     play_count = Hook.modify_card_play_count(card)
     for i in range(1, play_count):
-        card.on_play(ctx, card_play)  # 额外执行
+        card.on_play(ctx, card_play)  # extra execution
 
-    # 5. 牌的去向
+    # 5. Card destination
     if card.has_keyword(Exhaust):
         move_to(ExhaustPile)
     else:
-        move_to(DiscardPile)  # 默认
+        move_to(DiscardPile)  # default
 ```
 
-### 7.4 升级系统
+### 7.4 Upgrade system
 
 ```python
 def upgrade_card(card):
-    # 常见升级方式：
-    card.damage_var.upgrade_value_by(3)      # 伤害 +3
-    card.block_var.upgrade_value_by(3)        # 格挡 +3
-    card.energy_cost.upgrade_by(-1)           # 费用 -1
-    card.add_keyword(CardKeyword.Innate)      # 添加关键词
-    card.remove_keyword(CardKeyword.Ethereal) # 移除关键词
+    # Common upgrade patterns:
+    card.damage_var.upgrade_value_by(3)      # damage +3
+    card.block_var.upgrade_value_by(3)        # block +3
+    card.energy_cost.upgrade_by(-1)           # cost -1
+    card.add_keyword(CardKeyword.Innate)      # add keyword
+    card.remove_keyword(CardKeyword.Ethereal) # remove keyword
 ```
 
 ---
 
-## 8. 地图生成算法
+## 8. Map Generation
 
-### 8.1 地图结构 (`StandardActMap`)
+### 8.1 Map structure (`StandardActMap`)
 
 ```python
-# 7 列 × mapLength 行 的网格
+# 7 columns × mapLength rows
 map_grid = MapPoint[7][map_length]   # map_grid[column][row]
 
-# 特殊节点
-boss_point = BossMapPoint           # 最后一行之后
-second_boss_point = optional        # 某些情况有第二 Boss
+# Special nodes
+boss_point = BossMapPoint           # after final row
+second_boss_point = optional        # second boss in some cases
 ```
 
-### 8.2 路径生成算法
+### 8.2 Path generation algorithm
 
 ```python
 def generate_paths(map_grid, num_paths=7):
     for i in range(num_paths):
-        # 从第 1 行的随机列开始
+        # Start at random column on row 1
         col = random_column(0..6)
         row = 1
 
         while row < map_length:
-            # 创建节点
+            # Create node
             map_grid[col][row] = MapPoint()
 
-            # 连接到上一行的节点
+            # Connect to parent on previous row
             connect_to_parent(col, row)
 
-            # 前进一行，随机偏移列（左/中/右）
+            # Advance one row, random column offset (left / center / right)
             direction = random_choice([-1, 0, +1])
             new_col = clamp(col + direction, 0, 6)
 
-            # 防止路径交叉
+            # Prevent path crossing
             if would_cross_another_path(col, new_col, row):
-                new_col = col  # 保持直行
+                new_col = col  # go straight
 
             col = new_col
             row += 1
 
-        # 最后一行连接到 Boss 节点
+        # Connect last row to Boss node
         connect_to_boss(col)
 ```
 
-### 8.3 房间类型分配
+### 8.3 Room type assignment
 
-**固定分配**：
-```
-第 1 行          → Monster（首次遭遇）
-倒数第 7 行      → Treasure（宝箱）或 Elite（高难模式替换）
-Boss 前最后一行  → RestSite（篝火）
-```
+**Fixed placement**:
 
-**随机分配池**（高斯分布）：
-```
-Elite:    ~5 个 (高难 ×1.6)
-Shop:     3 个
-Unknown:  ~12 个（问号房，可触发事件/战斗/商店）
-RestSite: ~5 个
+```text
+Row 1              → Monster (first encounter)
+7th row from end   → Treasure (chest) or Elite (replaced in ascension)
+Last row before Boss → RestSite (campfire)
 ```
 
-**放置规则**：
-- 同类型特殊节点不能相邻（父子/兄弟关系）
-- RestSite 和 Elite 不能出现在前 4 行
-- RestSite 不能出现在后 3 行
+**Random pool** (Gaussian distribution):
 
-### 8.4 房间类型枚举
-
+```text
+Elite:    ~5 (×1.6 on ascension)
+Shop:     3
+Unknown:  ~12 (?) — can trigger event / combat / shop
+RestSite: ~5
 ```
+
+**Placement rules**:
+
+- Same special room type cannot be adjacent (parent/child or siblings)
+- RestSite and Elite cannot appear in first 4 rows
+- RestSite cannot appear in last 3 rows
+
+### 8.4 Room type enum
+
+```text
 Unassigned, Unknown, Shop, Treasure, RestSite, Monster, Elite, Boss, Ancient
 ```
 
-### 8.5 各幕配置
+### 8.5 Per-act configuration
 
-| 幕 | 名称 | 房间数 | 特色 |
-|-----|------|--------|------|
-| Act 1 | Overgrowth | 15 | 入门遭遇 |
-| Act 2 | Hive | — | 中期挑战 |
-| Act 3 | Glory | — | 高难遭遇 |
-| Act 4 | Underdocks | — | 最终挑战 |
+| Act | Name | Room count | Notes |
+| --- | ---- | ---------- | ----- |
+| Act 1 | Overgrowth | 15 | Intro encounters |
+| Act 2 | Hive | — | Mid-game challenge |
+| Act 3 | Glory | — | Hard encounters |
+| Act 4 | Underdocks | — | Final challenge |
 
-每幕定义自己的：Boss 池、遭遇池、事件池、Ancient NPC
+Each act defines its own: boss pool, encounter pool, event pool, ancient NPCs
 
 ---
 
-## 9. 能量与星星系统
+## 9. Energy and Stars
 
-### 9.1 能量 (Energy)
+### 9.1 Energy
 
 ```python
-# 每回合开始时
-player.energy = player.max_energy     # 默认 3
-player.energy += Hook.modify_energy() # 遗物/状态效果修正
+# Start of each turn
+player.energy = player.max_energy     # default 3
+player.energy += Hook.modify_energy() # relic / power modifiers
 
-# 打牌消耗
+# Playing cards
 player.energy -= card.energy_cost
 
-# X 费牌
-x = player.energy  # 消耗所有剩余能量
+# X-cost cards
+x = player.energy  # spend all remaining energy
 player.energy = 0
 ```
 
-### 9.2 星星 (Stars) — STS2 新机制
+### 9.2 Stars — STS2 new mechanic
 
 ```python
-# 某些卡牌需要同时消耗能量和星星
+# Some cards require both energy and stars
 def has_enough_resources(card):
     return (player.energy >= card.energy_cost and
             player.stars >= card.star_cost)
@@ -685,101 +702,101 @@ def has_enough_resources(card):
 
 ---
 
-## 10. 模拟器实现建议
+## 10. Simulator Implementation Recommendations
 
-### 10.1 优先级排序
+### 10.1 Priority order
 
-```
-P0 — 必须首先实现（最小可战斗原型）:
+```text
+P0 — Implement first (minimal combat prototype):
   ├── Creature (HP, Block, Powers)
-  ├── 5 个牌堆 (Hand, Draw, Discard, Exhaust, Play)
-  ├── 能量系统
-  ├── 伤害公式 (含 Strength, Weak, Vulnerable)
-  ├── 格挡公式 (含 Dexterity, Frail)
-  ├── 基础卡牌效果 (Strike, Defend 类)
-  ├── 回合流程 (玩家→敌方→循环)
-  └── 怪物 AI 状态机框架
+  ├── 5 piles (Hand, Draw, Discard, Exhaust, Play)
+  ├── Energy system
+  ├── Damage formula (Strength, Weak, Vulnerable)
+  ├── Block formula (Dexterity, Frail)
+  ├── Basic card effects (Strike, Defend style)
+  ├── Turn flow (player → enemy → loop)
+  └── Monster AI state machine framework
 
-P1 — 核心扩展:
-  ├── 完整的 Hook 事件系统
-  ├── 所有 Ironclad 卡牌（从单角色开始）
-  ├── Act 1 全部怪物 AI
-  ├── 关键遗物 (Starter + Common)
-  ├── 关键状态效果 (~20 个高频 Power)
-  └── 卡牌关键词 (Exhaust, Ethereal, Innate, Retain)
+P1 — Core expansion:
+  ├── Full Hook event system
+  ├── All Ironclad cards (start with one character)
+  ├── Act 1 monster AI
+  ├── Key relics (Starter + Common)
+  ├── Key powers (~20 high-frequency)
+  └── Card keywords (Exhaust, Ethereal, Innate, Retain)
 
-P2 — 完整战斗:
-  ├── 所有状态效果 (260 个)
-  ├── 所有遗物触发
-  ├── 药水系统
-  ├── 附魔系统（STS2 新增）
-  ├── 星星资源系统
-  └── X 费牌
+P2 — Full combat:
+  ├── All powers (260)
+  ├── All relic triggers
+  ├── Potion system
+  ├── Enchantment system (STS2 new)
+  ├── Star resource system
+  └── X-cost cards
 
-P3 — 地图与非战斗:
-  ├── 地图生成算法
-  ├── 事件决策树
-  ├── 商店系统
-  ├── 篝火（休息/升级/回忆）
-  ├── 卡牌奖励选择
-  └── Boss 宝箱遗物选择
+P3 — Map and non-combat:
+  ├── Map generation algorithm
+  ├── Event decision trees
+  ├── Shop system
+  ├── Rest site (rest / upgrade / recall)
+  ├── Card reward selection
+  └── Boss chest relic selection
 
-P4 — 完整游戏:
-  ├── 全部 5 个角色
-  ├── 全部 4 幕
-  ├── 高难度 (Ascension) 系统
-  └── 解锁系统
+P4 — Full game:
+  ├── All 5 characters
+  ├── All 4 acts
+  ├── Ascension system
+  └── Unlock system
 ```
 
-### 10.2 从 C# 提取逻辑的工作流
+### 10.2 Workflow for extracting logic from C\#
 
+```text
+1. Locate target file
+   e.g. extraction/decompiled/MegaCrit.Sts2.Core.Models.Monsters/Chomper.cs
+
+2. Read C# source and understand logic
+   - Constructor → HP, damage values
+   - GenerateMoveStateMachine() → AI pattern
+   - PerformMove delegate → concrete effects
+
+3. Reimplement in Python
+   - No 1:1 port required; behavior-equivalent is enough
+   - Use spire-codex JSON for static values
+   - Implement dynamic logic yourself (AI decisions, effect triggers)
+
+4. Validate with unit tests
+   - Compare to real game behavior
+   - Verify damage formula and power interactions
 ```
-1. 定位目标文件
-   例如: extraction/decompiled/MegaCrit.Sts2.Core.Models.Monsters/Chomper.cs
 
-2. 阅读 C# 源码，理解逻辑
-   - 构造函数 → HP, 伤害值
-   - GenerateMoveStateMachine() → AI 模式
-   - PerformMove 委托 → 具体效果
-
-3. 用 Python 重新实现
-   - 无需 1:1 翻译，只需行为等价
-   - 利用 spire-codex 的 JSON 数据获取静态数值
-   - 自行实现动态逻辑（AI 决策、效果触发）
-
-4. 单元测试验证
-   - 对照真实游戏行为
-   - 验证伤害公式、状态效果交互
-```
-
-### 10.3 与 spire-codex 数据的对接
+### 10.3 Integrating with spire-codex data
 
 ```python
-# spire-codex data/*.json 提供静态数据
-cards_data = load_json("cards.json")        # 576 张卡牌的数值
-monsters_data = load_json("monsters.json")  # 111 个怪物的 HP/伤害
-powers_data = load_json("powers.json")      # 260 个状态效果的元信息
-encounters_data = load_json("encounters.json")  # 87 个遭遇的怪物组合
-characters_data = load_json("characters.json")  # 5 个角色的初始状态
+# spire-codex data/*.json provides static data
+cards_data = load_json("cards.json")        # 576 cards’ values
+monsters_data = load_json("monsters.json")  # 111 monsters’ HP/damage
+powers_data = load_json("powers.json")      # 260 powers’ metadata
+encounters_data = load_json("encounters.json")  # 87 encounter monster groups
+characters_data = load_json("characters.json")  # 5 characters’ starting state
 
-# 需要从 C# 源码自行提取的动态逻辑
-# → 卡牌的 OnPlay() 效果
-# → 怪物的 GenerateMoveStateMachine() AI
-# → 遗物的各种 Hook 重写
-# → 状态效果的 Hook 重写
-# → 地图生成的 StandardActMap 算法
+# Dynamic logic to extract from C# source yourself
+# → Card OnPlay() effects
+# → Monster GenerateMoveStateMachine() AI
+# → Relic Hook overrides
+# → Power Hook overrides
+# → Map generation StandardActMap algorithm
 ```
 
-### 10.4 关键陷阱与注意事项
+### 10.4 Key pitfalls and notes
 
-1. **Hook 执行顺序**：多个 listener 的执行顺序可能影响最终结果（先加法后乘法是硬编码的，但同类修正的 listener 遍历顺序需要确认）
+1. **Hook execution order**: Order of multiple listeners can affect outcomes (additive before multiplicative is hard-coded, but iteration order among listeners of the same kind must be confirmed).
 
-2. **Vulnerable/Weak/Frail 消退时机**：在 **敌方回合结束时** 消退，而非玩家回合结束。这意味着玩家施加的 1 层 Vulnerable 实际上覆盖了玩家的一整个回合
+2. **Vulnerable / Weak / Frail decay timing**: They decay at **end of enemy turn**, not end of player turn. One stack of Vulnerable applied by the player lasts through the full player turn and enemy turn before ticking down.
 
-3. **第 1 回合格挡不清除**：玩家第 1 回合开始时不清除格挡（例如 Anchor 遗物在战斗开始时给 10 格挡，第 1 回合不会被清掉）
+3. **Block not cleared on turn 1**: Player block is not cleared at the start of turn 1 (e.g. Anchor’s 10 block at combat start persists through turn 1).
 
-4. **Powered vs Unpowered 攻击**：力量/虚弱/易伤只对 "powered attack" 生效。一些特殊伤害源（如 Thorns 荆棘、Poison 毒）标记为 Unpowered，不受这些修正影响
+4. **Powered vs Unpowered attacks**: Strength / Weak / Vulnerable only affect "powered attacks". Some damage sources (e.g. Thorns, Poison) are marked Unpowered and skip these modifiers.
 
-5. **怪物 AI 的随机性**：RandomBranchState 的权重和重复约束需要精确复现，否则怪物行为模式会偏离真实游戏
+5. **Monster AI randomness**: RandomBranchState weights and repeat constraints must match the game exactly or behavior diverges.
 
-6. **异步执行模型**：原版代码使用 C# async/await，模拟器可以简化为同步执行，但需要注意有些效果依赖执行顺序（如多段攻击中间触发的效果）
+6. **Async execution model**: The game uses C# async/await; the simulator can use synchronous execution, but some effects depend on ordering (e.g. triggers between multi-hit attacks).

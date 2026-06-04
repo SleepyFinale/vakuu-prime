@@ -10,7 +10,7 @@ Decompiled from `MegaCrit.Sts2.Core` (Slay the Spire 2 Early Access).
 
 ### 1.1 MapPointType Enum
 
-```
+```text
 Unassigned = 0
 Unknown    = 1   // "?" rooms -- resolved at runtime via odds
 Shop       = 2
@@ -24,15 +24,15 @@ Ancient    = 8   // Neow / other ancients
 
 ### 1.2 Grid Dimensions
 
-| Constant     | Value |
-|-------------|-------|
-| `_mapWidth`  | 7 columns |
-| `_mapLength` | `actModel.GetNumberOfRooms(isMultiplayer) + 1` rows |
-| `_iterations`| 7 (number of random paths generated) |
+| Constant      | Value                                               |
+| ------------- | --------------------------------------------------- |
+| `_mapWidth`   | 7 columns                                           |
+| `_mapLength`  | `actModel.GetNumberOfRooms(isMultiplayer) + 1` rows |
+| `_iterations` | 7 (number of random paths generated)                |
 
 ### 1.3 Path Generation Algorithm
 
-```
+```text
 GenerateMap():
     for i in 0..6:                         // 7 iterations
         startCol = rng.NextInt(0, 7)       // random column in [0,6]
@@ -55,7 +55,8 @@ GenerateMap():
 ```
 
 **PathGenerate(current)**:
-```
+
+```text
 while current.row < mapLength - 1:
     coord = GenerateNextCoord(current)
     next = GetOrCreate(coord)
@@ -64,7 +65,8 @@ while current.row < mapLength - 1:
 ```
 
 **GenerateNextCoord(current)**:
-```
+
+```text
 col = current.col
 minCol = max(0, col - 1)
 maxCol = min(col + 1, 6)
@@ -80,7 +82,7 @@ for dir in directions:
 
 ### 1.4 Room Type Pool Sizes (MapPointTypeCounts)
 
-```
+```text
 NumOfElites  = round(5 * (Ascension >= SwarmingElites ? 1.6 : 1.0))
              // = 5 normally, 8 at A1+
 NumOfShops   = 3
@@ -91,8 +93,9 @@ NumOfRests   = rng.NextGaussianInt(mean=5, stddev=1, min=3, max=6)
 ### 1.5 Room Type Assignment
 
 **Fixed assignments** (before random pool):
+
 | Row | Type | Condition |
-|-----|------|-----------|
+| --- | --- | --- |
 | Last row (`rowCount-1`) | `RestSite` | Always |
 | Row `rowCount-7` | `Treasure` | Default |
 | Row `rowCount-7` | `Elite` | If `ShouldReplaceTreasureWithElites` |
@@ -107,7 +110,7 @@ NumOfRests   = rng.NextGaussianInt(mean=5, stddev=1, min=3, max=6)
 A point type is **valid** only if all five rules pass:
 
 | Rule | Restricted Types | Condition |
-|------|-----------------|-----------|
+| --- | --- | --- |
 | **Lower map** (row < 5) | RestSite, Elite | Cannot appear in rows 0-4 |
 | **Upper map** (row >= mapLength-3) | RestSite | Cannot appear in last 3 rows |
 | **Parent adjacency** | Elite, RestSite, Treasure, Shop | Cannot be same type as any parent or child |
@@ -132,7 +135,7 @@ A point type is **valid** only if all five rules pass:
 ### 2.1 RunState Persistent Fields
 
 | Field | Type | Description |
-|-------|------|-------------|
+| --- | --- | --- |
 | `Players` | `List<Player>` | All players in the run |
 | `Acts` | `IReadOnlyList<ActModel>` | Act definitions (mutable clones) |
 | `CurrentActIndex` | `int` | Current act (0-based); setting clears visited coords & resets ActFloor |
@@ -151,7 +154,7 @@ A point type is **valid** only if all five rules pass:
 
 ### 2.2 Run Initialization Flow
 
-```
+```text
 1. SetUpNewSinglePlayer(state, shouldSave)
 2. InitializeShared() -- sets up sync, action queues, ascension, timers
 3. InitializeNewRun():
@@ -169,7 +172,7 @@ A point type is **valid** only if all five rules pass:
 
 ### 2.3 Entering a Map Point
 
-```
+```text
 EnterMapCoord(coord):
     RunState.AddVisitedMapCoord(coord)
     actFloor = coord.row + 1
@@ -184,8 +187,9 @@ EnterMapCoord(coord):
 ```
 
 **MapPointType to RoomType mapping**:
+
 | MapPointType | RoomType |
-|-------------|----------|
+| --- | --- |
 | Unknown | `Odds.UnknownMapPoint.Roll(blacklist, state)` |
 | Shop | Shop |
 | Treasure | Treasure |
@@ -197,7 +201,7 @@ EnterMapCoord(coord):
 
 ### 2.4 Act Transition
 
-```
+```text
 EnterNextAct():
     if currentActIndex >= acts.Count - 1:
         if currentRoom.IsVictoryRoom:
@@ -227,7 +231,7 @@ EnterAct(actIndex):
 ### 3.1 Card Rarity Odds (Base)
 
 | Context | Common | Uncommon | Rare |
-|---------|--------|----------|------|
+| --- | --- | --- | --- |
 | **Regular Encounter** | 0.60 (A7+: 0.615) | 0.37 | 0.03 (A7+: 0.0149) |
 | **Elite Encounter** | 0.50 (A7+: 0.549) | 0.40 | 0.10 (A7+: 0.05) |
 | **Boss Encounter** | 0.00 | 0.00 | 1.00 |
@@ -238,7 +242,7 @@ EnterAct(actIndex):
 
 The `CardRarityOdds` system maintains a `CurrentValue` (pity offset) that shifts rare odds over time.
 
-```
+```text
 Initial CurrentValue = -0.05
 
 Roll(type):
@@ -266,7 +270,7 @@ Merchant card rarity uses `RollWithoutChangingFutureOdds` -- consumes RNG but do
 
 ### 3.3 Upgrade Probability Formula
 
-```
+```text
 RollForUpgrade(player, card, baseChance, rng):
     roll = rng.NextFloat()
     if card.IsUpgradable:
@@ -280,7 +284,7 @@ RollForUpgrade(player, card, baseChance, rng):
 ```
 
 | Context | Base Chance | Notes |
-|---------|------------|-------|
+| --- | --- | --- |
 | Combat reward | 0.0 | Scales with act: +0.25/act (A7+: +0.125/act) |
 | Merchant card | -999999999 | Never upgrades (massive negative base) |
 
@@ -299,7 +303,7 @@ Cards already picked in the same reward set are blacklisted (via the `blacklist`
 ### 4.1 Inventory Composition
 
 | Slot | Count | Details |
-|------|-------|---------|
+| --- | --- | --- |
 | Character cards | 5 | Types: Attack, Attack, Skill, Skill, Power |
 | Colorless cards | 2 | Rarities: Uncommon, Rare |
 | Relics | 3 | 2x `RelicFactory.RollRarity()` + 1x `RelicRarity.Shop` |
@@ -310,7 +314,7 @@ Cards already picked in the same reward set are blacklisted (via the `blacklist`
 
 ### 4.2 Card Pricing
 
-```
+```text
 GetCost(card):
     baseCost = switch card.Rarity:
         Rare     -> 150
@@ -329,7 +333,7 @@ GetCost(card):
 
 ### 4.3 Relic Pricing
 
-```
+```text
 cost = round(relic.MerchantCost * rng.NextFloat(0.85, 1.15))
 ```
 
@@ -339,7 +343,7 @@ The `MerchantCost` property is defined per-relic on the model. Pricing has wider
 
 ### 4.4 Potion Pricing
 
-```
+```text
 baseCost = switch potion.Rarity:
     Rare     -> 100
     Uncommon -> 75
@@ -350,7 +354,7 @@ finalCost = round(baseCost * rng.NextFloat(0.95, 1.05))
 
 ### 4.5 Card Removal Cost
 
-```
+```text
 cost = 75 + 25 * player.ExtraFields.CardShopRemovalsUsed
 ```
 
@@ -358,7 +362,7 @@ Each removal increases the cost by 25 gold. First removal = 75, second = 100, th
 
 ### 4.6 Relic Rarity Roll (for shops and combat rewards)
 
-```
+```text
 RelicFactory.RollRarity(rng):
     roll = rng.NextFloat()
     if roll < 0.50: return Common
@@ -367,7 +371,7 @@ RelicFactory.RollRarity(rng):
 ```
 
 | Rarity | Probability |
-|--------|------------|
+| --- | --- |
 | Common | 50% |
 | Uncommon | 33% |
 | Rare | 17% |
@@ -381,6 +385,7 @@ RelicFactory.RollRarity(rng):
 ### 5.1 Default Options
 
 Generated via `RestSiteOption.Generate(player)`:
+
 - **Heal** (always)
 - **Smith** (always, but disabled if no upgradable cards)
 - **Mend** (multiplayer only -- heal another player)
@@ -390,7 +395,7 @@ Additional options are injected by relics via `Hook.ModifyRestSiteOptions`.
 ### 5.2 All Rest Site Options
 
 | Option | ID | Effect | Source/Condition |
-|--------|----|--------|-----------------|
+| --- | --- | --- | --- |
 | **Heal** | `HEAL` | Heal `floor(maxHp * 0.3)` HP | Default |
 | **Smith** | `SMITH` | Upgrade 1 card from deck (cancelable) | Default; disabled if no upgradable cards |
 | **Mend** | `MEND` | Heal another player for `floor(targetMaxHp * 0.3)` HP | Multiplayer only |
@@ -402,7 +407,7 @@ Additional options are injected by relics via `Hook.ModifyRestSiteOptions`.
 
 ### 5.3 Heal Formula
 
-```
+```text
 baseHealAmount = maxHp * 0.3
 finalHealAmount = Hook.ModifyRestSiteHealAmount(baseHealAmount)
 ```
@@ -420,7 +425,7 @@ The base is always 30% of max HP (decimal, applied as `CreatureCmd.Heal` which r
 Events without an `IsAllowed` override are always allowed (default = true). Deprecated/disabled events return false.
 
 | Event | IsAllowed Condition |
-|-------|-------------------|
+| --- | --- |
 | AbyssalBaths | Always |
 | Amalgamator | All players have >= 2 Strike-tagged AND >= 2 Defend-tagged cards |
 | AromaOfChaos | Always |
@@ -491,7 +496,7 @@ Events without an `IsAllowed` override are always allowed (default = true). Depr
 
 Each event extends `EventModel` and implements:
 
-```
+```text
 class MyEvent : EventModel
     // Dynamic variables for display
     CanonicalVars -> [DamageVar, HealVar, GoldVar, etc.]
@@ -534,7 +539,7 @@ class MyEvent : EventModel
 ### 7.1 Base Probabilities
 
 | Outcome | Base Odds | Notes |
-|---------|----------|-------|
+| --- | --- | --- |
 | Monster | 0.10 | |
 | Elite | -1.00 | Negative = impossible until boosted |
 | Treasure | 0.02 | |
@@ -543,7 +548,7 @@ class MyEvent : EventModel
 
 ### 7.2 Rolling Algorithm
 
-```
+```text
 Roll(blacklist, runState):
     // Tutorial override (first run, first 2 unknowns = Event, 3rd = Monster)
     if numberOfRuns == 0:
@@ -584,7 +589,7 @@ Roll(blacklist, runState):
 
 ### 8.1 Potion Drop Odds (Combat Reward)
 
-```
+```text
 PotionRewardOdds:
     initialValue = 0.40
     targetOdds   = 0.50
@@ -609,7 +614,7 @@ So potion drops oscillate around ~40-50% with +/- 10% swings. Elite fights get +
 
 ### 8.2 Potion Rarity Distribution
 
-```
+```text
 roll = rng.NextFloat()
 if roll <= 0.10: Rare
 elif roll <= 0.35: Uncommon    // 0.10 + 0.25
@@ -617,7 +622,7 @@ else: Common                   // remaining 0.65
 ```
 
 | Rarity | Probability |
-|--------|------------|
+| --- | --- |
 | Common | 65% |
 | Uncommon | 25% |
 | Rare | 10% |
@@ -629,7 +634,7 @@ Potions are drawn from `player.Character.PotionPool` (character-specific) combin
 ### 8.4 All Potions Reference
 
 | Potion | Rarity | Usage | Target |
-|--------|--------|-------|--------|
+| --- | --- | --- | --- |
 | Ashwater | Uncommon | CombatOnly | Self |
 | AttackPotion | Common | CombatOnly | Self |
 | BeetleJuice | Rare | CombatOnly | AnyEnemy |
@@ -695,6 +700,7 @@ Potions are drawn from `player.Character.PotionPool` (character-specific) combin
 | WeakPotion | Common | CombatOnly | AnyEnemy |
 
 **Usage Types**:
+
 - `CombatOnly` -- Can only be used during combat
 - `AnyTime` -- Can be used on the map or in combat
 - `Automatic` -- Triggers automatically (e.g., Fairy In A Bottle on death)
@@ -710,7 +716,7 @@ Potions are drawn from `player.Character.PotionPool` (character-specific) combin
 ### 9.1 Orb Types
 
 | Orb | Passive | Passive Trigger | Evoke | Special |
-|-----|---------|-----------------|-------|---------|
+| --- | --- | --- | --- | --- |
 | **Lightning** | 3 dmg to random enemy | Before turn end | 8 dmg to random enemy | Focus modifies values |
 | **Frost** | 2 Block to self | Before turn end | 5 Block to self | Focus modifies values |
 | **Dark** | +6 to evoke value (stacking) | Before turn end | Deal accumulated value to lowest-HP enemy | Starts at 6 evoke; gains PassiveVal each turn |
@@ -721,7 +727,7 @@ Potions are drawn from `player.Character.PotionPool` (character-specific) combin
 
 Lightning, Frost, Dark, and Glass use `ModifyOrbValue(base)` which adds Focus. Plasma does NOT use `ModifyOrbValue`.
 
-```
+```text
 ModifyOrbValue(base):
     return base + Focus
 ```
@@ -729,11 +735,11 @@ ModifyOrbValue(base):
 ### 9.3 OrbQueue Mechanics
 
 | Constant | Value |
-|----------|-------|
+| --- | --- |
 | `maxCapacity` | 10 |
 | Initial capacity | 0 (must be granted by cards/relics) |
 
-```
+```text
 TryEnqueue(orb):
     if capacity == 0: return false
     if orbs.Count >= capacity: ERROR (caller must evoke first)
@@ -763,14 +769,14 @@ AfterTurnStart(choiceContext):
 
 ### 10.1 Max Level
 
-```
+```text
 maxAscensionAllowed = 10
 ```
 
 ### 10.2 All Ascension Levels
 
 | Level | Enum Name | Effect |
-|-------|-----------|--------|
+| --- | --- | --- |
 | 0 | `None` | No modifiers |
 | 1 | `SwarmingElites` | Elite count on map: `round(5 * 1.6)` = 8 (up from 5) |
 | 2 | `WearyTraveler` | (Effect defined in localization/hooks -- reduced rest healing or similar) |
@@ -786,7 +792,7 @@ maxAscensionAllowed = 10
 ### 10.3 Ascension 7 (Scarcity) Exact Changes
 
 | Parameter | Normal | A7+ |
-|-----------|--------|-----|
+| --- | --- | --- |
 | Regular Common odds | 0.600 | 0.615 |
 | Regular Rare odds | 0.030 | 0.0149 |
 | Elite Common odds | 0.500 | 0.549 |
@@ -798,7 +804,7 @@ maxAscensionAllowed = 10
 
 ### 10.4 Ascension Effects Applied at Run Start
 
-```
+```text
 ApplyEffectsTo(player):
     if level >= TightBelt (4):
         player.SubtractFromMaxPotionCount(1)
@@ -823,13 +829,14 @@ The `RunRngSet` contains separate seeded RNG streams to ensure determinism:
 - Combat potion generation: `CombatPotionGeneration`
 
 Per-player streams (`PlayerRngSet`):
+
 - `Rewards` (card rarity, upgrades, potion drops)
 - `Shops` (merchant inventory generation)
 
 ## Appendix B: Key File Paths in Decompiled Source
 
 | System | Path |
-|--------|------|
+| --- | --- |
 | Map generation | `MegaCrit.Sts2.Core.Map/StandardActMap.cs` |
 | Map point types | `MegaCrit.Sts2.Core.Map/MapPointType.cs` |
 | Map room counts | `MegaCrit.Sts2.Core.Map/MapPointTypeCounts.cs` |

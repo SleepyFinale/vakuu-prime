@@ -1533,6 +1533,8 @@ class RunState:
             ancient_pool = list(act.ancient_ids) + shared_ancient_subsets.get(act.act_index, [])
             if ancient_pool:
                 act.ancient_id = self.rng.up_front.choice(ancient_pool)
+            if act.boss_ids:
+                act.boss_id = self.rng.up_front.choice(act.boss_ids)
         self._rooms_generated = True
 
     def _apply_ascension_effects(self) -> None:

@@ -7,7 +7,7 @@ How to train RL agents on the STS2 headless simulator.
 ## Hardware Requirements
 
 | Component | Minimum | Recommended |
-|-----------|---------|-------------|
+| --------- | --------- | ------------- |
 | CPU | 4 cores | 8+ cores (for parallel envs) |
 | RAM | 8 GB | 16 GB |
 | GPU | Not required (CPU training works) | NVIDIA RTX 4070 Ti SUPER or better |
@@ -35,7 +35,8 @@ python scripts/benchmark.py
 ```
 
 Expected benchmark output:
-```
+
+```text
 Episodes:       1000
 Total steps:    28101
 Time:           0.78s
@@ -64,7 +65,7 @@ python scripts/train_combat.py \
 ### Flags
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| ---- | ------- | ----------- |
 | `--total-timesteps` | 500,000 | Total environment steps |
 | `--n-envs` | 4 | Parallel environments (set to CPU core count) |
 | `--lr` | 3e-4 | Learning rate |
@@ -80,7 +81,7 @@ python scripts/train_combat.py \
 ### Expected Results
 
 | Timesteps | Win Rate | Training Time (8 envs, GPU) |
-|-----------|----------|----------------------------|
+| --------- | -------- | -------------------------- |
 | 100k | ~70% | ~1.5 min |
 | 500k | ~85% | ~7 min |
 | 2M | ~92% | ~27 min |
@@ -99,6 +100,7 @@ python scripts/benchmark.py  # Quick throughput check
 ```
 
 The training script saves two model checkpoints:
+
 - `output/combat_ppo/final_model.zip` -- model at the end of training
 - `output/combat_ppo/best_model/best_model.zip` -- best model during training (based on eval callback)
 
@@ -111,6 +113,7 @@ tensorboard --logdir output/combat_ppo/tb_logs
 ```
 
 Key metrics to watch:
+
 - `rollout/ep_rew_mean` -- average episode reward (should trend toward +1.0)
 - `rollout/ep_len_mean` -- average episode length (should decrease as agent wins faster)
 - `train/entropy_loss` -- exploration (should decrease over time but not collapse to 0)
@@ -137,7 +140,7 @@ Key metrics to watch:
 
 Train an agent that handles an entire run: combat, map navigation, card rewards, events, shops, and rest sites.
 
-### Command
+### Full-Run Command
 
 ```bash
 python scripts/train_full_run.py \
@@ -154,7 +157,7 @@ python scripts/train_full_run.py \
 ### Key Flags
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| ---- | ------- | ----------- |
 | `--act-count` | 1 | Acts per run (1 = Act 1 only, 3 = full game) |
 | `--reward-shaping` | True | Enable floor/act completion bonuses |
 | `--no-reward-shaping` | - | Sparse reward only (+1 win / -1 death) |
@@ -177,17 +180,19 @@ python scripts/train_full_run.py --act-count 1 --total-timesteps 2000000
 python scripts/train_full_run.py --act-count 3 --total-timesteps 5000000
 ```
 
-### Expected Results
+### Full-Run Expected Results
 
 **Random baseline** (Act 1 only):
-```
+
+```text
 Win rate:         0%
 Avg floors:       3.9
 Max floors:       8
 ```
 
 **Trained agent** (1M steps, Act 1 only):
-```
+
+```text
 Win rate:         0%
 Avg floors:       8.9
 Max floors:       15
@@ -203,7 +208,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 ### Challenges and Mitigations
 
 | Challenge | Current State | Future Direction |
-|-----------|--------------|------------------|
+| --------- | ------------ | ---------------- |
 | Sparse reward | Reward shaping (floor bonus) helps slightly | Better intermediate rewards, hindsight experience replay |
 | Long episodes | Act-count curriculum | Hierarchical policy (meta-policy picks strategy, sub-policies execute) |
 | Multi-phase | Single flat policy for all phases | Separate policies per phase, combined with a router |
@@ -215,7 +220,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 ## Training Results Summary
 
 | Metric | Random | Combat-Trained (2M) | Run-Trained (1M) |
-|--------|--------|---------------------|------------------|
+| ------ | ------ | ------------------- | ---------------- |
 | Combat win rate | 63.4% | 92% | N/A (not isolated) |
 | Run win rate | 0% | N/A (combat only) | 0% |
 | Avg floors (Act 1 run) | 3.9 | N/A | 8.9 |

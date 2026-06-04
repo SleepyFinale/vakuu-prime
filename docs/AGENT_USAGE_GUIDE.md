@@ -42,7 +42,7 @@ python scripts/train_combat.py \
 
 ### Training Output
 
-```
+```text
 output/combat_ppo/
   tb_logs/          # TensorBoard logs
   eval_logs/        # Evaluation results
@@ -60,7 +60,7 @@ tensorboard --logdir output/combat_ppo/tb_logs
 ### Hyperparameter Guidance
 
 | Parameter | Recommended Range | Notes |
-|-----------|------------------|-------|
+| --------- | ----------------- | ----- |
 | `--lr` | 1e-4 to 5e-4 | Lower for stability, higher for speed |
 | `--batch-size` | 128 to 512 | Larger = more stable gradients |
 | `--n-steps` | 1024 to 4096 | More steps = better advantage estimates |
@@ -75,7 +75,7 @@ tensorboard --logdir output/combat_ppo/tb_logs
 
 The full-run environment (`STS2RunEnv`) trains an agent on complete game runs, including combat, map navigation, card rewards, shop, rest sites, and events.
 
-### Basic Training
+### Basic Full-Run Training
 
 ```bash
 python scripts/train_full_run.py
@@ -108,7 +108,7 @@ python scripts/train_full_run.py \
 The `--act-count` flag controls episode length:
 
 | Value | Description | Recommended for |
-|-------|-------------|-----------------|
+| ----- | ----------- | ----------------- |
 | 1 | Act 1 only (Overgrowth) | Initial training |
 | 2 | Acts 1-2 | Intermediate |
 | 3 | Full game (Acts 1-3) | Final training |
@@ -136,6 +136,7 @@ python scripts/benchmark.py
 ```
 
 This runs 1,000 episodes with random actions and reports:
+
 - Episodes per second (~1,200)
 - Steps per second (~28,000)
 - Random-play win rate
@@ -161,7 +162,7 @@ python -m sts2_env.bridge.agent_runner \
 ### Agent Runner Options
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| ---- | ------- | ----------- |
 | `--model-path` | (required) | Path to trained MaskablePPO model (.zip) |
 | `--host` | 127.0.0.1 | Bridge server hostname |
 | `--port` | 9002 | Bridge server port |
@@ -175,11 +176,13 @@ python -m sts2_env.bridge.agent_runner \
 1. **Start the game.** Launch STS2 via Steam. Wait for the main menu. The mod will show "Running Modded" and start the TCP server on port 9002.
 
 2. **Wait for AutoSlayer.** The mod automatically creates an AutoSlayer instance and waits at the main menu. You should see log messages like:
-   ```
+
+   ```text
    [STS2Bridge] [RlAutoSlay] Main menu visible. Creating RL AutoSlayer...
    ```
 
 3. **Start the agent.** In a separate terminal:
+
    ```bash
    python -m sts2_env.bridge.agent_runner \
        --model-path output/combat_ppo/best_model/best_model.zip \
@@ -195,7 +198,8 @@ python -m sts2_env.bridge.agent_runner \
    - Handle shops, events, treasure, and boss relics through bridge option lists
 
 5. **Monitor output.** With `--verbose`, the agent logs every action:
-   ```
+
+   ```text
    COMBAT [HP:72/80 E:3] -> PLAY BASH (idx=4) -> NIBBIT (idx=0)
    COMBAT [HP:72/80 E:1] -> PLAY STRIKE_IRONCLAD (idx=2) -> NIBBIT (idx=0)
    COMBAT [HP:72/80 E:0] -> END_TURN (round 1)
@@ -206,7 +210,7 @@ python -m sts2_env.bridge.agent_runner \
 ### How the Agent Handles Different Phases
 
 | Phase | Strategy | Source |
-|-------|----------|--------|
+| ----- | -------- | ------ |
 | Combat | Trained MaskablePPO model | Model prediction |
 | Map navigation | Prefer elites when healthy; prefer rest/shop/treasure when low on HP | Heuristic (TODO: train) |
 | Card rewards | Prefer powers, then attacks, then skills; skip if deck > 30 | Heuristic (TODO: train) |
@@ -226,7 +230,7 @@ For a fully trained agent, use the full-run model instead of the combat-only mod
 Key metrics to watch:
 
 | Metric | What It Means |
-|--------|---------------|
+| ------ | ------------- |
 | `rollout/ep_rew_mean` | Average episode reward (should increase) |
 | `rollout/ep_len_mean` | Average episode length (shorter = faster wins or faster deaths) |
 | `train/loss` | Total PPO loss (should decrease then stabilize) |
@@ -237,7 +241,7 @@ Key metrics to watch:
 
 After training, the script prints:
 
-```
+```text
 --- Final Evaluation ---
 Episodes:    100
 Win rate:    92.0%
@@ -246,7 +250,7 @@ Avg reward:  0.847
 
 For the full-run agent:
 
-```
+```text
 Episodes:         100
 Win rate:         45.0%
 Avg reward:       0.123

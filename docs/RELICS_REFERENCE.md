@@ -19,6 +19,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 ## 1. Starter (10)
 
 ### BurningBlood
+
 - ID: BURNING_BLOOD
 - Rarity: Starter
 - Pool: ironclad
@@ -29,6 +30,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BlackBlood
+
 - ID: BLACK_BLOOD
 - Rarity: Starter
 - Pool: event (upgraded BurningBlood)
@@ -39,6 +41,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RingOfTheSnake
+
 - ID: RING_OF_THE_SNAKE
 - Rarity: Starter
 - Pool: silent
@@ -49,6 +52,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RingOfTheDrake
+
 - ID: RING_OF_THE_DRAKE
 - Rarity: Starter
 - Pool: event (upgraded RingOfTheSnake)
@@ -59,6 +63,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### CrackedCore
+
 - ID: CRACKED_CORE
 - Rarity: Starter
 - Pool: defect
@@ -69,6 +74,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### InfusedCore
+
 - ID: INFUSED_CORE
 - Rarity: Starter
 - Pool: event (upgraded CrackedCore)
@@ -79,6 +85,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BoundPhylactery
+
 - ID: BOUND_PHYLACTERY
 - Rarity: Starter
 - Pool: necrobinder
@@ -91,6 +98,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - SpawnsPets: true
 
 ### PhylacteryUnbound
+
 - ID: PHYLACTERY_UNBOUND
 - Rarity: Starter
 - Pool: event (upgraded BoundPhylactery)
@@ -103,6 +111,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - SpawnsPets: true
 
 ### DivineRight
+
 - ID: DIVINE_RIGHT
 - Rarity: Starter
 - Pool: regent
@@ -113,6 +122,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DivineDestiny
+
 - ID: DIVINE_DESTINY
 - Rarity: Starter
 - Pool: event (upgraded DivineRight)
@@ -127,6 +137,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 ## 2. Common
 
 ### AmethystAubergine
+
 - ID: AMETHYST_AUBERGINE
 - Rarity: Common
 - Pool: shared
@@ -137,6 +148,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Anchor
+
 - ID: ANCHOR
 - Rarity: Common
 - Pool: shared
@@ -147,6 +159,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BagOfPreparation
+
 - ID: BAG_OF_PREPARATION
 - Rarity: Common
 - Pool: shared
@@ -157,6 +170,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BloodVial
+
 - ID: BLOOD_VIAL
 - Rarity: Common
 - Pool: shared
@@ -167,6 +181,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BoneFlute
+
 - ID: BONE_FLUTE
 - Rarity: Common
 - Pool: necrobinder
@@ -177,6 +192,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BronzeScales
+
 - ID: BRONZE_SCALES
 - Rarity: Common
 - Pool: shared
@@ -187,6 +203,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### CentennialPuzzle
+
 - ID: CENTENNIAL_PUZZLE
 - Rarity: Common
 - Pool: shared
@@ -194,9 +211,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterDamageReceived, AfterCombatEnd]
 - Logic:
   - AfterDamageReceived: if owner takes unblocked damage and not used this combat, draw 3 cards
-- Internal State: _usedThisCombat (bool, reset on combat end)
+- Internal State: `_usedThisCombat` (bool, reset on combat end)
 
 ### DataDisk
+
 - ID: DATA_DISK
 - Rarity: Common
 - Pool: defect
@@ -207,6 +225,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FencingManual
+
 - ID: FENCING_MANUAL
 - Rarity: Common
 - Pool: regent
@@ -217,6 +236,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FestivePopper
+
 - ID: FESTIVE_POPPER
 - Rarity: Common
 - Pool: shared
@@ -227,6 +247,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Gorget
+
 - ID: GORGET
 - Rarity: Common
 - Pool: shared
@@ -237,6 +258,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### HappyFlower
+
 - ID: HAPPY_FLOWER
 - Rarity: Common
 - Pool: shared
@@ -244,10 +266,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - AfterSideTurnStart: increment turn counter; every 3 turns gain 1 energy
-- Internal State: _turnsSeen [SavedProperty], _isActivating
+- Internal State: `_turnsSeen` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes (TurnsSeen)
 
 ### JuzuBracelet
+
 - ID: JUZU_BRACELET
 - Rarity: Common
 - Pool: shared
@@ -258,6 +281,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Lantern
+
 - ID: LANTERN
 - Rarity: Common
 - Pool: shared
@@ -268,6 +292,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MealTicket
+
 - ID: MEAL_TICKET
 - Rarity: Common
 - Pool: shared
@@ -278,6 +303,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### OddlySmoothStone
+
 - ID: ODDLY_SMOOTH_STONE
 - Rarity: Common
 - Pool: shared
@@ -288,6 +314,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Pendulum
+
 - ID: PENDULUM
 - Rarity: Common
 - Pool: shared
@@ -298,6 +325,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Permafrost
+
 - ID: PERMAFROST
 - Rarity: Common
 - Pool: shared
@@ -305,9 +333,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterCardPlayed]
 - Logic:
   - AfterCardPlayed: if owner plays a Power card and not activated this combat, gain 6 block (unpowered)
-- Internal State: _activatedThisCombat (bool)
+- Internal State: `_activatedThisCombat` (bool)
 
 ### PotionBelt
+
 - ID: POTION_BELT
 - Rarity: Common
 - Pool: shared
@@ -318,6 +347,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RedSkull
+
 - ID: RED_SKULL
 - Rarity: Common
 - Pool: ironclad
@@ -325,9 +355,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterCombatEnd, AfterCurrentHpChanged]
 - Logic:
   - When HP <= 50% max HP: apply 3 Strength; when HP > 50%: remove 3 Strength
-- Internal State: _strengthApplied (bool)
+- Internal State: `_strengthApplied` (bool)
 
 ### RegalPillow
+
 - ID: REGAL_PILLOW
 - Rarity: Common
 - Pool: shared
@@ -338,6 +369,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SneckoSkull
+
 - ID: SNECKO_SKULL
 - Rarity: Common
 - Pool: silent
@@ -348,6 +380,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Strawberry
+
 - ID: STRAWBERRY
 - Rarity: Common
 - Pool: shared
@@ -358,6 +391,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### StrikeDummy
+
 - ID: STRIKE_DUMMY
 - Rarity: Common
 - Pool: shared
@@ -368,6 +402,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TinyMailbox
+
 - ID: TINY_MAILBOX
 - Rarity: Common
 - Pool: shared
@@ -378,6 +413,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Vajra
+
 - ID: VAJRA
 - Rarity: Common
 - Pool: shared
@@ -388,6 +424,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### VenerableTeaSet
+
 - ID: VENERABLE_TEA_SET
 - Rarity: Common
 - Pool: shared
@@ -396,10 +433,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - AfterRoomEntered: if rest site, set flag to gain energy next combat
   - AfterEnergyReset: if flag set, gain 2 energy and reset flag
-- Internal State: _gainEnergyInNextCombat [SavedProperty]
+- Internal State: `_gainEnergyInNextCombat` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### WarPaint
+
 - ID: WAR_PAINT
 - Rarity: Common
 - Pool: shared
@@ -410,6 +448,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Whetstone
+
 - ID: WHETSTONE
 - Rarity: Common
 - Pool: shared
@@ -420,6 +459,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BookOfFiveRings
+
 - ID: BOOK_OF_FIVE_RINGS
 - Rarity: Common
 - Pool: shared
@@ -427,7 +467,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [IsAllowed, AfterCardChangedPiles]
 - Logic:
   - AfterCardChangedPiles: when card added to deck, increment counter; every 5 cards added, heal 15
-- Internal State: _cardsAdded [SavedProperty], _isActivating
+- Internal State: `_cardsAdded` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ---
@@ -435,6 +475,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 ## 3. Uncommon
 
 ### Akabeko
+
 - ID: AKABEKO
 - Rarity: Uncommon
 - Pool: shared
@@ -445,6 +486,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BagOfMarbles
+
 - ID: BAG_OF_MARBLES
 - Rarity: Uncommon
 - Pool: shared
@@ -455,6 +497,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Bellows
+
 - ID: BELLOWS
 - Rarity: Uncommon
 - Pool: shared
@@ -465,6 +508,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BookRepairKnife
+
 - ID: BOOK_REPAIR_KNIFE
 - Rarity: Uncommon
 - Pool: necrobinder
@@ -475,6 +519,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BowlerHat
+
 - ID: BOWLER_HAT
 - Rarity: Uncommon
 - Pool: shared
@@ -482,9 +527,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [ShouldGainGold, AfterGoldGained]
 - Logic:
   - ShouldGainGold/AfterGoldGained: gain 20% bonus gold on each gold gain
-- Internal State: _pendingBonusGold, _isApplyingBonus
+- Internal State: `_pendingBonusGold`, `_isApplyingBonus`
 
 ### Candelabra
+
 - ID: CANDELABRA
 - Rarity: Uncommon
 - Pool: shared
@@ -495,6 +541,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### EternalFeather
+
 - ID: ETERNAL_FEATHER
 - Rarity: Uncommon
 - Pool: shared
@@ -505,6 +552,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FuneraryMask
+
 - ID: FUNERARY_MASK
 - Rarity: Uncommon
 - Pool: necrobinder
@@ -515,6 +563,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GalacticDust
+
 - ID: GALACTIC_DUST
 - Rarity: Uncommon
 - Pool: regent
@@ -522,10 +571,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterStarsSpent]
 - Logic:
   - AfterStarsSpent: track stars spent; every 10 stars, gain 10 block (unpowered)
-- Internal State: _starsSpent [SavedProperty], _isActivating
+- Internal State: `_starsSpent` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### GoldPlatedCables
+
 - ID: GOLD_PLATED_CABLES
 - Rarity: Uncommon
 - Pool: defect
@@ -536,6 +586,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GremlinHorn
+
 - ID: GREMLIN_HORN
 - Rarity: Uncommon
 - Pool: shared
@@ -546,6 +597,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### HornCleat
+
 - ID: HORN_CLEAT
 - Rarity: Uncommon
 - Pool: shared
@@ -556,6 +608,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### JossPaper
+
 - ID: JOSS_PAPER
 - Rarity: Uncommon
 - Pool: shared
@@ -563,10 +616,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardExhausted, AfterTurnEnd]
 - Logic:
   - AfterCardExhausted: count exhausted cards (ethereal counted separately at end of turn); every 5, draw 1
-- Internal State: _cardsExhausted [SavedProperty], _etherealCount, _isActivating
+- Internal State: `_cardsExhausted` [SavedProperty], `_etherealCount`, `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### Kusarigama
+
 - ID: KUSARIGAMA
 - Rarity: Uncommon
 - Pool: shared
@@ -574,9 +628,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCombatStart, AfterTurnEnd, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: count attacks this turn; every 3 attacks, deal 6 unpowered damage to random enemy
-- Internal State: _attacksPlayedThisTurn, _isActivating
+- Internal State: `_attacksPlayedThisTurn`, `_isActivating`
 
 ### LetterOpener
+
 - ID: LETTER_OPENER
 - Rarity: Uncommon
 - Pool: shared
@@ -584,9 +639,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: count skills this turn; every 3, deal 5 unpowered damage to all enemies
-- Internal State: _skillsPlayedThisTurn, _isActivating
+- Internal State: `_skillsPlayedThisTurn`, `_isActivating`
 
 ### LuckyFysh
+
 - ID: LUCKY_FYSH
 - Rarity: Uncommon
 - Pool: shared
@@ -597,6 +653,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MercuryHourglass
+
 - ID: MERCURY_HOURGLASS
 - Rarity: Uncommon
 - Pool: shared
@@ -607,6 +664,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MiniatureCannon
+
 - ID: MINIATURE_CANNON
 - Rarity: Uncommon
 - Pool: shared
@@ -617,6 +675,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Nunchaku
+
 - ID: NUNCHAKU
 - Rarity: Uncommon
 - Pool: shared
@@ -624,10 +683,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed]
 - Logic:
   - AfterCardPlayed: count attacks played; every 10, gain 1 energy
-- Internal State: _attacksPlayed [SavedProperty], _isActivating
+- Internal State: `_attacksPlayed` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### Orichalcum
+
 - ID: ORICHALCUM
 - Rarity: Uncommon
 - Pool: shared
@@ -635,9 +695,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeTurnEndVeryEarly, BeforeTurnEnd, BeforeSideTurnStart]
 - Logic:
   - BeforeTurnEnd: if owner has 0 block at end of turn, gain 6 block (unpowered)
-- Internal State: _shouldTrigger (bool)
+- Internal State: `_shouldTrigger` (bool)
 
 ### OrnamentalFan
+
 - ID: ORNAMENTAL_FAN
 - Rarity: Uncommon
 - Pool: shared
@@ -645,9 +706,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: count attacks this turn; every 3, gain 4 block (unpowered)
-- Internal State: _attacksPlayedThisTurn, _isActivating
+- Internal State: `_attacksPlayedThisTurn`, `_isActivating`
 
 ### Pantograph
+
 - ID: PANTOGRAPH
 - Rarity: Uncommon
 - Pool: shared
@@ -658,6 +720,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaperPhrog
+
 - ID: PAPER_PHROG
 - Rarity: Uncommon
 - Pool: ironclad
@@ -668,6 +731,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ParryingShield
+
 - ID: PARRYING_SHIELD
 - Rarity: Uncommon
 - Pool: shared
@@ -678,6 +742,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Pear
+
 - ID: PEAR
 - Rarity: Uncommon
 - Pool: shared
@@ -688,6 +753,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PenNib
+
 - ID: PEN_NIB
 - Rarity: Uncommon
 - Pool: shared
@@ -695,10 +761,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCardPlayed, AfterCardPlayed, ModifyDamageMultiplicative]
 - Logic:
   - Every 10th attack played: double damage of that attack
-- Internal State: _attacksPlayed [SavedProperty], _attackToDouble, _isActivating
+- Internal State: `_attacksPlayed` [SavedProperty], `_attackToDouble`, `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### PetrifiedToad
+
 - ID: PETRIFIED_TOAD
 - Rarity: Uncommon
 - Pool: shared
@@ -709,6 +776,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Planisphere
+
 - ID: PLANISPHERE
 - Rarity: Uncommon
 - Pool: shared
@@ -719,6 +787,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RedMask
+
 - ID: RED_MASK
 - Rarity: Uncommon
 - Pool: shared
@@ -729,6 +798,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Regalite
+
 - ID: REGALITE
 - Rarity: Uncommon
 - Pool: regent
@@ -739,6 +809,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ReptileTrinket
+
 - ID: REPTILE_TRINKET
 - Rarity: Uncommon
 - Pool: shared
@@ -749,6 +820,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RippleBasin
+
 - ID: RIPPLE_BASIN
 - Rarity: Uncommon
 - Pool: shared
@@ -759,6 +831,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none (checks combat history)
 
 ### SelfFormingClay
+
 - ID: SELF_FORMING_CLAY
 - Rarity: Uncommon
 - Pool: ironclad
@@ -769,6 +842,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SparklingRouge
+
 - ID: SPARKLING_ROUGE
 - Rarity: Uncommon
 - Pool: shared
@@ -779,6 +853,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### StoneCracker
+
 - ID: STONE_CRACKER
 - Rarity: Uncommon
 - Pool: shared
@@ -789,6 +864,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TuningFork
+
 - ID: TUNING_FORK
 - Rarity: Uncommon
 - Pool: shared
@@ -796,10 +872,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed]
 - Logic:
   - AfterCardPlayed: count skills played; every 10, gain 7 block (unpowered)
-- Internal State: _skillsPlayed [SavedProperty], _isActivating
+- Internal State: `_skillsPlayed` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### Tingsha
+
 - ID: TINGSHA
 - Rarity: Uncommon
 - Pool: silent
@@ -810,6 +887,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Vambrace
+
 - ID: VAMBRACE
 - Rarity: Uncommon
 - Pool: shared
@@ -817,13 +895,14 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCombatStart, ModifyBlockMultiplicative, AfterModifyingBlockAmount, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - First card that grants block in combat: double that block (once per combat)
-- Internal State: _triggeringCard, _blockGainedThisCombat
+- Internal State: `_triggeringCard`, `_blockGainedThisCombat`
 
 ---
 
 ## 4. Rare
 
 ### ArtOfWar
+
 - ID: ART_OF_WAR
 - Rarity: Rare
 - Pool: shared
@@ -831,9 +910,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed, AfterTurnEnd, AfterEnergyReset, AfterCombatEnd]
 - Logic:
   - AfterEnergyReset: if no attacks played last turn (after round 1), gain 1 energy
-- Internal State: _anyAttacksPlayedLastTurn, _anyAttacksPlayedThisTurn
+- Internal State: `_anyAttacksPlayedLastTurn`, `_anyAttacksPlayedThisTurn`
 
 ### BeatingRemnant
+
 - ID: BEATING_REMNANT
 - Rarity: Rare
 - Pool: shared
@@ -841,9 +921,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [ModifyHpLostAfterOsty, AfterDamageReceived, BeforeSideTurnStart]
 - Logic:
   - ModifyHpLostAfterOsty: cap damage taken per turn to 20
-- Internal State: _damageReceivedThisTurn (decimal, resets each player turn)
+- Internal State: `_damageReceivedThisTurn` (decimal, resets each player turn)
 
 ### BigHat
+
 - ID: BIG_HAT
 - Rarity: Rare
 - Pool: necrobinder
@@ -854,6 +935,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Bookmark
+
 - ID: BOOKMARK
 - Rarity: Rare
 - Pool: necrobinder
@@ -864,6 +946,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### CaptainsWheel
+
 - ID: CAPTAINS_WHEEL
 - Rarity: Rare
 - Pool: shared
@@ -874,6 +957,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Chandelier
+
 - ID: CHANDELIER
 - Rarity: Rare
 - Pool: shared
@@ -884,6 +968,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### CharonsAshes
+
 - ID: CHARONS_ASHES
 - Rarity: Rare
 - Pool: ironclad
@@ -894,6 +979,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DemonTongue
+
 - ID: DEMON_TONGUE
 - Rarity: Rare
 - Pool: ironclad
@@ -901,9 +987,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterDamageReceived, BeforeSideTurnStart]
 - Logic:
   - AfterDamageReceived: first time owner takes unblocked damage on their turn, heal that amount
-- Internal State: _triggeredThisTurn (bool, resets each turn)
+- Internal State: `_triggeredThisTurn` (bool, resets each turn)
 
 ### EmotionChip
+
 - ID: EMOTION_CHIP
 - Rarity: Rare
 - Pool: defect
@@ -914,6 +1001,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none (checks combat history)
 
 ### FrozenEgg
+
 - ID: FROZEN_EGG
 - Rarity: Rare
 - Pool: shared
@@ -924,6 +1012,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GamblingChip
+
 - ID: GAMBLING_CHIP
 - Rarity: Rare
 - Pool: shared
@@ -934,6 +1023,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GamePiece
+
 - ID: GAME_PIECE
 - Rarity: Rare
 - Pool: shared
@@ -944,6 +1034,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Girya
+
 - ID: GIRYA
 - Rarity: Rare
 - Pool: shared
@@ -952,10 +1043,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - AfterRoomEntered: if combat room, apply Strength = TimesLifted
   - TryModifyRestSiteOptions: add Lift option (max 3 times)
-- Internal State: _timesLifted [SavedProperty]
+- Internal State: `_timesLifted` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### HelicalDart
+
 - ID: HELICAL_DART
 - Rarity: Rare
 - Pool: silent
@@ -966,6 +1058,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### IceCream
+
 - ID: ICE_CREAM
 - Rarity: Rare
 - Pool: shared
@@ -976,6 +1069,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### IntimidatingHelmet
+
 - ID: INTIMIDATING_HELMET
 - Rarity: Rare
 - Pool: shared
@@ -986,6 +1080,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### IvoryTile
+
 - ID: IVORY_TILE
 - Rarity: Rare
 - Pool: necrobinder
@@ -996,6 +1091,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Kunai
+
 - ID: KUNAI
 - Rarity: Rare
 - Pool: shared
@@ -1003,9 +1099,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: count attacks this turn; every 3, gain 1 Dexterity
-- Internal State: _attacksPlayedThisTurn, _isActivating
+- Internal State: `_attacksPlayedThisTurn`, `_isActivating`
 
 ### LastingCandy
+
 - ID: LASTING_CANDY
 - Rarity: Rare
 - Pool: shared
@@ -1013,10 +1110,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [TryModifyCardRewardOptions, AfterCombatEnd]
 - Logic:
   - Every 2nd combat: add an extra Power card to card reward options
-- Internal State: _combatsSeen [SavedProperty], _isActivating
+- Internal State: `_combatsSeen` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### LizardTail
+
 - ID: LIZARD_TAIL
 - Rarity: Rare
 - Pool: shared
@@ -1025,10 +1123,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - ShouldDieLate: prevent owner death once
   - AfterPreventingDeath: heal 50% of max HP
-- Internal State: _wasUsed [SavedProperty]
+- Internal State: `_wasUsed` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### LunarPastry
+
 - ID: LUNAR_PASTRY
 - Rarity: Rare
 - Pool: regent
@@ -1039,6 +1138,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Mango
+
 - ID: MANGO
 - Rarity: Rare
 - Pool: shared
@@ -1049,6 +1149,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MeatOnTheBone
+
 - ID: MEAT_ON_THE_BONE
 - Rarity: Rare
 - Pool: shared
@@ -1059,6 +1160,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none (checks HP dynamically)
 
 ### Metronome
+
 - ID: METRONOME
 - Rarity: Rare
 - Pool: defect
@@ -1066,9 +1168,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterOrbChanneled, AfterCombatEnd]
 - Logic:
   - AfterOrbChanneled: count orbs channeled; at 7, deal 30 unpowered damage to all enemies
-- Internal State: _orbsChanneled, _isActivating
+- Internal State: `_orbsChanneled`, `_isActivating`
 
 ### MiniRegent
+
 - ID: MINI_REGENT
 - Rarity: Rare
 - Pool: regent
@@ -1076,9 +1179,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterStarsSpent, BeforeSideTurnStart, AfterCombatEnd]
 - Logic:
   - AfterStarsSpent: first time stars spent each turn, gain 1 Strength
-- Internal State: _usedThisTurn (bool)
+- Internal State: `_usedThisTurn` (bool)
 
 ### MoltenEgg
+
 - ID: MOLTEN_EGG
 - Rarity: Rare
 - Pool: shared
@@ -1089,6 +1193,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MummifiedHand
+
 - ID: MUMMIFIED_HAND
 - Rarity: Rare
 - Pool: shared
@@ -1099,6 +1204,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### OldCoin
+
 - ID: OLD_COIN
 - Rarity: Rare
 - Pool: shared
@@ -1109,6 +1215,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### OrangeDough
+
 - ID: ORANGE_DOUGH
 - Rarity: Rare
 - Pool: regent
@@ -1119,6 +1226,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Pocketwatch
+
 - ID: POCKETWATCH
 - Rarity: Rare
 - Pool: shared
@@ -1126,9 +1234,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed, ModifyHandDraw, BeforeSideTurnStart, AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - ModifyHandDraw: if <= 3 cards played last turn, draw +3 cards this turn
-- Internal State: _cardsPlayedThisTurn, _cardsPlayedLastTurn
+- Internal State: `_cardsPlayedThisTurn`, `_cardsPlayedLastTurn`
 
 ### PowerCell
+
 - ID: POWER_CELL
 - Rarity: Rare
 - Pool: defect
@@ -1139,6 +1248,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PrayerWheel
+
 - ID: PRAYER_WHEEL
 - Rarity: Rare
 - Pool: shared
@@ -1149,6 +1259,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RainbowRing
+
 - ID: RAINBOW_RING
 - Rarity: Rare
 - Pool: shared
@@ -1156,9 +1267,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: if played Attack + Skill + Power this turn (once per turn), gain 1 Strength + 1 Dexterity
-- Internal State: _attacksPlayedThisTurn, _skillsPlayedThisTurn, _powersPlayedThisTurn, _activationCountThisTurn
+- Internal State: `_attacksPlayedThisTurn`, `_skillsPlayedThisTurn`, `_powersPlayedThisTurn`, `_activationCountThisTurn`
 
 ### RazorTooth
+
 - ID: RAZOR_TOOTH
 - Rarity: Rare
 - Pool: shared/event
@@ -1169,6 +1281,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Shovel
+
 - ID: SHOVEL
 - Rarity: Rare
 - Pool: shared
@@ -1179,6 +1292,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Shuriken
+
 - ID: SHURIKEN
 - Rarity: Rare
 - Pool: shared
@@ -1186,9 +1300,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - AfterCardPlayed: count attacks this turn; every 3, gain 1 Strength
-- Internal State: _attacksPlayedThisTurn, _isActivating
+- Internal State: `_attacksPlayedThisTurn`, `_isActivating`
 
 ### StoneCalendar
+
 - ID: STONE_CALENDAR
 - Rarity: Rare
 - Pool: shared
@@ -1196,9 +1311,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterSideTurnStart, BeforeTurnEnd, AfterCombatEnd, AfterRoomEntered]
 - Logic:
   - BeforeTurnEnd: on turn 7, deal 52 unpowered damage to all enemies
-- Internal State: _isActivating
+- Internal State: `_isActivating`
 
 ### SturdyClamp
+
 - ID: STURDY_CLAMP
 - Rarity: Rare
 - Pool: shared
@@ -1209,6 +1325,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TheCourier
+
 - ID: THE_COURIER
 - Rarity: Rare
 - Pool: shared
@@ -1220,6 +1337,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ToughBandages
+
 - ID: TOUGH_BANDAGES
 - Rarity: Rare
 - Pool: silent
@@ -1230,6 +1348,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ToxicEgg
+
 - ID: TOXIC_EGG
 - Rarity: Rare
 - Pool: shared
@@ -1240,6 +1359,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TungstenRod
+
 - ID: TUNGSTEN_ROD
 - Rarity: Rare
 - Pool: shared
@@ -1250,6 +1370,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### UnceasingTop
+
 - ID: UNCEASING_TOP
 - Rarity: Rare
 - Pool: shared
@@ -1260,6 +1381,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### UnsettlingLamp
+
 - ID: UNSETTLING_LAMP
 - Rarity: Rare
 - Pool: shared
@@ -1267,9 +1389,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCombatStart, BeforePowerAmountChanged, ModifyPowerAmountGiven, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - First card that applies debuffs to enemies: double all debuff amounts from that card (once per combat)
-- Internal State: _triggeringCard, _doubledPowers (list), _isFinishedTriggering
+- Internal State: `_triggeringCard`, `_doubledPowers` (list), `_isFinishedTriggering`
 
 ### RuinedHelmet
+
 - ID: RUINED_HELMET
 - Rarity: Rare
 - Pool: ironclad
@@ -1277,9 +1400,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [TryModifyPowerAmountReceived, AfterModifyingPowerAmountReceived, AfterCombatEnd]
 - Logic:
   - TryModifyPowerAmountReceived: first positive Strength gain in combat is doubled
-- Internal State: _usedThisCombat (bool)
+- Internal State: `_usedThisCombat` (bool)
 
 ### VexingPuzzlebox
+
 - ID: VEXING_PUZZLEBOX
 - Rarity: Rare
 - Pool: shared
@@ -1290,6 +1414,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WhiteBeastStatue
+
 - ID: WHITE_BEAST_STATUE
 - Rarity: Rare
 - Pool: shared
@@ -1300,6 +1425,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WhiteStar
+
 - ID: WHITE_STAR
 - Rarity: Rare
 - Pool: shared
@@ -1310,6 +1436,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaperKrane
+
 - ID: PAPER_KRANE
 - Rarity: Rare
 - Pool: silent
@@ -1324,6 +1451,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 ## 5. Shop
 
 ### BeltBuckle
+
 - ID: BELT_BUCKLE
 - Rarity: Shop
 - Pool: shared
@@ -1331,9 +1459,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, BeforeCombatStart, AfterCombatEnd, AfterPotionProcured, AfterPotionDiscarded, AfterPotionUsed, AfterCombatVictory]
 - Logic:
   - When owner has no potions: gain 2 Dexterity; when potion procured: lose 2 Dexterity
-- Internal State: _dexterityApplied (bool)
+- Internal State: `_dexterityApplied` (bool)
 
 ### Bread
+
 - ID: BREAD
 - Rarity: Shop
 - Pool: shared
@@ -1345,6 +1474,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Brimstone
+
 - ID: BRIMSTONE
 - Rarity: Shop
 - Pool: ironclad
@@ -1355,6 +1485,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BurningSticks
+
 - ID: BURNING_STICKS
 - Rarity: Shop
 - Pool: shared
@@ -1362,9 +1493,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterCardExhausted, AfterCombatEnd]
 - Logic:
   - AfterCardExhausted: first Skill exhausted per combat: create clone of it in hand
-- Internal State: _wasUsedThisCombat (bool)
+- Internal State: `_wasUsedThisCombat` (bool)
 
 ### Cauldron
+
 - ID: CAULDRON
 - Rarity: Shop
 - Pool: shared
@@ -1375,6 +1507,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ChemicalX
+
 - ID: CHEMICAL_X
 - Rarity: Shop
 - Pool: shared
@@ -1385,6 +1518,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DingyRug
+
 - ID: DINGY_RUG
 - Rarity: Shop
 - Pool: shared
@@ -1395,6 +1529,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DollysMirror
+
 - ID: DOLLYS_MIRROR
 - Rarity: Shop
 - Pool: shared
@@ -1405,6 +1540,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DragonFruit
+
 - ID: DRAGON_FRUIT
 - Rarity: Shop
 - Pool: shared
@@ -1415,6 +1551,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GhostSeed
+
 - ID: GHOST_SEED
 - Rarity: Shop
 - Pool: shared
@@ -1425,6 +1562,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GnarledHammer
+
 - ID: GNARLED_HAMMER
 - Rarity: Shop
 - Pool: shared
@@ -1435,6 +1573,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Kifuda
+
 - ID: KIFUDA
 - Rarity: Shop
 - Pool: shared
@@ -1445,6 +1584,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LavaLamp
+
 - ID: LAVA_LAMP
 - Rarity: Shop
 - Pool: shared
@@ -1452,10 +1592,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterDamageReceived, TryModifyCardRewardOptionsLate]
 - Logic:
   - TryModifyCardRewardOptionsLate: if no damage taken this combat, upgrade all card rewards
-- Internal State: _tookDamageThisCombat [SavedProperty]
+- Internal State: `_tookDamageThisCombat` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### LeesWaffle
+
 - ID: LEES_WAFFLE
 - Rarity: Shop
 - Pool: shared
@@ -1466,6 +1607,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MembershipCard
+
 - ID: MEMBERSHIP_CARD
 - Rarity: Shop
 - Pool: shared
@@ -1476,6 +1618,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MiniatureTent
+
 - ID: MINIATURE_TENT
 - Rarity: Shop
 - Pool: shared
@@ -1486,6 +1629,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MysticLighter
+
 - ID: MYSTIC_LIGHTER
 - Rarity: Shop
 - Pool: shared
@@ -1496,6 +1640,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### NinjaScroll
+
 - ID: NINJA_SCROLL
 - Rarity: Shop
 - Pool: silent
@@ -1506,6 +1651,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Orrery
+
 - ID: ORRERY
 - Rarity: Shop
 - Pool: shared
@@ -1516,6 +1662,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PunchDagger
+
 - ID: PUNCH_DAGGER
 - Rarity: Shop
 - Pool: shared
@@ -1526,6 +1673,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RingingTriangle
+
 - ID: RINGING_TRIANGLE
 - Rarity: Shop
 - Pool: shared
@@ -1536,6 +1684,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RoyalStamp
+
 - ID: ROYAL_STAMP
 - Rarity: Shop
 - Pool: shared
@@ -1546,6 +1695,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RunicCapacitor
+
 - ID: RUNIC_CAPACITOR
 - Rarity: Shop
 - Pool: defect
@@ -1556,6 +1706,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ScreamingFlagon
+
 - ID: SCREAMING_FLAGON
 - Rarity: Shop
 - Pool: shared
@@ -1566,6 +1717,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SlingOfCourage
+
 - ID: SLING_OF_COURAGE
 - Rarity: Shop
 - Pool: shared
@@ -1576,6 +1728,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TheAbacus
+
 - ID: THE_ABACUS
 - Rarity: Shop
 - Pool: shared
@@ -1586,6 +1739,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Toolbox
+
 - ID: TOOLBOX
 - Rarity: Shop
 - Pool: shared
@@ -1596,6 +1750,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### UndyingSigil
+
 - ID: UNDYING_SIGIL
 - Rarity: Shop
 - Pool: necrobinder
@@ -1606,6 +1761,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### VitruvianMinion
+
 - ID: VITRUVIAN_MINION
 - Rarity: Shop
 - Pool: regent
@@ -1616,6 +1772,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WingCharm
+
 - ID: WING_CHARM
 - Rarity: Shop
 - Pool: shared
@@ -1630,6 +1787,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 ## 6. Event
 
 ### AlchemicalCoffer
+
 - ID: ALCHEMICAL_COFFER
 - Rarity: Ancient
 - Pool: event
@@ -1640,6 +1798,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ArcaneScroll
+
 - ID: ARCANE_SCROLL
 - Rarity: Ancient
 - Pool: event
@@ -1650,6 +1809,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ArchaicTooth
+
 - ID: ARCHAIC_TOOTH
 - Rarity: Ancient
 - Pool: event
@@ -1657,10 +1817,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained]
 - Logic:
   - AfterObtained: transform starter card (Bash->Break, Neutralize->Suppress, etc.) into ancient version
-- Internal State: _serializableStarterCard [SavedProperty], _serializableAncientCard [SavedProperty]
+- Internal State: `_serializableStarterCard` [SavedProperty], `_serializableAncientCard` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### Astrolabe
+
 - ID: ASTROLABE
 - Rarity: Ancient
 - Pool: event
@@ -1671,6 +1832,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BeautifulBracelet
+
 - ID: BEAUTIFUL_BRACELET
 - Rarity: Ancient
 - Pool: event
@@ -1681,6 +1843,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BigMushroom
+
 - ID: BIG_MUSHROOM
 - Rarity: Event
 - Pool: event
@@ -1692,6 +1855,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BiiigHug
+
 - ID: BIIIG_HUG
 - Rarity: Ancient
 - Pool: event
@@ -1703,6 +1867,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BingBong
+
 - ID: BING_BONG
 - Rarity: Event
 - Pool: event
@@ -1710,9 +1875,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardChangedPiles]
 - Logic:
   - AfterCardChangedPiles: when card added to deck (from no source), duplicate it to bottom of deck
-- Internal State: _cardsToSkip (HashSet, prevents infinite loop)
+- Internal State: `_cardsToSkip` (HashSet, prevents infinite loop)
 
 ### BlackStar
+
 - ID: BLACK_STAR
 - Rarity: Ancient
 - Pool: event
@@ -1723,6 +1889,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BlessedAntler
+
 - ID: BLESSED_ANTLER
 - Rarity: Ancient
 - Pool: event
@@ -1734,6 +1901,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BloodSoakedRose
+
 - ID: BLOOD_SOAKED_ROSE
 - Rarity: Ancient
 - Pool: event
@@ -1745,6 +1913,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BoneTea
+
 - ID: BONE_TEA
 - Rarity: Event
 - Pool: event
@@ -1752,10 +1921,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterSideTurnStart]
 - Logic:
   - AfterSideTurnStart: for 1 combat, upgrade all cards in hand on round 1
-- Internal State: _combatsLeft [SavedProperty]
+- Internal State: `_combatsLeft` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### BoomingConch
+
 - ID: BOOMING_CONCH
 - Rarity: Ancient
 - Pool: event
@@ -1766,6 +1936,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### BrilliantScarf
+
 - ID: BRILLIANT_SCARF
 - Rarity: Ancient
 - Pool: event
@@ -1773,9 +1944,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [TryModifyEnergyCostInCombat, TryModifyStarCost, BeforeSideTurnStart, AfterCardPlayed, AfterCombatEnd]
 - Logic:
   - 5th card played each turn costs 0 energy/stars
-- Internal State: _cardsPlayedThisTurn (int)
+- Internal State: `_cardsPlayedThisTurn` (int)
 
 ### Byrdpip
+
 - ID: BYRDPIP
 - Rarity: Event
 - Pool: event
@@ -1783,11 +1955,12 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, BeforeCombatStart]
 - Logic:
   - AfterObtained: assign random skin, transform ByrdonisEgg cards to ByrdSwoop, summon Byrdpip pet
-- Internal State: _skin [SavedProperty]
+- Internal State: `_skin` [SavedProperty]
 - Uses [SavedProperty]: yes
 - AddsPet/SpawnsPets: true
 
 ### CallingBell
+
 - ID: CALLING_BELL
 - Rarity: Ancient
 - Pool: event
@@ -1798,6 +1971,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ChoicesParadox
+
 - ID: CHOICES_PARADOX
 - Rarity: Ancient
 - Pool: event
@@ -1808,6 +1982,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ChosenCheese
+
 - ID: CHOSEN_CHEESE
 - Rarity: Event
 - Pool: event
@@ -1818,6 +1993,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Claws
+
 - ID: CLAWS
 - Rarity: Ancient
 - Pool: event
@@ -1828,6 +2004,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Crossbow
+
 - ID: CROSSBOW
 - Rarity: Ancient
 - Pool: event
@@ -1838,6 +2015,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### CursedPearl
+
 - ID: CURSED_PEARL
 - Rarity: Ancient
 - Pool: event
@@ -1848,6 +2026,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DarkstonePeriapt
+
 - ID: DARKSTONE_PERIAPT
 - Rarity: Event
 - Pool: event
@@ -1858,6 +2037,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DaughterOfTheWind
+
 - ID: DAUGHTER_OF_THE_WIND
 - Rarity: Event
 - Pool: event
@@ -1868,6 +2048,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DelicateFrond
+
 - ID: DELICATE_FROND
 - Rarity: Ancient
 - Pool: event
@@ -1878,6 +2059,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DiamondDiadem
+
 - ID: DIAMOND_DIADEM
 - Rarity: Ancient
 - Pool: event
@@ -1885,9 +2067,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed, BeforeTurnEnd, AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - BeforeTurnEnd: if played <= 2 cards this turn, gain DiamondDiademPower (stacking buff)
-- Internal State: _cardsPlayedThisTurn
+- Internal State: `_cardsPlayedThisTurn`
 
 ### DistinguishedCape
+
 - ID: DISTINGUISHED_CAPE
 - Rarity: Ancient
 - Pool: event
@@ -1898,6 +2081,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DreamCatcher
+
 - ID: DREAM_CATCHER
 - Rarity: Event
 - Pool: event
@@ -1908,6 +2092,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Driftwood
+
 - ID: DRIFTWOOD
 - Rarity: Ancient
 - Pool: event
@@ -1918,6 +2103,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### DustyTome
+
 - ID: DUSTY_TOME
 - Rarity: Ancient
 - Pool: event
@@ -1925,10 +2111,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained]
 - Logic:
   - AfterObtained: add 1 random Ancient-rarity card (upgraded) to deck
-- Internal State: _ancientCard [SavedProperty]
+- Internal State: `_ancientCard` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### Ectoplasm
+
 - ID: ECTOPLASM
 - Rarity: Ancient
 - Pool: event
@@ -1940,6 +2127,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ElectricShrymp
+
 - ID: ELECTRIC_SHRYMP
 - Rarity: Ancient
 - Pool: event
@@ -1950,6 +2138,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### EmberTea
+
 - ID: EMBER_TEA
 - Rarity: Event
 - Pool: event
@@ -1957,10 +2146,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered]
 - Logic:
   - AfterRoomEntered: for 5 combats, gain 2 Strength at start
-- Internal State: _combatsLeft [SavedProperty]
+- Internal State: `_combatsLeft` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### EmptyCage
+
 - ID: EMPTY_CAGE
 - Rarity: Ancient
 - Pool: event
@@ -1971,6 +2161,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FakeAnchor
+
 - ID: FAKE_ANCHOR
 - Rarity: Event
 - Pool: event
@@ -1982,6 +2173,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - MerchantCost: 50
 
 ### FakeBloodVial
+
 - ID: FAKE_BLOOD_VIAL
 - Rarity: Event
 - Pool: event
@@ -1993,6 +2185,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - MerchantCost: 50
 
 ### FakeHappyFlower
+
 - ID: FAKE_HAPPY_FLOWER
 - Rarity: Event
 - Pool: event
@@ -2000,11 +2193,12 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - AfterSideTurnStart: every 5 turns, gain 1 energy
-- Internal State: _turnsSeen [SavedProperty], _isActivating
+- Internal State: `_turnsSeen` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 - MerchantCost: 50
 
 ### FakeLeesWaffle
+
 - ID: FAKE_LEES_WAFFLE
 - Rarity: Event
 - Pool: event
@@ -2016,6 +2210,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - MerchantCost: 50
 
 ### FakeMango
+
 - ID: FAKE_MANGO
 - Rarity: Event
 - Pool: event
@@ -2027,6 +2222,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - MerchantCost: 50
 
 ### FakeMerchantsRug
+
 - ID: FAKE_MERCHANTS_RUG
 - Rarity: Event
 - Pool: event
@@ -2036,6 +2232,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FakeOrichalcum
+
 - ID: FAKE_ORICHALCUM
 - Rarity: Event
 - Pool: event
@@ -2043,10 +2240,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeTurnEndVeryEarly, BeforeTurnEnd, BeforeSideTurnStart]
 - Logic:
   - BeforeTurnEnd: if 0 block at end of turn, gain 3 block (unpowered)
-- Internal State: _shouldTrigger (bool)
+- Internal State: `_shouldTrigger` (bool)
 - MerchantCost: 50
 
 ### FakeSneckoEye
+
 - ID: FAKE_SNECKO_EYE
 - Rarity: Event
 - Pool: event
@@ -2054,10 +2252,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, BeforeCombatStart]
 - Logic:
   - Applies Confused power (randomizes card costs)
-- Internal State: _testEnergyCostOverride
+- Internal State: `_testEnergyCostOverride`
 - MerchantCost: 50
 
 ### FakeStrikeDummy
+
 - ID: FAKE_STRIKE_DUMMY
 - Rarity: Event
 - Pool: event
@@ -2069,6 +2268,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - MerchantCost: 50
 
 ### FakeVenerableTeaSet
+
 - ID: FAKE_VENERABLE_TEA_SET
 - Rarity: Event
 - Pool: event
@@ -2076,11 +2276,12 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, AfterEnergyReset]
 - Logic:
   - After rest site, gain 1 energy next combat
-- Internal State: _gainEnergyInNextCombat [SavedProperty]
+- Internal State: `_gainEnergyInNextCombat` [SavedProperty]
 - Uses [SavedProperty]: yes
 - MerchantCost: 50
 
 ### Fiddle
+
 - ID: FIDDLE
 - Rarity: Ancient
 - Pool: event
@@ -2092,6 +2293,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ForgottenSoul
+
 - ID: FORGOTTEN_SOUL
 - Rarity: Event
 - Pool: event
@@ -2102,6 +2304,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FragrantMushroom
+
 - ID: FRAGRANT_MUSHROOM
 - Rarity: Event
 - Pool: event
@@ -2112,6 +2315,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FresnelLens
+
 - ID: FRESNEL_LENS
 - Rarity: Event
 - Pool: event
@@ -2122,6 +2326,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### FurCoat
+
 - ID: FUR_COAT
 - Rarity: Ancient
 - Pool: event
@@ -2133,6 +2338,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Uses [SavedProperty]: yes
 
 ### GlassEye
+
 - ID: GLASS_EYE
 - Rarity: Ancient
 - Pool: event
@@ -2143,6 +2349,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Glitter
+
 - ID: GLITTER
 - Rarity: Ancient
 - Pool: event
@@ -2153,6 +2360,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### GoldenCompass
+
 - ID: GOLDEN_COMPASS
 - Rarity: Ancient
 - Pool: event
@@ -2160,10 +2368,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, ModifyGeneratedMap, ModifyUnknownMapPointRoomTypes]
 - Logic:
   - Replaces current act map with GoldenPathActMap (all events)
-- Internal State: _goldenPathAct [SavedProperty]
+- Internal State: `_goldenPathAct` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### GoldenPearl
+
 - ID: GOLDEN_PEARL
 - Rarity: Ancient
 - Pool: event
@@ -2174,6 +2383,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### HandDrill
+
 - ID: HAND_DRILL
 - Rarity: Event
 - Pool: event
@@ -2184,6 +2394,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### HistoryCourse
+
 - ID: HISTORY_COURSE
 - Rarity: Event
 - Pool: event
@@ -2194,6 +2405,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none (checks combat history)
 
 ### IronClub
+
 - ID: IRON_CLUB
 - Rarity: Ancient
 - Pool: event
@@ -2201,10 +2413,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCardPlayed]
 - Logic:
   - AfterCardPlayed: every 4 cards played (persistent across combats), draw 1 card
-- Internal State: _cardsPlayed [SavedProperty], _isActivating
+- Internal State: `_cardsPlayed` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### JeweledMask
+
 - ID: JEWELED_MASK
 - Rarity: Ancient
 - Pool: event
@@ -2215,6 +2428,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### JewelryBox
+
 - ID: JEWELRY_BOX
 - Rarity: Ancient
 - Pool: event
@@ -2225,6 +2439,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LargeCapsule
+
 - ID: LARGE_CAPSULE
 - Rarity: Ancient
 - Pool: event
@@ -2235,6 +2450,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LavaRock
+
 - ID: LAVA_ROCK
 - Rarity: Ancient
 - Pool: event
@@ -2242,10 +2458,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [TryModifyRewards]
 - Logic:
   - TryModifyRewards: add 2 relic rewards after Act 1 boss (once only)
-- Internal State: _hasTriggered [SavedProperty]
+- Internal State: `_hasTriggered` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### LeadPaperweight
+
 - ID: LEAD_PAPERWEIGHT
 - Rarity: Ancient
 - Pool: event
@@ -2256,6 +2473,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LeafyPoultice
+
 - ID: LEAFY_POULTICE
 - Rarity: Ancient
 - Pool: event
@@ -2266,6 +2484,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LoomingFruit
+
 - ID: LOOMING_FRUIT
 - Rarity: Ancient
 - Pool: event
@@ -2276,6 +2495,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LordsParasol
+
 - ID: LORDS_PARASOL
 - Rarity: Ancient
 - Pool: event
@@ -2286,6 +2506,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LostCoffer
+
 - ID: LOST_COFFER
 - Rarity: Ancient
 - Pool: event
@@ -2296,6 +2517,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### LostWisp
+
 - ID: LOST_WISP
 - Rarity: Event
 - Pool: event
@@ -2306,6 +2528,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MassiveScroll
+
 - ID: MASSIVE_SCROLL
 - Rarity: Ancient
 - Pool: event
@@ -2316,6 +2539,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MawBank
+
 - ID: MAW_BANK
 - Rarity: Event
 - Pool: event
@@ -2324,10 +2548,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - AfterRoomEntered: gain 12 gold entering each room (until something is purchased)
   - AfterItemPurchased: disable relic permanently after first purchase
-- Internal State: _hasItemBeenBought [SavedProperty]
+- Internal State: `_hasItemBeenBought` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### MeatCleaver
+
 - ID: MEAT_CLEAVER
 - Rarity: Ancient
 - Pool: event
@@ -2338,6 +2563,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MrStruggles
+
 - ID: MR_STRUGGLES
 - Rarity: Event
 - Pool: event
@@ -2348,6 +2574,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### MusicBox
+
 - ID: MUSIC_BOX
 - Rarity: Ancient
 - Pool: event
@@ -2355,9 +2582,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCardPlayed, AfterCardPlayed, BeforeSideTurnStart, AfterCombatEnd]
 - Logic:
   - First Attack played each turn: create Ethereal clone of it in hand
-- Internal State: _wasUsedThisTurn, _cardBeingPlayed
+- Internal State: `_wasUsedThisTurn`, `_cardBeingPlayed`
 
 ### NeowsTorment
+
 - ID: NEOWS_TORMENT
 - Rarity: Ancient
 - Pool: event
@@ -2368,6 +2596,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### NewLeaf
+
 - ID: NEW_LEAF
 - Rarity: Ancient
 - Pool: event
@@ -2378,6 +2607,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### NutritiousOyster
+
 - ID: NUTRITIOUS_OYSTER
 - Rarity: Ancient
 - Pool: event
@@ -2388,6 +2618,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### NutritiousSoup
+
 - ID: NUTRITIOUS_SOUP
 - Rarity: Ancient
 - Pool: event
@@ -2398,6 +2629,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsBlood
+
 - ID: PAELS_BLOOD
 - Rarity: Ancient
 - Pool: event
@@ -2408,6 +2640,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsClaw
+
 - ID: PAELS_CLAW
 - Rarity: Ancient
 - Pool: event
@@ -2418,6 +2651,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsEye
+
 - ID: PAELS_EYE
 - Rarity: Ancient
 - Pool: event
@@ -2425,9 +2659,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCardPlayed, AfterSideTurnStart, ShouldTakeExtraTurn, BeforeTurnEndEarly, AfterTakingExtraTurn, AfterCombatEnd]
 - Logic:
   - If no cards played on a turn: exhaust all hand, take an extra turn (once per combat)
-- Internal State: _usedThisCombat, _anyCardsPlayedThisTurn
+- Internal State: `_usedThisCombat`, `_anyCardsPlayedThisTurn`
 
 ### PaelsFlesh
+
 - ID: PAELS_FLESH
 - Rarity: Ancient
 - Pool: event
@@ -2438,6 +2673,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsGrowth
+
 - ID: PAELS_GROWTH
 - Rarity: Ancient
 - Pool: event
@@ -2449,6 +2685,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsHorn
+
 - ID: PAELS_HORN
 - Rarity: Ancient
 - Pool: event
@@ -2459,6 +2696,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PaelsLegion
+
 - ID: PAELS_LEGION
 - Rarity: Ancient
 - Pool: event
@@ -2466,11 +2704,12 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, BeforeCombatStart, ModifyBlockMultiplicative, AfterModifyingBlockAmount, AfterCardPlayed, AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - Summons PaelsLegion pet; doubles block from first block-granting card (2 turn cooldown)
-- Internal State: _skin [SavedProperty], _cooldown, _triggeredBlockLastTurn, _affectedCardPlay
+- Internal State: `_skin` [SavedProperty], `_cooldown`, `_triggeredBlockLastTurn`, `_affectedCardPlay`
 - Uses [SavedProperty]: yes
 - AddsPet/SpawnsPets: true
 
 ### PaelsTears
+
 - ID: PAELS_TEARS
 - Rarity: Ancient
 - Pool: event
@@ -2478,9 +2717,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeTurnEnd, AfterSideTurnStart, AfterCombatEnd]
 - Logic:
   - If leftover energy at end of turn, gain 2 energy next turn
-- Internal State: _hadLeftoverEnergy (bool)
+- Internal State: `_hadLeftoverEnergy` (bool)
 
 ### PaelsTooth
+
 - ID: PAELS_TOOTH
 - Rarity: Ancient
 - Pool: event
@@ -2489,10 +2729,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - AfterObtained: remove up to 5 upgradable cards from deck, store them
   - AfterCombatEnd: return 1 random stored card (upgraded) to deck
-- Internal State: _serializableCards [SavedProperty]
+- Internal State: `_serializableCards` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### PaelsWing
+
 - ID: PAELS_WING
 - Rarity: Ancient
 - Pool: event
@@ -2500,10 +2741,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [TryModifyCardRewardAlternatives]
 - Logic:
   - Adds "Sacrifice" option to card rewards; every 2 sacrifices, obtain a random relic
-- Internal State: _rewardsSacrificed [SavedProperty], _isActivating
+- Internal State: `_rewardsSacrificed` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### PandorasBox
+
 - ID: PANDORAS_BOX
 - Rarity: Ancient
 - Pool: event
@@ -2514,6 +2756,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PhilosophersStone
+
 - ID: PHILOSOPHERS_STONE
 - Rarity: Ancient
 - Pool: event
@@ -2525,6 +2768,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PollinousCore
+
 - ID: POLLINOUS_CORE
 - Rarity: Event
 - Pool: event
@@ -2532,10 +2776,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeSideTurnStart, AfterCombatEnd, ModifyHandDraw, AfterModifyingHandDraw]
 - Logic:
   - Every 4 turns: draw +2 extra cards
-- Internal State: _turnsSeen [SavedProperty], _isActivating
+- Internal State: `_turnsSeen` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### Pomander
+
 - ID: POMANDER
 - Rarity: Ancient
 - Pool: event
@@ -2546,6 +2791,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PrecariousShears
+
 - ID: PRECARIOUS_SHEARS
 - Rarity: Ancient
 - Pool: event
@@ -2556,6 +2802,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PreciseScissors
+
 - ID: PRECISE_SCISSORS
 - Rarity: Ancient
 - Pool: event
@@ -2566,6 +2813,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PreservedFog
+
 - ID: PRESERVED_FOG
 - Rarity: Ancient
 - Pool: event
@@ -2576,6 +2824,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PrismaticGem
+
 - ID: PRISMATIC_GEM
 - Rarity: Ancient
 - Pool: event
@@ -2587,6 +2836,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### PumpkinCandle
+
 - ID: PUMPKIN_CANDLE
 - Rarity: Ancient
 - Pool: event
@@ -2594,10 +2844,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, ModifyMaxEnergy, AfterRoomEntered]
 - Logic:
   - ModifyMaxEnergy: +1 max energy (only in the act it was obtained)
-- Internal State: _activeAct [SavedProperty]
+- Internal State: `_activeAct` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### RadiantPearl
+
 - ID: RADIANT_PEARL
 - Rarity: Ancient
 - Pool: event
@@ -2608,6 +2859,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RoyalPoison
+
 - ID: ROYAL_POISON
 - Rarity: Event
 - Pool: event
@@ -2618,6 +2870,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### RunicPyramid
+
 - ID: RUNIC_PYRAMID
 - Rarity: Ancient
 - Pool: event
@@ -2628,6 +2881,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Sai
+
 - ID: SAI
 - Rarity: Ancient
 - Pool: event
@@ -2638,6 +2892,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SandCastle
+
 - ID: SAND_CASTLE
 - Rarity: Ancient
 - Pool: event
@@ -2648,6 +2903,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ScrollBoxes
+
 - ID: SCROLL_BOXES
 - Rarity: Ancient
 - Pool: event
@@ -2658,6 +2914,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SeaGlass
+
 - ID: SEA_GLASS
 - Rarity: Ancient
 - Pool: event
@@ -2665,10 +2922,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained]
 - Logic:
   - AfterObtained: offer 15 cards from assigned character's pool (5 common, 5 uncommon, 5 rare)
-- Internal State: _characterId [SavedProperty]
+- Internal State: `_characterId` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### SealOfGold
+
 - ID: SEAL_OF_GOLD
 - Rarity: Ancient
 - Pool: event
@@ -2679,6 +2937,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SereTalon
+
 - ID: SERE_TALON
 - Rarity: Ancient
 - Pool: event
@@ -2689,6 +2948,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SignetRing
+
 - ID: SIGNET_RING
 - Rarity: Ancient
 - Pool: event
@@ -2699,6 +2959,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SilverCrucible
+
 - ID: SILVER_CRUCIBLE
 - Rarity: Ancient
 - Pool: event
@@ -2707,10 +2968,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - First 3 card rewards: all cards pre-upgraded
   - Skips first treasure room generation
-- Internal State: _timesUsed [SavedProperty], _treasureRoomsEntered [SavedProperty]
+- Internal State: `_timesUsed` [SavedProperty], `_treasureRoomsEntered` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### SmallCapsule
+
 - ID: SMALL_CAPSULE
 - Rarity: Ancient
 - Pool: event
@@ -2721,6 +2983,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SneckoEye
+
 - ID: SNECKO_EYE
 - Rarity: Ancient
 - Pool: event
@@ -2728,9 +2991,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained, BeforeCombatStart, ModifyHandDraw]
 - Logic:
   - Applies Confused power + draw +2 cards per turn
-- Internal State: _testEnergyCostOverride
+- Internal State: `_testEnergyCostOverride`
 
 ### Sozu
+
 - ID: SOZU
 - Rarity: Ancient
 - Pool: event
@@ -2742,6 +3006,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SpikedGauntlets
+
 - ID: SPIKED_GAUNTLETS
 - Rarity: Ancient
 - Pool: event
@@ -2753,6 +3018,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### StoneHumidifier
+
 - ID: STONE_HUMIDIFIER
 - Rarity: Ancient
 - Pool: event
@@ -2763,6 +3029,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### Storybook
+
 - ID: STORYBOOK
 - Rarity: Ancient
 - Pool: event
@@ -2773,6 +3040,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### SwordOfStone
+
 - ID: SWORD_OF_STONE
 - Rarity: Event
 - Pool: event
@@ -2780,10 +3048,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCombatVictory]
 - Logic:
   - AfterCombatVictory: count elite victories; at 5, transform into SwordOfJade
-- Internal State: _elitesDefeated [SavedProperty]
+- Internal State: `_elitesDefeated` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### SwordOfJade
+
 - ID: SWORD_OF_JADE
 - Rarity: Event
 - Pool: event (transformed from SwordOfStone)
@@ -2794,6 +3063,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TanxsWhistle
+
 - ID: TANXS_WHISTLE
 - Rarity: Ancient
 - Pool: event
@@ -2804,6 +3074,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TeaOfDiscourtesy
+
 - ID: TEA_OF_DISCOURTESY
 - Rarity: Event
 - Pool: event
@@ -2811,10 +3082,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [BeforeCombatStart]
 - Logic:
   - BeforeCombatStart: for 1 combat, add 2 Dazed cards to draw pile
-- Internal State: _combatsLeft [SavedProperty]
+- Internal State: `_combatsLeft` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### TheBoot
+
 - ID: THE_BOOT
 - Rarity: Event
 - Pool: event
@@ -2825,6 +3097,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### ThrowingAxe
+
 - ID: THROWING_AXE
 - Rarity: Ancient
 - Pool: event
@@ -2832,9 +3105,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterRoomEntered, ModifyCardPlayCount, AfterModifyingCardPlayCount, AfterCombatEnd]
 - Logic:
   - First card played each combat: played twice (once per combat)
-- Internal State: _usedThisCombat (bool)
+- Internal State: `_usedThisCombat` (bool)
 
 ### ToastyMittens
+
 - ID: TOASTY_MITTENS
 - Rarity: Ancient
 - Pool: event
@@ -2845,6 +3119,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### TouchOfOrobas
+
 - ID: TOUCH_OF_OROBAS
 - Rarity: Ancient
 - Pool: event
@@ -2852,10 +3127,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterObtained]
 - Logic:
   - AfterObtained: replaces starter relic with upgraded version (BurningBlood->BlackBlood, etc.)
-- Internal State: _starterRelic [SavedProperty], _upgradedRelic [SavedProperty]
+- Internal State: `_starterRelic` [SavedProperty], `_upgradedRelic` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### ToyBox
+
 - ID: TOY_BOX
 - Rarity: Ancient
 - Pool: event
@@ -2864,10 +3140,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - AfterObtained: offer 4 wax relics
   - AfterCombatEnd: every 3 combats, melt one wax relic
-- Internal State: _combatsSeen [SavedProperty], _isActivating
+- Internal State: `_combatsSeen` [SavedProperty], `_isActivating`
 - Uses [SavedProperty]: yes
 
 ### TriBoomerang
+
 - ID: TRI_BOOMERANG
 - Rarity: Ancient
 - Pool: event
@@ -2878,6 +3155,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### VelvetChoker
+
 - ID: VELVET_CHOKER
 - Rarity: Ancient
 - Pool: event
@@ -2886,9 +3164,10 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Logic:
   - ModifyMaxEnergy: +1 max energy
   - ShouldPlay: prevent playing cards after 6th card each turn
-- Internal State: _cardsPlayedThisTurn
+- Internal State: `_cardsPlayedThisTurn`
 
 ### VeryHotCocoa
+
 - ID: VERY_HOT_COCOA
 - Rarity: Ancient
 - Pool: event
@@ -2899,6 +3178,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WarHammer
+
 - ID: WAR_HAMMER
 - Rarity: Ancient
 - Pool: event
@@ -2909,6 +3189,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WhisperingEarring
+
 - ID: WHISPERING_EARRING
 - Rarity: Ancient
 - Pool: event
@@ -2920,6 +3201,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WongoCustomerAppreciationBadge
+
 - ID: WONGO_CUSTOMER_APPRECIATION_BADGE
 - Rarity: Event
 - Pool: event
@@ -2929,6 +3211,7 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Internal State: none
 
 ### WongosMysteryTicket
+
 - ID: WONGOS_MYSTERY_TICKET
 - Rarity: Event
 - Pool: event
@@ -2936,10 +3219,11 @@ Total relics: 290 files (288 unique relics + Circlet fallback + DeprecatedRelic 
 - Hooks: [AfterCombatEnd, TryModifyRewards, AfterModifyingRewards]
 - Logic:
   - AfterCombatEnd: count combats; after 5, add 3 relic rewards to next combat (once)
-- Internal State: _combatsFinished [SavedProperty], _gaveRelic [SavedProperty]
+- Internal State: `_combatsFinished` [SavedProperty], `_gaveRelic` [SavedProperty]
 - Uses [SavedProperty]: yes
 
 ### YummyCookie
+
 - ID: YUMMY_COOKIE
 - Rarity: Ancient
 - Pool: event
@@ -2962,6 +3246,7 @@ Note: Many "Ancient" relics are in the Event pool. The "Ancient" here reflects t
 ## 8. Special / Other
 
 ### Circlet
+
 - ID: CIRCLET
 - Rarity: None
 - Pool: fallback
@@ -2972,6 +3257,7 @@ Note: Many "Ancient" relics are in the Event pool. The "Ancient" here reflects t
 - IsStackable: true
 
 ### DeprecatedRelic
+
 - ID: DEPRECATED_RELIC
 - Rarity: None
 - Pool: deprecated
@@ -2982,6 +3268,7 @@ Note: Many "Ancient" relics are in the Event pool. The "Ancient" here reflects t
 - IsStackable: true
 
 ### VakuuCardSelector
+
 - Not a relic. Helper class implementing ICardSelector for WhisperingEarring's auto-play logic.
 
 ---
@@ -2989,7 +3276,7 @@ Note: Many "Ancient" relics are in the Event pool. The "Ancient" here reflects t
 ## Summary Statistics
 
 | Rarity | Count |
-|--------|-------|
+| ------ | ----- |
 | Starter | 10 |
 | Common | ~32 |
 | Uncommon | ~32 |
@@ -3002,7 +3289,7 @@ Note: Many "Ancient" relics are in the Event pool. The "Ancient" here reflects t
 ## Key Hook Methods Reference
 
 | Hook | Description |
-|------|-------------|
+| ---- | ----------- |
 | AfterObtained | When relic is picked up |
 | BeforeCombatStart / BeforeCombatStartLate | Before combat begins |
 | AfterRoomEntered | When entering a room |

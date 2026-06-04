@@ -16,6 +16,8 @@ from sts2_env.core.combat import CombatState
 from sts2_env.core.enums import IntentType, PotionTargetType, TargetType
 from sts2_env.core.rng import INT_MAX
 from sts2_env.run.reward_objects import CardBundlesReward, CardReward, PotionReward, RelicReward
+from sts2_env.core.enums import MapPointType
+from sts2_env.map.labels import ROOM_LABELS, map_point_label
 from sts2_env.run.run_manager import RunManager, SUPPORTED_CHARACTER_IDS
 from sts2_env.run.shop import is_shop_entry_available
 
@@ -38,17 +40,6 @@ PHASE_LABELS = {
     RunManager.PHASE_EVENT: "Event",
     RunManager.PHASE_TREASURE: "Treasure",
     RunManager.PHASE_RUN_OVER: "Run Over",
-}
-ROOM_LABELS = {
-    "MONSTER": "Monster",
-    "ELITE": "Elite",
-    "BOSS": "Boss",
-    "SHOP": "Shop",
-    "TREASURE": "Treasure",
-    "REST_SITE": "Rest",
-    "UNKNOWN": "?",
-    "ANCIENT": "Event",
-    "UNASSIGNED": "?",
 }
 INTENT_LABELS = {
     IntentType.ATTACK: "Attack",
@@ -96,11 +87,20 @@ def describe_card(card: object) -> str:
     return display_text(repr(card))
 
 
-def describe_action(action: dict[str, Any]) -> str:
+def describe_action(action: dict[str, Any], act: object | None = None) -> str:
     kind = action.get("action")
     if kind == "move":
         coord = action.get("coord")
-        return f"Go to {coord}  [{ROOM_LABELS.get(str(action.get('point_type')), display_name(action.get('point_type')))}]"
+        point_type_name = str(action.get("point_type", "UNKNOWN"))
+        if act is not None:
+            try:
+                point_type = MapPointType[point_type_name]
+                label = map_point_label(point_type, act)
+            except KeyError:
+                label = ROOM_LABELS.get(point_type_name, display_name(point_type_name))
+        else:
+            label = ROOM_LABELS.get(point_type_name, display_name(point_type_name))
+        return f"Go to {coord}  [{label}]"
     if kind == "event_choice":
         label = action.get("label", action.get("option_id", "choice"))
         description = action.get("description", "")
@@ -230,7 +230,9 @@ def display_map(mgr: RunManager, actions: list[dict[str, Any]]) -> None:
         for point in points:
             coord = (point.col, point.row)
             marker = "*" if coord in reachable else "x" if point.coord in visited else " "
-            parts.append(f"{marker}({point.col},{point.row}) {ROOM_LABELS.get(point.point_type.name, display_name(point.point_type.name))}")
+            parts.append(
+                f"{marker}({point.col},{point.row}) {map_point_label(point.point_type, run_state.current_act)}"
+            )
         print("    " + "   ".join(parts))
     if reachable:
         print("\n  NEXT PATHS:")
@@ -241,13 +243,13 @@ def display_map(mgr: RunManager, actions: list[dict[str, Any]]) -> None:
             if point is None:
                 continue
             children = ", ".join(
-                f"({child.col},{child.row}) {ROOM_LABELS.get(child.point_type.name, display_name(child.point_type.name))}"
+                f"({child.col},{child.row}) {map_point_label(child.point_type, run_state.current_act)}"
                 for child in sorted(point.children, key=lambda child: child.col)
             )
             suffix = f" -> {children}" if children else ""
             print(
                 f"    ({point.col},{point.row}) "
-                f"{ROOM_LABELS.get(point.point_type.name, display_name(point.point_type.name))}{suffix}"
+                f"{map_point_label(point.point_type, run_state.current_act)}{suffix}"
             )
 
 
@@ -427,7 +429,7 @@ def display_inventory(mgr: RunManager) -> None:
 def display_actions(actions: list[dict[str, Any]]) -> None:
     print("\n  ACTIONS:")
     for i, action in enumerate(actions):
-        print(f"    [{i}] {describe_action(action)}")
+        print(f"    [{i}] {describe_action(action, mgr.run_state.current_act)}")
     print("    h help   i inspect   q quit")
 
 

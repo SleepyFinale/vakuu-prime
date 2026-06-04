@@ -6,7 +6,7 @@ Internal architecture of the headless Python combat and run simulator in `sts2_e
 
 ## Module Dependency Graph
 
-```
+```text
 core/                       Foundation layer (no game-content dependencies)
   combat.py                 CombatState: turn flow, card play, pile management
   creature.py               Creature: HP, block, powers, power class registry
@@ -79,6 +79,7 @@ Dependency flow is strictly top-down: `core -> cards/powers/monsters/relics -> e
 The central simulation class. One instance per combat encounter.
 
 **State held:**
+
 - `player: Creature` -- the player entity
 - `enemies: list[Creature]` -- enemy entities
 - `enemy_ais: dict[int, MonsterAI]` -- AI state machines keyed by combat_id
@@ -90,7 +91,7 @@ The central simulation class. One instance per combat encounter.
 
 **Turn flow** (mirrors decompiled `CombatManager`):
 
-```
+```text
 start_combat()
   -> fire_before_combat_start (relics trigger, e.g. Anchor gives 10 block)
   -> all enemies roll_move (determine first intent)
@@ -131,6 +132,7 @@ Represents any combat entity (player or monster).
 Uses `__slots__` for memory efficiency: `max_hp`, `current_hp`, `block`, `powers`, `side`, `is_player`, `monster_id`, `combat_id`, `stars`.
 
 Key operations:
+
 - `gain_block(amount)` -- capped at 999
 - `damage_block(amount, unblockable)` -- returns amount absorbed
 - `lose_hp(amount)` -- returns actual HP lost
@@ -144,12 +146,14 @@ Key operations:
 Two main functions:
 
 1. `calculate_damage(base, dealer, target, props, combat)` -- runs the full modifier pipeline via `hooks.modify_damage()`:
+
    - Additive pass (Strength adds to dealer's attacks)
    - Multiplicative pass (Vulnerable = 1.5x on target, Weak = 0.75x on dealer)
    - Cap pass (Intangible caps at 1)
    - Floor and clamp to 0
 
 2. `apply_damage(target, damage, props, combat, dealer)` -- applies calculated damage:
+
    - `fire_before_damage_received` (Thorns, Flame Barrier trigger here)
    - Block absorption (unless Unblockable)
    - HP loss modification via `modify_hp_lost` (Intangible, Tungsten Rod)
@@ -158,6 +162,7 @@ Two main functions:
    - Returns `DamageResult(blocked, hp_lost, was_killed, unblocked_damage)`
 
 `ValueProp` flags control which modifiers apply:
+
 - `MOVE (0x8)` -- from a card or monster move
 - `UNPOWERED (0x4)` -- bypasses Strength/Weak/Vulnerable
 - `UNBLOCKABLE (0x2)` -- bypasses block
@@ -171,6 +176,7 @@ Centralized dispatch matching `CombatState.IterateHookListeners()` from the C# s
 **Dispatch order:** Powers (all creatures) -> Relics (player only).
 
 **~25 hook points** organized as:
+
 - **Modification hooks** (return a value): `modify_damage`, `modify_block`, `modify_hp_lost`, `modify_hand_draw`, `modify_max_energy`, `modify_card_play_count`
 - **Condition hooks** (return bool): `should_clear_block`, `should_reset_energy`, `should_flush`, `should_play`, `should_draw`, `should_take_extra_turn`
 - **Event hooks** (fire-and-forget): `fire_before_card_played`, `fire_after_card_played`, `fire_after_card_exhausted`, `fire_after_card_discarded`, `fire_after_card_drawn`, `fire_before_turn_end`, `fire_after_turn_end`, `fire_before_side_turn_start`, `fire_after_side_turn_start`, `fire_before_combat_start`, `fire_after_combat_victory`, `fire_after_combat_end`, `fire_before_damage_received`, `fire_after_damage_received`, `fire_after_damage_given`, `fire_after_block_gained`, `fire_after_block_cleared`, `fire_after_energy_reset`, `fire_after_shuffle`, `fire_after_hand_emptied`
@@ -182,6 +188,7 @@ Centralized dispatch matching `CombatState.IterateHookListeners()` from the C# s
 ### CardInstance dataclass (`cards/base.py`)
 
 Every card in combat is a `CardInstance` with fields:
+
 - `card_id: CardId` -- enum member identifying the card
 - `cost: int`, `card_type: CardType`, `target_type: TargetType`, `rarity: CardRarity`
 - `base_damage: int | None`, `base_block: int | None`
@@ -211,6 +218,7 @@ def _strike_ironclad(card, combat, target):
 ### Effect primitives (`cards/effects.py`)
 
 12 composable building blocks:
+
 - `deal_damage(combat, dealer, target, base_damage, hits=1, props=MOVE)`
 - `deal_damage_to_all_enemies(combat, dealer, base_damage, hits=1)`
 - `deal_damage_to_random_enemy(combat, dealer, base_damage, hits=1)`
@@ -233,16 +241,19 @@ def _strike_ironclad(card, combat, target):
 All powers inherit from `PowerInstance` and override hook methods.
 
 Class-level attributes define metadata:
+
 - `power_id: PowerId` -- identifies the power
 - `power_type: PowerType` -- BUFF, DEBUFF, or NONE
 - `stack_type: PowerStackType` -- COUNTER, SINGLE, or NONE
 - `allow_negative: bool` -- whether the amount can go below 0
 
 Instance state:
+
 - `amount: int` -- current stacks/counter value
 - `skip_next_tick: bool` -- when a debuff is applied to the player, the first tick is skipped (so it lasts the full turn)
 
 Hook methods (all no-ops by default, subclasses override as needed):
+
 - Damage: `modify_damage_additive`, `modify_damage_multiplicative`, `modify_damage_cap`
 - Block: `modify_block_additive`, `modify_block_multiplicative`
 - HP: `modify_hp_lost`
@@ -272,6 +283,7 @@ class StrengthPower(PowerInstance):
 ### Registration
 
 Powers register at module import time:
+
 ```python
 register_power_class(PowerId.STRENGTH, StrengthPower)
 ```
@@ -285,6 +297,7 @@ register_power_class(PowerId.STRENGTH, StrengthPower)
 Three node types:
 
 **MoveState** -- a concrete monster action:
+
 - `state_id: str` -- unique name (e.g. "Thrash", "Bite")
 - `effect_fn: Callable[[CombatState], None]` -- executes the move's combat effects
 - `intents: list[Intent]` -- displayed intent (attack, defend, buff, etc.)
@@ -292,12 +305,14 @@ Three node types:
 - `must_perform_once: bool` -- cannot transition away until performed
 
 **RandomBranchState** -- weighted random selection:
+
 - Contains a list of `WeightedBranch` entries, each with:
   - `state_id`, `base_weight`, `repeat_type`, `max_times`, `cooldown`
 - Repeat rules: `CAN_REPEAT_FOREVER`, `CANNOT_REPEAT` (not twice in a row), `CAN_REPEAT_X_TIMES(n)`, `USE_ONLY_ONCE`
 - Weights are dynamically adjusted based on `state_log` history
 
 **ConditionalBranchState** -- first-matching condition:
+
 - Contains `(condition_fn, state_id)` pairs
 - Evaluates conditions in order, picks the first that returns True
 - Used for HP thresholds, summoning conditions, etc.
@@ -306,7 +321,7 @@ Three node types:
 
 Holds the state dictionary and manages transitions:
 
-```
+```text
 roll_move(rng) -> MoveState
   1. Get next state ID from current state's get_next_state()
   2. Walk through branch states until a MoveState is reached
@@ -336,12 +351,14 @@ Single-combat training environment.
 - **Action masking:** `action_masks()` returns `int8[115]` marking legal actions. Required by `MaskablePPO`.
 
 On `reset()`:
+
 1. Create Ironclad starter deck
 2. Create `CombatState` with random seed
 3. Pick random encounter from Act 1 pool
 4. Call `combat.start_combat()`
 
 On `step(action)`:
+
 1. Decode action -> (hand_index, target_index) or end_turn
 2. Call `combat.play_card()` or `combat.end_player_turn()`
 3. Return (obs, reward, terminated, truncated, info)
@@ -353,7 +370,7 @@ On `step(action)`:
 131-dimensional flat float32 vector:
 
 | Segment | Dims | Encoding |
-|---------|------|----------|
+| ------- | ---- | -------- |
 | Player state | 4 | hp/max_hp, block/50, energy/10, max_energy/10 |
 | Player powers | 6 | str/20, dex/20, vuln/20, weak/20, frail/20, artifact/20 |
 | Hand (10 slots) | 50 | 5 features per card: card_id_norm, cost/5, damage/50, block/50, is_attack |
@@ -365,6 +382,7 @@ Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a 
 ### Action space (`gym_env/action_space.py`)
 
 115 discrete actions:
+
 - `0` -- end turn
 - `1..10` -- play card from hand slot 0..9 (self/none/all-enemies target)
 - `11..60` -- play card i targeting enemy j: `action = 1 + 10 + hand_idx * 5 + enemy_idx`
@@ -372,8 +390,8 @@ Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a 
 
 ### RunEnv vs CombatEnv
 
-| | CombatEnv | RunEnv |
-|--|-----------|--------|
+| Topic | CombatEnv | RunEnv |
+| ----- | --------- | ------ |
 | Scope | Single combat | Full multi-act run |
 | Obs size | 131 | 151 (131 combat + 20 run-level) |
 | Action space | Discrete(115) | Discrete(157) |
@@ -382,6 +400,7 @@ Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a 
 | Run-level obs | N/A | act/floor/hp_ratio/gold/deck_size/relic_count/potions/phase_onehot(8)/ascension/is_elite/is_boss |
 
 RunEnv action layout (Discrete(157)):
+
 - 0-114: combat actions (same as CombatEnv)
 - 115-119: map choices (0-4 paths)
 - 120-123: card reward (pick 0-2, or skip)
@@ -398,7 +417,8 @@ RunEnv action layout (Discrete(157)):
 ## Performance
 
 **Benchmark results** (modern CPU, single thread):
-```
+
+```text
 Episodes:       1000
 Total steps:    28101
 Time:           0.78s
@@ -407,7 +427,8 @@ Steps/sec:      28101
 ```
 
 **Bottlenecks:**
-1. Power iteration in hook dispatch -- iterates all creatures' powers for every hook call. With many powers active, this is O(creatures * powers * hooks_per_step).
+
+1. Power iteration in hook dispatch -- iterates all creatures' powers for every hook call. With many powers active, this is `O(creatures * powers * hooks_per_step)`.
 2. Python interpreter overhead -- pure Python is inherently slower than C/C++. A Cython port of the core loop could yield 5-10x improvement.
 3. List operations in card piles -- `draw_pile.pop(0)` is O(n). Using `collections.deque` would make it O(1).
 
@@ -427,10 +448,10 @@ Steps/sec:      28101
 
 ### Remaining
 
-5. **run_env swallows exceptions.** In `STS2RunEnv.step()` (run_env.py line 238), a bare `except Exception` catches all simulation errors and force-ends the run as a loss. While this prevents training crashes, it silently hides bugs. Simulation errors should be logged before being swallowed.
+1. **run_env swallows exceptions.** In `STS2RunEnv.step()` (run_env.py line 238), a bare `except Exception` catches all simulation errors and force-ends the run as a loss. While this prevents training crashes, it silently hides bugs. Simulation errors should be logged before being swallowed.
 
-6. **AnimationSpeedPatch fails to apply.** The Harmony patch targeting `MegaAnimationState.SetTimeScale` fails on some game versions because the method signature does not match. The patch is skipped with a log message; the game runs without animation acceleration.
+2. **AnimationSpeedPatch fails to apply.** The Harmony patch targeting `MegaAnimationState.SetTimeScale` fails on some game versions because the method signature does not match. The patch is skipped with a log message; the game runs without animation acceleration.
 
-7. **Mod abandon-run popup path may not match.** The Godot node path `/root/Game/RootSceneContainer/MainMenu/...` for the abandon-run confirmation popup may differ across game versions.
+3. **Mod abandon-run popup path may not match.** The Godot node path `/root/Game/RootSceneContainer/MainMenu/...` for the abandon-run confirmation popup may differ across game versions.
 
-8. **Pile summary mismatch in bridge.** The state adapter (`state_adapter.py`) cannot compute draw/discard attack/skill counts because the bridge only sends pile counts, not full pile composition. These 3 features are always 0 in bridge mode but nonzero during simulator training, creating a distribution shift.
+4. **Pile summary mismatch in bridge.** The state adapter (`state_adapter.py`) cannot compute draw/discard attack/skill counts because the bridge only sends pile counts, not full pile composition. These 3 features are always 0 in bridge mode but nonzero during simulator training, creating a distribution shift.

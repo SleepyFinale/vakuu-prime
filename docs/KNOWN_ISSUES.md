@@ -13,6 +13,7 @@ Current known issues, bugs, and limitations of the STS2 RL Agent project.
 **Problem:** The C# bridge mod initially used `CardCmd.AutoPlay()` to execute card plays. This method bypasses the normal energy deduction, so the player's energy always stayed at 3 (max) regardless of cards played. The agent could play unlimited cards per turn.
 
 **Fix:** Switched to `PlayCardAction` which properly spends energy:
+
 ```csharp
 var playAction = new PlayCardAction(card, target);
 RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(playAction);
@@ -47,6 +48,7 @@ RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(playAction);
 **Problem:** The Python `StateAdapter` was expecting different field names and formats than what the C# mod was actually sending. For example, target type strings like `"AnyEnemy"` vs `"ANY_ENEMY"`, and power list format differences.
 
 **Fix:** Updated `state_adapter.py` to handle both formats:
+
 ```python
 _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.ALL_ENEMIES,
                      "SELF", "NONE", "ALL_ENEMIES", "Self", "None", "AllEnemies"}
@@ -89,6 +91,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 **Problem:** The full-run environment produces 0% win rate even after 1M training steps. The agent learns to progress further through Act 1 (avg 8.9 floors vs 3.9 for random) but cannot complete a run.
 
 **Root causes:**
+
 - Sparse reward: only +1 at run victory, -1 at death. No intermediate signal.
 - Long episodes: a full run spans thousands of steps.
 - Multi-phase action space: `Discrete(157)` across combat, map, rewards, shop, rest, event, treasure, and player-selection slices.
@@ -103,6 +106,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 **Problem:** The combat training pipeline only creates Ironclad starter decks. All training and evaluation use the Ironclad character.
 
 **Impact:** The trained model is specific to Ironclad. It cannot play Silent, Defect, Necrobinder, or Regent effectively because:
+
 - Different starter decks and starting HP
 - Character-specific mechanics (orbs, stars, pets)
 - Different card pools with different effect distributions
@@ -126,6 +130,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 **Problem:** The headless simulator reimplements card effects based on the decompiled C# source, but exact parity is still broader than the currently audited test surface. The earlier helper-level gaps are fixed, but some card and relic interactions still need direct decompiled-backed regression tests before they should be treated as exact.
 
 **Examples of still-audited-not-proven-exact areas:**
+
 - selected colorless/event cards such as `Alchemize`, `BeatDown`, and `HandOfGreed`
 - selected Defect and Silent follow-up effects such as `Compact`, `WhiteNoise`, and `TheHunt`
 - wider relic-hook interactions outside the targeted parity suites

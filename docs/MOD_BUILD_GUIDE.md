@@ -13,17 +13,20 @@ This guide covers the current `bridge_mod/` implementation, which is based on th
 The game and mod template target .NET 9.0.
 
 **Windows (PowerShell):**
+
 ```powershell
 Invoke-WebRequest -Uri https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.ps1
 ./dotnet-install.ps1 -Channel 9.0
 ```
 
 **Linux/macOS:**
+
 ```bash
 curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 9.0
 ```
 
 Verify:
+
 ```bash
 dotnet --version
 # Should show 9.x.x
@@ -33,7 +36,7 @@ dotnet --version
 
 Required only for `dotnet publish` (PCK generation). Not needed for `dotnet build`.
 
-1. Download from: https://github.com/godotengine/godot/releases/tag/4.5.1-stable
+1. Download from: <https://github.com/godotengine/godot/releases/tag/4.5.1-stable>
 2. Get the **Mono** variant for your platform:
    - Windows: `Godot_v4.5.1-stable_mono_win64.zip`
    - Linux: `Godot_v4.5.1-stable_mono_linux_x86_64.zip`
@@ -77,12 +80,14 @@ dotnet build
 ```
 
 This:
+
 - Compiles all `.cs` files into `STS2BridgeMod.dll`
 - Copies the DLL and `STS2BridgeMod.json` to the game's mods folder
 - Copies BaseLib (dependency) to the mods folder
 
 Output:
-```
+
+```text
 Slay the Spire 2/
   mods/
     BaseLib/
@@ -102,11 +107,13 @@ dotnet publish
 ```
 
 This does everything `dotnet build` does, plus:
+
 - Invokes Godot to export the PCK file (contains `mod_manifest.json` and any Godot resources)
 - Copies the PCK to the mods folder
 
 Output:
-```
+
+```text
 Slay the Spire 2/
   mods/
     STS2BridgeMod/
@@ -120,7 +127,7 @@ Slay the Spire 2/
 ## Mod Files
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `MainFile.cs` | Entry point. Applies Harmony patches, starts TCP server, launches AutoSlayer. |
 | `BridgeServer.cs` | TCP server (port 9002). Handles JSON message I/O with the Python agent. |
 | `RlAutoSlayer.cs` | Replaces AutoSlay's random handlers with RL agent decision handlers. |
@@ -141,7 +148,8 @@ Slay the Spire 2/
 2. **Check the title screen.** If mods loaded correctly, you will see "Running Modded" in the corner.
 
 3. **Check game logs.** Look for:
-   ```
+
+   ```text
    [STS2Bridge] === STS2 RL Bridge Mod Initializing ===
    [STS2Bridge]   Patched: IsReleaseGamePatch
    [STS2Bridge]   Patched: WaitSpeedPatch
@@ -152,10 +160,12 @@ Slay the Spire 2/
    ```
 
    Log file location:
+
    - **Windows:** `%APPDATA%/Godot/app_userdata/Slay the Spire 2/logs/godot.log`
    - **Linux:** `~/.local/share/godot/app_userdata/Slay the Spire 2/logs/godot.log`
 
 4. **Test TCP connection.** In a separate terminal:
+
    ```bash
    python -c "
    import socket, json
@@ -227,7 +237,7 @@ The `sts2.dll` reference is not resolving. Verify:
 The mod includes three Harmony patches that accelerate the game for faster agent evaluation:
 
 | Patch | Target | Default | Effect |
-|-------|--------|---------|--------|
+| ----- | ------ | ------- | ------ |
 | `WaitSpeedPatch` | `Cmd.CustomScaledWait` | 0.1x | Reduces all timed delays by 10x |
 | `AnimationSpeedPatch` | `MegaAnimationState.SetTimeScale` | 5.0x | Speeds up Spine animations by 5x |
 | `IsReleaseGamePatch` | `NGame.IsReleaseGame` | false | Unlocks AutoSlay and debug features |
@@ -239,6 +249,7 @@ Combined, these patches achieve approximately 5-10x faster gameplay compared to 
 ## Architecture Note
 
 **bridge_mod/**:
+
 - Patches `NGame.IsReleaseGame()` to unlock the built-in `AutoSlay` system
 - Replaces AutoSlay's random decision handlers with RL agent handlers
 - AutoSlay handles all UI navigation, screen transitions, and error recovery

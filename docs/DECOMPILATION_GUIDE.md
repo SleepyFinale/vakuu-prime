@@ -18,7 +18,7 @@ Two extraction steps are needed:
 ## Tools
 
 | Tool | Version Used | Purpose | Install |
-|------|-------------|---------|---------|
+| ---- | ------------ | ------- | ------- |
 | [ILSpy](https://github.com/icsharpcode/ILSpy) | 10.0 | GUI decompiler for .NET DLLs | Download release from GitHub |
 | [ilspycmd](https://github.com/icsharpcode/ILSpy) | 9.1.0 | CLI decompiler (batch extraction) | `dotnet tool install -g ilspycmd` |
 | [GDRE Tools](https://github.com/GDRETools/gdsdecomp) | 2.4.0 | Godot PCK extraction | Download release from GitHub |
@@ -39,7 +39,7 @@ After installing STS2 via Steam, the game directory is typically:
 
 Key files:
 
-```
+```text
 Slay the Spire 2/
   sts2.exe                              # Godot launcher
   sts2.pck                              # Main resource pack
@@ -66,7 +66,7 @@ ilspycmd -p -o decompiled/ "C:\Program Files (x86)\Steam\steamapps\common\Slay t
 
 The `-p` flag writes one file per class, organized by namespace. This produces approximately 3,300 `.cs` files:
 
-```
+```text
 decompiled/
   MegaCrit.Sts2.Core.Combat/
     CombatManager.cs
@@ -105,6 +105,7 @@ decompiled/
 4. Right-click any class/namespace and "Save Code" to export
 
 The GUI is useful for:
+
 - Following cross-references (Ctrl+Click on a type to navigate)
 - Searching across the entire assembly (Ctrl+Shift+F)
 - Viewing IL alongside decompiled C#
@@ -121,7 +122,7 @@ gdre_tools.exe --headless --recover="C:\Program Files (x86)\Steam\steamapps\comm
 
 This extracts approximately 24,000 files:
 
-```
+```text
 extracted_pck/
   images/                    # Card art, relic icons, UI elements (PNG)
   animations/                # Spine skeletal animations (.skel + .atlas + .png)
@@ -139,6 +140,7 @@ extracted_pck/
 ```
 
 The most valuable extractions for simulator development:
+
 - **Localization files:** Contain all user-facing text with SmartFormat templates
 - **Images:** Card portraits and relic icons (useful for debugging/visualization)
 - **Spine animations:** Monster animations (not needed for headless sim)
@@ -152,7 +154,7 @@ The decompiled source is organized by namespace. Here is a guide to the most imp
 ### Core Engine
 
 | Namespace | Files | Purpose |
-|-----------|-------|---------|
+| --------- | ----- | ------- |
 | `MegaCrit.Sts2.Core.Combat` | ~10 | CombatManager, CombatState, CombatSide |
 | `MegaCrit.Sts2.Core.Commands` | ~15 | Low-level commands (DamageCmd, CreatureCmd, CardPileCmd, PowerCmd) |
 | `MegaCrit.Sts2.Core.Commands.Builders` | ~5 | AttackCommand builder pattern |
@@ -165,7 +167,7 @@ The decompiled source is organized by namespace. Here is a guide to the most imp
 ### Game Content
 
 | Namespace | Files | Purpose |
-|-----------|-------|---------|
+| --------- | ----- | ------- |
 | `MegaCrit.Sts2.Core.Models.Cards` | ~577 | One file per card |
 | `MegaCrit.Sts2.Core.Models.Powers` | ~260 | One file per status effect |
 | `MegaCrit.Sts2.Core.Models.Monsters` | ~121 | One file per monster |
@@ -179,7 +181,7 @@ The decompiled source is organized by namespace. Here is a guide to the most imp
 ### Supporting Systems
 
 | Namespace | Purpose |
-|-----------|---------|
+| --------- | ------- |
 | `MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine` | Monster AI state machine |
 | `MegaCrit.Sts2.Core.MonsterMoves.Intents` | Intent types |
 | `MegaCrit.Sts2.Core.Map` | Map generation (StandardActMap, MapPoint) |
@@ -335,7 +337,7 @@ However, spire-codex only extracts static data (names, costs, damage values). Dy
 ### 8. STS2 vs STS1 key differences
 
 | Aspect | STS1 | STS2 |
-|--------|------|------|
+| ------ | ---- | ---- |
 | Engine | libGDX (Java) | Godot 4 (C#/.NET 9) |
 | Decompiler | CFR / JD-GUI | ILSpy / ilspycmd |
 | Resource format | JAR (ZIP with .class) | PCK + DLL |

@@ -33,6 +33,7 @@ from sts2_env.core.enums import (
     TargetType,
 )
 from sts2_env.core.rng import INT_MAX, Rng
+from sts2_env.encounters.registry import get_boss_setup
 from sts2_env.map.map_point import MapCoord
 from sts2_env.core.constants import PERCENT_DENOMINATOR
 from sts2_env.potions.all import (
@@ -513,8 +514,12 @@ class RunManager:
 
         # Select encounter from appropriate pool
         pools = _get_encounter_pools(self._run_state.current_act_index)
+        setup_fn = None
         if room_type == RoomType.BOSS:
             pool = pools["boss"]
+            boss_id = self._run_state.current_act.boss_id
+            if boss_id:
+                setup_fn = get_boss_setup(boss_id)
         elif room_type == RoomType.ELITE:
             pool = pools["elite"]
         elif self._run_state.act_floor <= self._run_state.current_act.num_weak_encounters:
@@ -522,8 +527,9 @@ class RunManager:
         else:
             pool = pools["normal"]
 
-        if pool:
+        if setup_fn is None and pool:
             setup_fn = self._rng.choice(pool)
+        if setup_fn is not None:
             encounter_rng = Rng(self._rng.next_int(0, INT_MAX))
             setup_fn(self._combat, encounter_rng)
 

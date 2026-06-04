@@ -97,7 +97,7 @@ Sent when the game is in the combat play phase and awaiting a card play or end-t
 **Field details:**
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `type` | string | Always `"combat_action"` |
 | `request_id` | string | Request/response correlation token. The client should echo it back on the chosen action. |
 | `player.hp` | int | Current HP |
@@ -131,6 +131,7 @@ Sent when the game is in the combat play phase and awaiting a card play or end-t
 | `act` | int | Current act (1-indexed) |
 
 **Intent types** (as serialized by C#):
+
 - `SingleAttack` -- single attack
 - `MultiAttack` -- multi-hit attack
 - `Defend` -- gaining block
@@ -276,6 +277,7 @@ Sent when the run ends.
 ```
 
 Or:
+
 ```json
 {
   "type": "game_over",
@@ -323,7 +325,7 @@ Play a card from hand.
 ```
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `action` | string | `"play"` |
 | `card_index` | int | 0-indexed position in the hand array |
 | `target_index` | int | 0-indexed position in the enemies array. Use -1 or omit for self/all-target cards. |
@@ -349,10 +351,10 @@ Choose an option (map node, card reward, event option, etc.).
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `action` | string | `"choose"` |
-| `index` | int | 0-indexed choice from the available options |
+| Field    | Type   | Description                                 |
+| -------- | ------ | ------------------------------------------- |
+| `action` | string | `"choose"`                                  |
+| `index`  | int    | 0-indexed choice from the available options |
 
 For single-select card rewards, the `index` maps to the `cards` array. To skip, either:
 
@@ -395,7 +397,7 @@ Use a potion.
 ```
 
 | Field | Type | Description |
-|-------|------|-------------|
+| ----- | ---- | ----------- |
 | `action` | string | `"potion"` |
 | `slot` | int | Potion slot index |
 | `target_index` | int | Target enemy index (-1 for self-target potions) |
@@ -416,7 +418,7 @@ Health check. The game responds with `{"type": "pong"}`.
 
 A complete message exchange for one combat turn:
 
-```
+```text
 === Turn Start ===
 
 Game -> Agent:

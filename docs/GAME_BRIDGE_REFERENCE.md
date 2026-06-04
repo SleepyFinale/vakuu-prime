@@ -1,43 +1,44 @@
-# STS2 真实游戏桥接 — 技术方案
+# STS2 Real-Game Bridge — Technical Design
 
-## 概述
+## Overview
 
-将训练好的 RL agent 连接到真实 STS2 游戏，需要两个组件：
-1. **C# Mod** (游戏侧) — 通过 Harmony hook 暴露游戏状态，接收动作指令
-2. **Python 客户端** (Agent 侧) — 连接 Mod，运行模型推理
+Connecting a trained RL agent to the real STS2 game requires two components:
 
-## 架构
+1. **C# Mod** (game side) — expose game state via Harmony hooks, receive action commands
+2. **Python client** (agent side) — connect to the mod, run model inference
 
-```
-STS2 游戏进程 (Godot + .NET 8)          Python Agent 进程
+## Architecture
+
+```text
+STS2 game process (Godot + .NET 8)          Python agent process
 ┌─────────────────────────────┐   TCP   ┌──────────────────┐
 │  STS2BridgeMod (.dll)       │◄───────►│  sts2_client.py  │
 │                             │  JSON   │                  │
 │  ┌───────────────────────┐  │         │  ┌────────────┐  │
-│  │ TcpListener (端口9002) │  │ ──状态─►│  │ 状态解析   │  │
-│  │ 后台线程              │  │         │  │ → 观测向量  │  │
+│  │ TcpListener (port 9002)│ │ ─state─►│  │ Parse state│  │
+│  │ background thread     │  │         │  │ → obs vec  │  │
 │  └───────────────────────┘  │         │  └────────────┘  │
 │                             │         │        ↓         │
 │  ┌───────────────────────┐  │         │  ┌────────────┐  │
 │  │ Harmony Hooks:        │  │         │  │ MaskablePPO│  │
-│  │  CombatManager        │  │         │  │ 模型推理   │  │
+│  │  CombatManager        │  │         │  │ inference  │  │
 │  │  PlayCardAction       │  │         │  └────────────┘  │
 │  │  ActionQueueSet       │  │         │        ↓         │
 │  └───────────────────────┘  │         │  ┌────────────┐  │
-│                             │ ◄─动作──│  │ 动作编码   │  │
+│                             │ ◄action─│  │ Encode act │  │
 │  ┌───────────────────────┐  │         │  │ → JSON cmd │  │
 │  │ Superfast Patches:    │  │         │  └────────────┘  │
-│  │  3-10x 动画加速       │  │         │                  │
-│  │  跳过等待             │  │         │                  │
+│  │  3–10x animation      │  │         │                  │
+│  │  skip waits           │  │         │                  │
 │  └───────────────────────┘  │         │                  │
 └─────────────────────────────┘         └──────────────────┘
 ```
 
-## 第一部分: C# Mod
+## Part 1: C# Mod
 
-### 项目配置
+### Project setup
 
-参考 [lamali292/sts2_example_mod](https://github.com/lamali292/sts2_example_mod):
+See [lamali292/sts2_example_mod](https://github.com/lamali292/sts2_example_mod):
 
 ```xml
 <!-- STS2BridgeMod.csproj -->
@@ -47,7 +48,7 @@ STS2 游戏进程 (Godot + .NET 8)          Python Agent 进程
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <!-- 从游戏 data_sts2_windows_x86_64/ 目录引用 -->
+    <!-- Reference from game data_sts2_windows_x86_64/ directory -->
     <Reference Include="0Harmony">
       <HintPath>$(STS2GamePath)/data_sts2_windows_x86_64/0Harmony.dll</HintPath>
     </Reference>
@@ -61,7 +62,7 @@ STS2 游戏进程 (Godot + .NET 8)          Python Agent 进程
 </Project>
 ```
 
-### Mod 入口
+### Mod entry point
 
 ```csharp
 using HarmonyLib;
@@ -75,17 +76,17 @@ public class BridgeMod
         var harmony = new Harmony("sts2.bridge.rl");
         harmony.PatchAll();
 
-        // 启动 TCP 服务器
+        // Start TCP server
         BridgeServer.Instance.Start(port: 9002);
         Logger.Log("STS2 Bridge Mod initialized on port 9002");
     }
 }
 ```
 
-### TCP 服务器
+### TCP server
 
 ```csharp
-// 后台线程运行 TcpListener
+// TcpListener runs on a background thread
 public class BridgeServer
 {
     private TcpListener _listener;
@@ -111,17 +112,17 @@ public class BridgeServer
 }
 ```
 
-### 状态序列化 (当 ActionQueue idle 时)
+### State serialization (when ActionQueue is idle)
 
-关键: 只在游戏等待玩家输入时发送状态。
+Important: send state only when the game is waiting for player input.
 
 ```csharp
-// 需要 hook 的关键点:
-// 1. CombatManager — 回合开始/结束
-// 2. ActionQueueSet — 队列空闲时读取状态
-// 3. PlayCardAction — 注入打牌动作
+// Key hook points:
+// 1. CombatManager — turn start/end
+// 2. ActionQueueSet — read state when queue is idle
+// 3. PlayCardAction — inject play-card actions
 
-// 状态 JSON 格式 (参考 STS1 CommunicationMod):
+// State JSON format (see STS1 CommunicationMod):
 {
     "type": "game_state",
     "phase": "COMBAT_PLAY",  // COMBAT_PLAY, COMBAT_END_TURN, MAP, EVENT, SHOP, REST, CARD_REWARD, ...
@@ -152,28 +153,28 @@ public class BridgeServer
 }
 ```
 
-### 动作注入
+### Action injection
 
 ```csharp
-// 从 TCP 接收动作后，通过 CallDeferred 回到主线程执行
+// After receiving an action over TCP, use CallDeferred to run on the main thread
 public void HandleAction(string actionJson)
 {
     var action = JsonConvert.DeserializeObject<BridgeAction>(actionJson);
 
-    // 必须在主线程执行游戏动作
+    // Game actions must run on the main thread
     Godot.Callable.From(() => {
         switch (action.Type)
         {
             case "PLAY":
-                // 模拟打牌: 找到手牌, 找到目标, 创建 PlayCardAction
+                // Inject play card: find hand card, find target, create PlayCardAction
                 InjectPlayCard(action.CardIndex, action.TargetIndex);
                 break;
             case "END_TURN":
-                // 模拟结束回合
+                // Inject end turn
                 InjectEndTurn();
                 break;
             case "CHOOSE":
-                // 非战斗选择 (卡牌奖励, 事件选项, 地图节点等)
+                // Out-of-combat choices (card rewards, event options, map nodes, etc.)
                 InjectChoice(action.ChoiceIndex);
                 break;
             case "POTION":
@@ -184,10 +185,10 @@ public void HandleAction(string actionJson)
 }
 ```
 
-### Superfast 加速 (集成 STS2_Superfast_Mod 方案)
+### Superfast speed-up (STS2_Superfast_Mod approach)
 
 ```csharp
-// Hook Cmd.CustomScaledWait 减少所有等待时间
+// Hook Cmd.CustomScaledWait to reduce all wait times
 [HarmonyPatch]
 class SpeedPatch
 {
@@ -195,12 +196,12 @@ class SpeedPatch
     [HarmonyPrefix]
     static void Prefix(ref float fastSeconds, ref float standardSeconds)
     {
-        fastSeconds *= 0.1f;    // 10x 加速
+        fastSeconds *= 0.1f;    // 10x speed-up
         standardSeconds *= 0.1f;
     }
 }
 
-// Hook Spine 动画速度
+// Hook Spine animation speed
 [HarmonyPatch]
 class AnimSpeedPatch
 {
@@ -208,25 +209,25 @@ class AnimSpeedPatch
     [HarmonyPrefix]
     static void Prefix(ref float timeScale)
     {
-        timeScale *= 5.0f;  // 5x 动画速度
+        timeScale *= 5.0f;  // 5x animation speed
     }
 }
 ```
 
-### Mod 安装
+### Mod installation
 
-```
+```text
 Slay the Spire 2/
 └── mods/
     └── STS2BridgeMod/
-        ├── STS2BridgeMod.dll      # 编译后的 mod
-        ├── STS2BridgeMod.pck      # Godot 资源包 (最小化)
+        ├── STS2BridgeMod.dll      # built mod
+        ├── STS2BridgeMod.pck      # Godot resource pack (minimal)
         └── mod_manifest.json      # {"pck_name":"STS2BridgeMod","name":"STS2 Bridge"}
 ```
 
-## 第二部分: Python 客户端
+## Part 2: Python client
 
-### 连接与通信
+### Connection and communication
 
 ```python
 # sts2_client.py
@@ -240,14 +241,14 @@ class STS2GameClient:
         self.buffer = b""
 
     def receive_state(self) -> dict:
-        """接收游戏状态 JSON"""
+        """Receive game state JSON."""
         while b"\n" not in self.buffer:
             self.buffer += self.sock.recv(4096)
         line, self.buffer = self.buffer.split(b"\n", 1)
         return json.loads(line)
 
     def send_action(self, action: dict):
-        """发送动作指令"""
+        """Send action command."""
         self.sock.sendall(json.dumps(action).encode() + b"\n")
 
     def play_card(self, card_index: int, target_index: int = -1):
@@ -263,7 +264,7 @@ class STS2GameClient:
         self.send_action({"type": "POTION", "slot": slot, "target_index": target_index})
 ```
 
-### Agent 运行循环
+### Agent run loop
 
 ```python
 # run_agent.py
@@ -280,7 +281,7 @@ def run_agent(model_path: str, host: str = "127.0.0.1", port: int = 9002):
         state = client.receive_state()
 
         if state["phase"] == "COMBAT_PLAY":
-            # 战斗中: 用训练好的模型决策
+            # In combat: use trained model
             obs = encode_observation(state["combat_state"])
             mask = compute_action_mask(state["combat_state"])
             action, _ = model.predict(obs, action_masks=mask, deterministic=True)
@@ -292,57 +293,60 @@ def run_agent(model_path: str, host: str = "127.0.0.1", port: int = 9002):
                 client.play_card(decoded["card_index"], decoded.get("target_index", -1))
 
         elif state["phase"] == "CARD_REWARD":
-            # 卡牌奖励: 暂用简单启发式
+            # Card reward: simple heuristic for now
             client.choose(pick_best_card(state))
 
         elif state["phase"] == "MAP":
-            # 地图选路: 暂用简单启发式
+            # Map routing: simple heuristic for now
             client.choose(pick_map_node(state))
 
         elif state["phase"] in ("EVENT", "SHOP", "REST"):
-            # 其他: 暂用简单启发式
-            client.choose(0)  # 默认第一个选项
+            # Other phases: simple heuristic for now
+            client.choose(0)  # default to first option
 ```
 
-## 第三部分: 实现步骤
+## Part 3: Implementation steps
 
-### Phase 1: 最小可用 (纯战斗)
-1. 创建 C# mod 项目 (参考 sts2_example_mod)
-2. 实现 TCP 服务器
-3. Hook CombatManager, 序列化战斗状态
-4. 实现打牌/结束回合的动作注入
-5. Python 客户端 + 已训练的 combat 模型
-6. **验证**: agent 能在真实游戏中打一场战斗
+### Phase 1: Minimal viable (combat only)
 
-### Phase 2: 全流程
-1. 扩展状态序列化 (地图/事件/商店/篝火/卡牌奖励)
-2. 扩展动作注入 (地图选择/购买/篝火选项)
-3. 训练全流程 RunEnv 模型
-4. **验证**: agent 能完成一整局 run
+1. Create C# mod project (see sts2_example_mod)
+2. Implement TCP server
+3. Hook CombatManager, serialize combat state
+4. Implement play card / end turn action injection
+5. Python client + trained combat model
+6. **Validate**: agent can play one combat in the real game
 
-### Phase 3: 高性能
-1. 集成 Superfast 加速 (3-10x)
-2. 测试 --headless 模式
-3. 批量运行收集数据
-4. 在真实游戏数据上 fine-tune 模型
+### Phase 2: Full run
 
-## 关键参考项目
+1. Extend state serialization (map / events / shop / rest / card rewards)
+2. Extend action injection (map choice / purchases / rest options)
+3. Train full-run RunEnv model
+4. **Validate**: agent can complete an entire run
 
-| 项目 | 说明 | 链接 |
-|------|------|------|
-| sts2_example_mod | STS2 Mod 项目模板 | [GitHub](https://github.com/lamali292/sts2_example_mod) |
-| STS2_Superfast_Mod | 加速 Mod (Harmony patches) | [GitHub](https://github.com/jidon333/STS2_Superfast_Mod) |
-| QuickRestart | 状态操作参考 | [GitHub](https://github.com/freude916/sts2-quickRestart) |
-| CommunicationMod (STS1) | 协议设计参考 | [GitHub](https://github.com/ForgottenArbiter/CommunicationMod) |
-| spirecomm (STS1) | Python 客户端参考 | [GitHub](https://github.com/ForgottenArbiter/spirecomm) |
-| TelnetTheSpire (STS1) | TCP 方案参考 | [GitHub](https://github.com/cdaymand/TelnetTheSpire) |
-| UndoAndRedo | 状态快照参考 | [NexusMods](https://www.nexusmods.com/slaythespire2/mods/16) |
-| BaseLib-StS2 | Mod 基础库 | [GitHub](https://github.com/Alchyr/BaseLib-StS2) |
+### Phase 3: High performance
 
-## 注意事项
+1. Integrate Superfast speed-up (3–10x)
+2. Test `--headless` mode
+3. Batch runs for data collection
+4. Fine-tune model on real-game data
 
-1. **线程安全**: 游戏状态读取和动作注入必须在 Godot 主线程，TCP 通信在后台线程
-2. **稳定性检测**: 只在 ActionQueue idle 时读取状态和注入动作
-3. **Modded 存档隔离**: 加 mod 后使用独立存档，不影响正常游戏
-4. **Mac ARM64**: 自带的 0Harmony.dll 有 bug，需要替换修补版
-5. **游戏更新**: STS2 在 Early Access，每次更新可能需要重新适配 Harmony patches
+## Key reference projects
+
+| Project | Description | Link |
+| ------- | ----------- | ---- |
+| sts2_example_mod | STS2 mod project template | [GitHub](https://github.com/lamali292/sts2_example_mod) |
+| STS2_Superfast_Mod | Speed mod (Harmony patches) | [GitHub](https://github.com/jidon333/STS2_Superfast_Mod) |
+| QuickRestart | State manipulation reference | [GitHub](https://github.com/freude916/sts2-quickRestart) |
+| CommunicationMod (STS1) | Protocol design reference | [GitHub](https://github.com/ForgottenArbiter/CommunicationMod) |
+| spirecomm (STS1) | Python client reference | [GitHub](https://github.com/ForgottenArbiter/spirecomm) |
+| TelnetTheSpire (STS1) | TCP approach reference | [GitHub](https://github.com/cdaymand/TelnetTheSpire) |
+| UndoAndRedo | State snapshot reference | [NexusMods](https://www.nexusmods.com/slaythespire2/mods/16) |
+| BaseLib-StS2 | Mod base library | [GitHub](https://github.com/Alchyr/BaseLib-StS2) |
+
+## Notes
+
+1. **Thread safety**: Read game state and inject actions on the Godot main thread; TCP I/O on a background thread
+2. **Stability**: Read state and inject actions only when ActionQueue is idle
+3. **Separate modded saves**: Modded runs use separate save data; normal saves are unaffected
+4. **Mac ARM64**: Stock `0Harmony.dll` has bugs; use a patched build
+5. **Game updates**: STS2 is in Early Access; updates may require re-adapting Harmony patches

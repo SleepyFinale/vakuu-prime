@@ -52,6 +52,7 @@ class ActConfig:
     num_rooms: int  # Number of room rows (used as mapLength input)
     num_weak_encounters: int = 3  # C# NumberOfWeakEncounters (3 for Acts 0/3, 2 for Acts 1/2)
     boss_ids: list[str] = field(default_factory=list)
+    boss_id: str | None = None
     elite_ids: list[str] = field(default_factory=list)
     weak_encounter_ids: list[str] = field(default_factory=list)
     strong_encounter_ids: list[str] = field(default_factory=list)
@@ -67,6 +68,7 @@ class ActConfig:
             num_rooms=self.num_rooms,
             num_weak_encounters=self.num_weak_encounters,
             boss_ids=list(self.boss_ids),
+            boss_id=self.boss_id,
             elite_ids=list(self.elite_ids),
             weak_encounter_ids=list(self.weak_encounter_ids),
             strong_encounter_ids=list(self.strong_encounter_ids),
@@ -83,7 +85,7 @@ class ActConfig:
 ACT_0 = ActConfig(
     act_index=0,
     num_rooms=15,
-    boss_ids=["TheLich"],
+    boss_ids=["VantomBoss", "CeremonialBeastBoss", "TheKinBoss"],
     elite_ids=["SentryAndSentry", "GremlinNob", "BookOfStabbing"],
     weak_encounter_ids=[
         "TwoLouses", "ThreeJawWorms", "SmallSlimes",
@@ -115,7 +117,7 @@ ACT_1 = ActConfig(
     act_index=1,
     num_rooms=14,  # C# Hive.BaseNumberOfRooms = 14
     num_weak_encounters=2,  # C# Hive.NumberOfWeakEncounters = 2
-    boss_ids=["TheCollector", "Automaton", "Champ"],
+    boss_ids=["TheInsatiableBoss", "KnowledgeDemonBoss", "KaiserCrabBoss"],
     elite_ids=["TaskMaster", "SphericGuardian", "Snecko"],
     weak_encounter_ids=[
         "SnakePlant", "Centurion", "ThreeByrds",
@@ -142,7 +144,7 @@ ACT_2 = ActConfig(
     act_index=2,
     num_rooms=13,  # C# Glory.BaseNumberOfRooms = 13
     num_weak_encounters=2,  # C# Glory.NumberOfWeakEncounters = 2
-    boss_ids=["AwakenedOne", "TimeEater", "DonuAndDeca"],
+    boss_ids=["QueenBoss", "TestSubjectBoss", "DoormakerBoss"],
     elite_ids=["GiantHead", "Nemesis", "Reptomancer"],
     weak_encounter_ids=[
         "Darkling", "OrbWalker",

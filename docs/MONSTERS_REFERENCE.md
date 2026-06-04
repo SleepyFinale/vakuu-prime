@@ -9,21 +9,24 @@
 
 Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, SlimesWeak, CubexConstructNormal, FlyconidNormal, FogmogNormal, InkletsNormal, MawlerNormal, NibbitsNormal, OvergrowthCrawlers, RubyRaidersNormal, SlimesNormal, SlitheringStranglerNormal, SnappingJaxfruitNormal, VineShamblerNormal, BygoneEffigyElite, ByrdonisElite, PhrogParasiteElite, CeremonialBeastBoss, TheKinBoss, VantomBoss.
 
-### Weak Encounters
+### Act 1 - Overgrowth —Weak Encounters
 
 ---
 
 ### FuzzyWurmCrawler
+
 - ID: FUZZY_WURM_CRAWLER
 - Type: Normal (Weak encounter)
 - HP: 55-57 (ascension: 58-59)
 - Damage Values: {AcidGoop: 4 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: FIRST_ACID_GOOP
   FIRST_ACID_GOOP -> INHALE -> ACID_GOOP -> FIRST_ACID_GOOP (loop)
   ```
+
 - Moves:
   - FIRST_ACID_GOOP: Deal AcidGoopDamage [SingleAttack]
   - INHALE: Gain 7 Strength [Buff]
@@ -33,16 +36,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Nibbit
+
 - ID: NIBBIT
 - Type: Normal (appears in Weak and Normal encounters)
 - HP: 11-13 (ascension: 12-14)
 - Damage Values: {Nibble: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: NIBBLE_MOVE
   NIBBLE_MOVE -> NIBBLE_MOVE (repeat forever)
   ```
+
 - Moves:
   - NIBBLE_MOVE: Deal NibbleDamage [SingleAttack]
 - Special: Simple single-move monster
@@ -50,16 +56,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### ShrinkerBeetle
+
 - ID: SHRINKER_BEETLE
 - Type: Normal (Weak encounter)
 - HP: 23-26 (ascension: 24-27)
 - Damage Values: {Chomp: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SHRINK_MOVE
   SHRINK_MOVE -> CHOMP_MOVE -> CHOMP_MOVE (repeat)
   ```
+
 - Moves:
   - SHRINK_MOVE: Apply 1 Weak + 1 Vulnerable to targets [Debuff]
   - CHOMP_MOVE: Deal ChompDamage [SingleAttack]
@@ -68,16 +77,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### LeafSlimeM (Medium Leaf Slime)
+
 - ID: LEAF_SLIME_M
 - Type: Normal (appears in SlimesWeak/SlimesNormal)
 - HP: 27-29 (ascension: 29-31)
 - Damage Values: {Slam: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLAM_MOVE
   SLAM_MOVE -> SLAM_MOVE (repeat)
   ```
+
 - Moves:
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies SplitPower to self. On death, splits into 2 LeafSlimeS
@@ -85,16 +97,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### LeafSlimeS (Small Leaf Slime)
+
 - ID: LEAF_SLIME_S
 - Type: Normal (spawned from LeafSlimeM split)
 - HP: 6-9 (ascension: 7-10)
 - Damage Values: {Slam: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLAM_MOVE
   SLAM_MOVE -> SLAM_MOVE (repeat)
   ```
+
 - Moves:
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
 - Special: Spawned from LeafSlimeM split
@@ -102,16 +117,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### TwigSlimeM (Medium Twig Slime)
+
 - ID: TWIG_SLIME_M
 - Type: Normal (appears in SlimesWeak/SlimesNormal)
 - HP: 27-29 (ascension: 29-31)
 - Damage Values: {Slam: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLAM_MOVE
   SLAM_MOVE -> SLAM_MOVE (repeat)
   ```
+
 - Moves:
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies SplitPower to self. On death, splits into 2 TwigSlimeS
@@ -119,37 +137,43 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### TwigSlimeS (Small Twig Slime)
+
 - ID: TWIG_SLIME_S
 - Type: Normal (spawned from TwigSlimeM split)
 - HP: 6-9 (ascension: 7-10)
 - Damage Values: {Slam: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLAM_MOVE
   SLAM_MOVE -> SLAM_MOVE (repeat)
   ```
+
 - Moves:
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
 
 ---
 
-### Normal Encounters
+### Act 1 - Overgrowth —Normal Encounters
 
 ---
 
 ### CubexConstruct
+
 - ID: CUBEX_CONSTRUCT
 - Type: Normal
 - HP: 65 (ascension: 70)
 - Damage Values: {Blast: 7 (8), Expel: 5 (6)}
 - Block Values: {Submerge: 15, InitialBlock: 13}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CHARGE_UP_MOVE
   CHARGE_UP_MOVE -> REPEATER_MOVE -> REPEATER_MOVE_2 -> EXPEL_BLAST -> REPEATER_MOVE (loop)
   SUBMERGE_MOVE -> CHARGE_UP_MOVE
   ```
+
 - Moves:
   - CHARGE_UP_MOVE: Gain 2 Strength [Buff]
   - REPEATER_MOVE: Deal BlastDamage + gain 2 Strength [SingleAttack + Buff]
@@ -161,17 +185,20 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Flyconid
+
 - ID: FLYCONID
 - Type: Normal
 - HP: 47-49 (ascension: 51-53)
 - Damage Values: {Smash: 11 (12), FrailSpores: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INITIAL_RANDOM (weighted: FrailSpores 2, Smash 1)
   then -> RAND (weighted: VulnerableSpores 3, FrailSpores 2, Smash 1; all CannotRepeat)
   All moves -> RAND
   ```
+
 - Moves:
   - VULNERABLE_SPORES_MOVE: Apply 2 Vulnerable to targets [Debuff]
   - FRAIL_SPORES_MOVE: Deal SporeDamage + apply 2 Frail [SingleAttack + Debuff]
@@ -181,18 +208,21 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Fogmog
+
 - ID: FOGMOG
 - Type: Normal
 - HP: 74 (ascension: 78)
 - Damage Values: {Swipe: 8 (9), Headbutt: 14 (16)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: ILLUSION_MOVE
   ILLUSION_MOVE -> SWIPE_MOVE -> RAND(SwipeRandom 40%, Headbutt 60%; CannotRepeat)
   SWIPE_RANDOM -> HEADBUTT -> SWIPE_MOVE (loop)
   HEADBUTT -> SWIPE_MOVE
   ```
+
 - Moves:
   - ILLUSION_MOVE: Summon EyeWithTeeth minion [Summon]
   - SWIPE_MOVE: Deal SwipeDamage + gain 1 Strength [SingleAttack + Buff]
@@ -202,16 +232,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### EyeWithTeeth
+
 - ID: EYE_WITH_TEETH
 - Type: Minion (summoned by Fogmog)
 - HP: 6 (fixed)
 - Damage Values: none
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: DISTRACT_MOVE
   DISTRACT_MOVE -> DISTRACT_MOVE (repeat)
   ```
+
 - Moves:
   - DISTRACT_MOVE: Add 3 Dazed to targets' discard pile [Status]
 - Special: Has Illusion power. Does not disappear from Doom. Death anim only plays when no primary enemies alive.
@@ -219,13 +252,15 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Inklet
+
 - ID: INKLET
 - Type: Normal
 - HP: 30-33 (ascension: 32-35)
 - Damage Values: {Splatter: 6 (7), Submerge: 4 (5)}
 - Block Values: {Submerge: 8 (9)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONDITIONAL
     if slot == "first": SPLATTER_MOVE
     if slot == "second": SUBMERGE_MOVE
@@ -233,6 +268,7 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
   SPLATTER_MOVE -> SUBMERGE_MOVE -> RAND(Splatter CannotRepeat, Submerge CannotRepeat)
   Both -> RAND
   ```
+
 - Moves:
   - SPLATTER_MOVE: Deal SplatterDamage [SingleAttack]
   - SUBMERGE_MOVE: Deal SubDamage + gain Block [SingleAttack + Defend]
@@ -241,16 +277,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Mawler
+
 - ID: MAWLER
 - Type: Normal
 - HP: 72 (ascension: 76)
 - Damage Values: {RipAndTear: 14 (16), Claw: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND(RipAndTear CannotRepeat, Roar UseOnlyOnce, Claw CannotRepeat)
   All -> RAND
   ```
+
 - Moves:
   - RIP_AND_TEAR_MOVE: Deal RipAndTearDamage [SingleAttack]
   - ROAR_MOVE: Apply 2 Vulnerable to targets [Debuff] (UseOnlyOnce)
@@ -260,16 +299,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### VineShambler
+
 - ID: VINE_SHAMBLER
 - Type: Normal
 - HP: 40-43 (ascension: 42-45)
 - Damage Values: {VineWhip: 7 (8), Tangle: 10 (12)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND(VineWhip CannotRepeat, Tangle CannotRepeat)
   Both -> RAND
   ```
+
 - Moves:
   - VINE_WHIP_MOVE: Deal VineWhipDamage + apply 1 Weak [SingleAttack + Debuff]
   - TANGLE_MOVE: Deal TangleDamage [SingleAttack]
@@ -278,16 +320,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### SlitheringStrangler
+
 - ID: SLITHERING_STRANGLER
 - Type: Normal
 - HP: 45-49 (ascension: 47-51)
 - Damage Values: {Squeeze: 5 (6), Strangle: 12 (14)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SQUEEZE_MOVE
   SQUEEZE_MOVE -> STRANGLE_MOVE -> SQUEEZE_MOVE (alternating)
   ```
+
 - Moves:
   - SQUEEZE_MOVE: Deal SqueezeDamage x2 [MultiAttack]
   - STRANGLE_MOVE: Deal StrangleDamage + apply 1 Weak [SingleAttack + Debuff]
@@ -296,16 +341,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### SnappingJaxfruit
+
 - ID: SNAPPING_JAXFRUIT
 - Type: Normal
 - HP: 53-56 (ascension: 56-59)
 - Damage Values: {Snap: 7 (8), SeedSpit: 1}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND(Snap CannotRepeat, SeedSpit CannotRepeat, Burrow CannotRepeat; weight 1 each)
   All -> RAND
   ```
+
 - Moves:
   - SNAP_MOVE: Deal SnapDamage [SingleAttack]
   - SEED_SPIT_MOVE: Deal 1 damage x SeedSpitRepeats(4/5 asc) + apply 1 Frail [MultiAttack + Debuff]
@@ -317,32 +365,38 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ### RubyRaiders (encounter with multiple raider types)
 
 ### AssassinRubyRaider
+
 - ID: ASSASSIN_RUBY_RAIDER
 - Type: Normal (part of RubyRaidersNormal)
 - HP: 18-23 (ascension: 19-24)
 - Damage Values: {Killshot: 11 (12)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: KILLSHOT_MOVE
   KILLSHOT_MOVE -> KILLSHOT_MOVE (repeat)
   ```
+
 - Moves:
   - KILLSHOT_MOVE: Deal KillshotDamage [SingleAttack]
 
 ---
 
 ### AxeRubyRaider
+
 - ID: AXE_RUBY_RAIDER
 - Type: Normal (part of RubyRaidersNormal)
 - HP: 20-22 (ascension: 21-23)
 - Damage Values: {Swing: 5 (6), BigSwing: 12 (13)}
 - Block Values: {Swing: 5 (6)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SWING_1
   SWING_1 -> SWING_2 -> BIG_SWING -> SWING_1 (cycle)
   ```
+
 - Moves:
   - SWING_1/SWING_2: Deal SwingDamage + gain SwingBlock [SingleAttack + Defend]
   - BIG_SWING: Deal BigSwingDamage [SingleAttack]
@@ -350,16 +404,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### BruteRubyRaider
+
 - ID: BRUTE_RUBY_RAIDER
 - Type: Normal (part of RubyRaidersNormal)
 - HP: 30-33 (ascension: 31-34)
 - Damage Values: {Beat: 7 (8)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BEAT_MOVE
   BEAT_MOVE -> ROAR_MOVE -> BEAT_MOVE (alternating)
   ```
+
 - Moves:
   - BEAT_MOVE: Deal BeatDamage [SingleAttack]
   - ROAR_MOVE: Gain 3 Strength [Buff]
@@ -367,16 +424,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### CrossbowRubyRaider
+
 - ID: CROSSBOW_RUBY_RAIDER
 - Type: Normal (part of RubyRaidersNormal)
 - HP: 18-21 (ascension: 19-22)
 - Damage Values: {Fire: 14 (16)}
 - Block Values: {Reload: 3}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RELOAD_MOVE
   RELOAD_MOVE -> FIRE_MOVE -> RELOAD_MOVE (alternating)
   ```
+
 - Moves:
   - FIRE_MOVE: Deal FireDamage [SingleAttack]
   - RELOAD_MOVE: Gain 3 Block [Defend]
@@ -384,16 +444,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### TrackerRubyRaider
+
 - ID: TRACKER_RUBY_RAIDER
 - Type: Normal (part of RubyRaidersNormal)
 - HP: 21-25 (ascension: 22-26)
 - Damage Values: {Hounds: 1 (1) x 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: TRACK_MOVE
   TRACK_MOVE -> HOUNDS_MOVE -> HOUNDS_MOVE (repeat)
   ```
+
 - Moves:
   - TRACK_MOVE: Apply 2 Frail to targets [Debuff]
   - HOUNDS_MOVE: Deal HoundsDamage x HoundsRepeat [MultiAttack]
@@ -404,22 +467,25 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 
 ---
 
-### Elite Encounters
+### Act 1 - Overgrowth —Elite Encounters
 
 ---
 
 ### BygoneEffigy
+
 - ID: BYGONE_EFFIGY
 - Type: Elite
 - HP: 127 (ascension: 132)
 - Damage Values: {Slash: 15 (17)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INITIAL_SLEEP_MOVE
   INITIAL_SLEEP_MOVE -> WAKE_MOVE -> SLASHES_MOVE -> SLASHES_MOVE (repeat)
   SLEEP_MOVE -> SLASHES_MOVE
   ```
+
 - Moves:
   - INITIAL_SLEEP_MOVE: Does nothing, displays speak line [Sleep]
   - WAKE_MOVE: Gain 10 Strength [Buff]
@@ -430,16 +496,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Byrdonis
+
 - ID: BYRDONIS
 - Type: Elite
 - HP: 91-94 (ascension: 99)
 - Damage Values: {Peck: 3 (4) x 3, Swoop: 16 (18)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SWOOP_MOVE
   SWOOP_MOVE -> PECK_MOVE -> SWOOP_MOVE (alternating)
   ```
+
 - Moves:
   - PECK_MOVE: Deal PeckDamage x PeckRepeat [MultiAttack]
   - SWOOP_MOVE: Deal SwoopDamage [SingleAttack]
@@ -448,16 +517,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### PhrogParasite
+
 - ID: PHROG_PARASITE
 - Type: Elite
 - HP: 80-83 (ascension: 83-86)
 - Damage Values: {Lunge: 12 (14), Bite: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: LUNGE_MOVE
   LUNGE_MOVE -> INFEST_MOVE -> BITE_MOVE -> LUNGE_MOVE (cycle)
   ```
+
 - Moves:
   - LUNGE_MOVE: Deal LungeDamage [SingleAttack]
   - INFEST_MOVE: Add 2 Parasite cards to targets' draw pile [Status]
@@ -466,22 +538,25 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 
 ---
 
-### Boss Encounters
+### Act 1 - Overgrowth —Boss Encounters
 
 ---
 
 ### Vantom
+
 - ID: VANTOM
 - Type: Boss
 - HP: 206 (ascension: 216)
 - Damage Values: {Chomp: 9 (11), GhastlySmash: 22 (25), Wail: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONSUME_MOVE
   CONSUME_MOVE -> RAND(Chomp maxRepeat2, GhastlySmash maxRepeat2, Wail maxRepeat2)
   All -> RAND
   ```
+
 - Moves:
   - CONSUME_MOVE: Summon 2 Parafright minions [Summon + Buff]
   - CHOMP_MOVE: Deal ChompDamage x2 [MultiAttack]
@@ -492,16 +567,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### Parafright
+
 - ID: PARAFRIGHT
 - Type: Minion (summoned by Vantom)
 - HP: 1 (fixed)
 - Damage Values: {Haunt: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: HAUNT_MOVE
   HAUNT_MOVE -> HAUNT_MOVE (repeat)
   ```
+
 - Moves:
   - HAUNT_MOVE: Deal HauntDamage + apply 1 Frail [SingleAttack + Debuff]
 - Special: Has Illusion power. Minion.
@@ -509,19 +587,22 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### CeremonialBeast
+
 - ID: CEREMONIAL_BEAST
 - Type: Boss
 - HP: 252 (ascension: 262)
 - Damage Values: {Plow: 18 (20), Stomp: 15 (17), Crush: 17 (19)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: STAMP_MOVE
   Phase 1:
     STAMP_MOVE -> PLOW_MOVE -> PLOW_MOVE (repeat until Plow broken)
   Phase 2 (after stun):
     STUN_MOVE -> BEAST_CRY_MOVE -> STOMP_MOVE -> CRUSH_MOVE -> BEAST_CRY_MOVE (cycle)
   ```
+
 - Moves:
   - STAMP_MOVE: Apply PlowPower(150/160 asc) to self [Buff]
   - PLOW_MOVE: Deal PlowDamage + gain 2 Strength [SingleAttack + Buff]
@@ -534,16 +615,19 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### KinPriest
+
 - ID: KIN_PRIEST
 - Type: Boss (part of TheKinBoss)
 - HP: 119 (ascension: 125)
 - Damage Values: {SmiteDamage: 22 (24)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONVERSION_MOVE
   CONVERSION_MOVE -> SMITE_MOVE -> SMITE_MOVE (repeat)
   ```
+
 - Moves:
   - CONVERSION_MOVE: Gain 4 Ritual [Buff]
   - SMITE_MOVE: Deal SmiteDamage [SingleAttack]
@@ -552,13 +636,15 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 ---
 
 ### KinFollower
+
 - ID: KIN_FOLLOWER
 - Type: Boss (part of TheKinBoss)
 - HP: 65-71 (ascension: 67-73)
 - Damage Values: {Bash: 10 (11), Bite: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONDITIONAL
     if slot == "first": BASH_MOVE
     if slot == "second": BASH_MOVE
@@ -567,6 +653,7 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
   BASH_MOVE -> BITE_MOVE -> BASH_MOVE (alternating)
   BITE_MOVE -> BASH_MOVE -> BITE_MOVE (alternating)
   ```
+
 - Moves:
   - BASH_MOVE: Deal BashDamage [SingleAttack]
   - BITE_MOVE: Deal BiteDamage x2 + apply 1 Weak [MultiAttack + Debuff]
@@ -578,21 +665,24 @@ Encounters in this act: FuzzyWurmCrawlerWeak, NibbitsWeak, ShrinkerBeetleWeak, S
 
 Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, BowlbugsNormal, ChompersNormal, ExoskeletonsNormal, HunterKillerNormal, LouseProgenitorNormal, MytesNormal, OvicopterNormal, SlumberingBeetleNormal, SpinyToadNormal, TheObscuraNormal, TunnelerNormal, DecimillipedeElite, EntomancerElite, InfestedPrismsElite, KaiserCrabBoss, KnowledgeDemonBoss, TheInsatiableBoss.
 
-### Weak Encounters
+### Act 2 - Hive —Weak Encounters
 
 ---
 
 ### ThievingHopper
+
 - ID: THIEVING_HOPPER
 - Type: Normal (Weak encounter)
 - HP: 15-18 (ascension: 16-19)
 - Damage Values: {Mug: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: MUG_MOVE
   MUG_MOVE -> MUG_MOVE (repeat)
   ```
+
 - Moves:
   - MUG_MOVE: Deal MugDamage + steal gold [SingleAttack]
 - Special: AfterAddedToRoom: applies ThieveryPower(15). Steals gold on each attack.
@@ -600,16 +690,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Tunneler
+
 - ID: TUNNELER
 - Type: Normal (Weak and Normal encounters)
 - HP: 24-28 (ascension: 26-29)
 - Damage Values: {Bite: 7 (8)}
 - Block Values: {Burrow: 8 (9)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BURROW_MOVE
   BURROW_MOVE -> BITE_MOVE -> BURROW_MOVE (alternating)
   ```
+
 - Moves:
   - BURROW_MOVE: Gain BurrowBlock [Defend]
   - BITE_MOVE: Deal BiteDamage [SingleAttack]
@@ -617,32 +710,38 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### BowlbugEgg
+
 - ID: BOWLBUG_EGG
 - Type: Normal (part of Bowlbugs encounter)
 - HP: 21-22 (ascension: 23-24)
 - Damage Values: {Bite: 7 (8)}
 - Block Values: {Bite: 7 (8)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BITE_MOVE
   BITE_MOVE -> BITE_MOVE (repeat)
   ```
+
 - Moves:
   - BITE_MOVE: Deal BiteDamage + gain ProtectBlock [SingleAttack + Defend]
 
 ---
 
 ### BowlbugNectar
+
 - ID: BOWLBUG_NECTAR
 - Type: Normal (part of Bowlbugs encounter)
 - HP: 35-38 (ascension: 36-39)
 - Damage Values: {Thrash: 3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: THRASH_MOVE
   THRASH_MOVE -> BUFF_MOVE -> THRASH2_MOVE -> THRASH2_MOVE (repeat)
   ```
+
 - Moves:
   - THRASH_MOVE: Deal 3 damage [SingleAttack]
   - BUFF_MOVE: Gain 15(16 asc) Strength [Buff]
@@ -651,18 +750,21 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### BowlbugRock
+
 - ID: BOWLBUG_ROCK
 - Type: Normal (part of Bowlbugs encounter)
 - HP: 45-48 (ascension: 46-49)
 - Damage Values: {Headbutt: 15 (16)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: HEADBUTT_MOVE
   HEADBUTT_MOVE -> CONDITIONAL:
     if IsOffBalance: DIZZY_MOVE -> HEADBUTT_MOVE
     else: HEADBUTT_MOVE (repeat)
   ```
+
 - Moves:
   - HEADBUTT_MOVE: Deal HeadbuttDamage. If IsOffBalance, becomes stunned [SingleAttack]
   - DIZZY_MOVE: Recover from stun [Stun]
@@ -671,16 +773,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### BowlbugSilk
+
 - ID: BOWLBUG_SILK
 - Type: Normal (part of Bowlbugs encounter)
 - HP: 40-43 (ascension: 41-44)
 - Damage Values: {Thrash: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: TOXIC_SPIT_MOVE
   TOXIC_SPIT_MOVE -> THRASH_MOVE -> TOXIC_SPIT_MOVE (alternating)
   ```
+
 - Moves:
   - THRASH_MOVE: Deal ThrashDamage x2 [MultiAttack]
   - TOXIC_SPIT_MOVE: Apply 1 Weak to targets [Debuff]
@@ -688,13 +793,15 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Exoskeleton
+
 - ID: EXOSKELETON
 - Type: Normal (Weak and Normal encounters)
 - HP: 24-28 (ascension: 25-29)
 - Damage Values: {Skitter: 1 x 3(4 asc), Mandibles: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONDITIONAL by slot:
     "first": SKITTER_MOVE
     "second": MANDIBLE_MOVE
@@ -703,6 +810,7 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
   SKITTER_MOVE -> RAND(Skitter CannotRepeat, Mandible CannotRepeat)
   MANDIBLE_MOVE -> ENRAGE_MOVE -> RAND
   ```
+
 - Moves:
   - SKITTER_MOVE: Deal 1 x SkitterRepeats [MultiAttack]
   - MANDIBLE_MOVE: Deal MandiblesDamage [SingleAttack]
@@ -711,21 +819,24 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 
 ---
 
-### Normal Encounters
+### Act 2 - Hive —Normal Encounters
 
 ---
 
 ### Chomper
+
 - ID: CHOMPER
 - Type: Normal
 - HP: 60-64 (ascension: 63-67)
 - Damage Values: {Clamp: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CLAMP_MOVE (or SCREECH_MOVE if ScreamFirst=true)
   CLAMP_MOVE -> SCREECH_MOVE -> CLAMP_MOVE (alternating)
   ```
+
 - Moves:
   - CLAMP_MOVE: Deal ClampDamage x2 [MultiAttack]
   - SCREECH_MOVE: Add 3 Dazed to targets' discard pile [Status]
@@ -734,16 +845,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### HunterKiller
+
 - ID: HUNTER_KILLER
 - Type: Normal
 - HP: 60-65 (ascension: 63-68)
 - Damage Values: {Hunt: 4 (5), Kill: 15 (17)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: HUNT_MOVE
   HUNT_MOVE -> KILL_MOVE -> HUNT_MOVE (alternating)
   ```
+
 - Moves:
   - HUNT_MOVE: Deal HuntDamage x2 + apply 1 Vulnerable [MultiAttack + Debuff]
   - KILL_MOVE: Deal KillDamage [SingleAttack]
@@ -752,16 +866,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### LouseProgenitor
+
 - ID: LOUSE_PROGENITOR
 - Type: Normal
 - HP: 52-56 (ascension: 54-58)
 - Damage Values: {Scratch: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SPAWN_MOVE
   SPAWN_MOVE -> SCRATCH_MOVE -> SCRATCH_MOVE (repeat)
   ```
+
 - Moves:
   - SPAWN_MOVE: Summon 2 Wrigglers [Summon]
   - SCRATCH_MOVE: Deal ScratchDamage [SingleAttack]
@@ -770,16 +887,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Wriggler
+
 - ID: WRIGGLER
 - Type: Minion (summoned by LouseProgenitor)
 - HP: 8-10 (ascension: 9-11)
 - Damage Values: {Bite: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BITE_MOVE
   BITE_MOVE -> BITE_MOVE (repeat)
   ```
+
 - Moves:
   - BITE_MOVE: Deal BiteDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies MinionPower
@@ -787,16 +907,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Myte
+
 - ID: MYTE
 - Type: Normal
 - HP: 22-26 (ascension: 24-28)
 - Damage Values: {Bite: 6 (7), Infest: 5 (6)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND(Bite CannotRepeat, Infest CannotRepeat)
   Both -> RAND
   ```
+
 - Moves:
   - BITE_MOVE: Deal BiteDamage [SingleAttack]
   - INFEST_MOVE: Deal InfestDamage + add 1 Parasite to draw pile [SingleAttack + Status]
@@ -805,16 +928,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Ovicopter
+
 - ID: OVICOPTER
 - Type: Normal
 - HP: 67-72 (ascension: 70-75)
 - Damage Values: {Dive: 14 (16)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: LAY_EGGS_MOVE
   LAY_EGGS_MOVE -> DIVE_MOVE -> LAY_EGGS_MOVE (alternating)
   ```
+
 - Moves:
   - LAY_EGGS_MOVE: Summon ToughEgg [Summon]
   - DIVE_MOVE: Deal DiveDamage [SingleAttack]
@@ -823,16 +949,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### ToughEgg
+
 - ID: TOUGH_EGG
 - Type: Minion (summoned by Ovicopter)
 - HP: 10-12 (ascension: 11-13)
 - Damage Values: none
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: WAIT_MOVE
   WAIT_MOVE -> WAIT_MOVE (repeat)
   ```
+
 - Moves:
   - WAIT_MOVE: Does nothing [Hidden intent]
 - Special: AfterAddedToRoom: applies MinionPower and HatchPower. If not killed, hatches into a stronger enemy.
@@ -840,18 +969,21 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### SlumberingBeetle
+
 - ID: SLUMBERING_BEETLE
 - Type: Normal
 - HP: 66-70 (ascension: 69-73)
 - Damage Values: {Gore: 9 (10)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLEEP_MOVE
   SLEEP_MOVE -> CONDITIONAL:
     if awakened: GORE_MOVE -> GORE_MOVE (repeat)
     else: SLEEP_MOVE (repeat)
   ```
+
 - Moves:
   - SLEEP_MOVE: Does nothing [Sleep]
   - GORE_MOVE: Deal GoreDamage [SingleAttack]
@@ -860,16 +992,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### SpinyToad
+
 - ID: SPINY_TOAD
 - Type: Normal
 - HP: 116-119 (ascension: 121-124)
 - Damage Values: {Lash: 17 (19), Explosion: 23 (25)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: LASH_MOVE
   LASH_MOVE -> SPINES_MOVE -> LASH2_MOVE -> EXPLOSION_MOVE -> LASH_MOVE (cycle)
   ```
+
 - Moves:
   - LASH_MOVE: Deal LashDamage [SingleAttack]
   - SPINES_MOVE: Gain SpinesAmount(8/10 asc) Thorns [Buff]
@@ -880,16 +1015,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### TheObscura
+
 - ID: THE_OBSCURA
 - Type: Normal
 - HP: 36-39 (ascension: 38-41)
 - Damage Values: {Chomp: 5 (6) x2, Strike: 13 (15)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: DARKNESS_MOVE
   DARKNESS_MOVE -> RAND(Chomp 2, Strike 2; maxRepeat 2) -> RAND (loop)
   ```
+
 - Moves:
   - DARKNESS_MOVE: Apply 2 Frail + 2 Weak to targets [Debuff]
   - CHOMP_MOVE: Deal ChompDamage x2 [MultiAttack]
@@ -898,22 +1036,25 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 
 ---
 
-### Elite Encounters
+### Act 2 - Hive —Elite Encounters
 
 ---
 
 ### DecimillipedeSegment (Front/Middle/Back)
+
 - ID: DECIMILLIPEDE_SEGMENT
 - Type: Elite
 - HP: 42-48 (ascension: 48-56)
 - Damage Values: {Writhe: 5 (6) x2, Constrict: 8 (9), Bulk: 6 (7)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: varies by StarterMoveIdx (0: Writhe, 1: Bulk, 2: Constrict)
   Normal cycle: WRITHE -> CONSTRICT -> BULK -> WRITHE (cycle)
   After death+reattach: DEAD_MOVE -> REATTACH_MOVE -> RAND(Writhe/Bulk/Constrict CannotRepeat)
   ```
+
 - Moves:
   - WRITHE_MOVE: Deal WritheDamage x2 [MultiAttack]
   - BULK_MOVE: Deal BulkDamage + gain 2 Strength [SingleAttack + Buff]
@@ -925,16 +1066,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Entomancer
+
 - ID: ENTOMANCER
 - Type: Elite
 - HP: 145 (ascension: 155)
 - Damage Values: {Spear: 18 (20), Bees: 3 (3) x 7(8 asc)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BEES_MOVE
   BEES_MOVE -> SPEAR_MOVE -> PHEROMONE_SPIT_MOVE -> BEES_MOVE (cycle)
   ```
+
 - Moves:
   - BEES_MOVE: Deal BeesDamage x BeesRepeat [MultiAttack]
   - SPEAR_MOVE: Deal SpearMoveDamage [SingleAttack]
@@ -944,13 +1088,15 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### InfestedPrism
+
 - ID: INFESTED_PRISM
 - Type: Elite
 - HP: 40-45 (ascension: 42-47)
 - Damage Values: {LaserBeam: 8 (9), InfestedLaser: 10 (12)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CONDITIONAL by slot:
     "first": LASER_BEAM
     "second": INFESTED_LASER
@@ -958,6 +1104,7 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
   LASER_BEAM -> INFESTED_LASER -> RAND(LaserBeam CannotRepeat, InfestedLaser CannotRepeat)
   INFESTED_LASER -> LASER_BEAM -> RAND
   ```
+
 - Moves:
   - LASER_BEAM_MOVE: Deal LaserBeamDamage [SingleAttack]
   - INFESTED_LASER_MOVE: Deal InfestedLaserDamage + add 1 Parasite to draw pile [SingleAttack + Status]
@@ -965,22 +1112,25 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 
 ---
 
-### Boss Encounters
+### Act 2 - Hive —Boss Encounters
 
 ---
 
 ### TheInsatiable
+
 - ID: THE_INSATIABLE
 - Type: Boss
 - HP: 242 (ascension: 256)
 - Damage Values: {Chomp: 17 (19), DevouringMaw: 7 (8) x3, AcidBlast: 23 (27)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CHOMP_MOVE
   Phase cycle: CHOMP -> DEVOURING_MAW -> ACID_BLAST -> CHOMP (repeat cycle)
   At half HP: EVOLVE_MOVE interrupts, then enhanced cycle
   ```
+
 - Moves:
   - CHOMP_MOVE: Deal ChompDamage [SingleAttack]
   - DEVOURING_MAW_MOVE: Deal DevouringMawDamage x3 [MultiAttack]
@@ -991,16 +1141,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### KnowledgeDemon
+
 - ID: KNOWLEDGE_DEMON
 - Type: Boss
 - HP: 286 (ascension: 300)
 - Damage Values: {DarkBlast: 18 (20), MindSpike: 6 (7) x3, Annihilate: 40 (45)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: FORBIDDEN_TOME_MOVE
   FORBIDDEN_TOME -> DARK_BLAST -> MIND_SPIKE -> ANNIHILATE -> FORBIDDEN_TOME (cycle)
   ```
+
 - Moves:
   - FORBIDDEN_TOME_MOVE: Add status cards to player + gain Strength [Buff + Status]
   - DARK_BLAST_MOVE: Deal DarkBlastDamage [SingleAttack]
@@ -1011,16 +1164,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Crusher (Kaiser Crab Left Arm)
+
 - ID: CRUSHER
 - Type: Boss (part of KaiserCrabBoss)
 - HP: 199 (ascension: 209)
 - Damage Values: {Thrash: 12 (14), EnlargingStrike: 4 (4), BugSting: 6 (7) x2, GuardedStrike: 12 (14)}
 - Block Values: {GuardedStrike: 18}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: THRASH_MOVE
   THRASH -> ENLARGING_STRIKE -> BUG_STING -> ADAPT -> GUARDED_STRIKE -> THRASH (cycle)
   ```
+
 - Moves:
   - THRASH_MOVE: Deal ThrashDamage [SingleAttack]
   - ENLARGING_STRIKE_MOVE: Deal EnlargingStrikeDamage [SingleAttack]
@@ -1032,16 +1188,19 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 ---
 
 ### Rocket (Kaiser Crab Right Arm)
+
 - ID: ROCKET
 - Type: Boss (part of KaiserCrabBoss)
 - HP: 189 (ascension: 199)
 - Damage Values: {TargetingReticle: 3 (4), PrecisionBeam: 18 (20), Laser: 31 (35)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: TARGETING_RETICLE_MOVE
   TARGETING_RETICLE -> PRECISION_BEAM -> LASER -> TARGETING_RETICLE (cycle)
   ```
+
 - Moves:
   - TARGETING_RETICLE_MOVE: Deal TargetingReticleDamage + apply 2 Vulnerable [SingleAttack + Debuff]
   - PRECISION_BEAM_MOVE: Deal PrecisionBeamDamage [SingleAttack]
@@ -1054,21 +1213,24 @@ Encounters: BowlbugsWeak, ExoskeletonsWeak, ThievingHopperWeak, TunnelerWeak, Bo
 
 Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, AxebotsNormal, ConstructMenagerieNormal, FabricatorNormal, FrogKnightNormal, GlobeHeadNormal, OwlMagistrateNormal, ScrollsOfBitingNormal, SlimedBerserkerNormal, TheLostAndForgottenNormal, KnightsElite, MechaKnightElite, SoulNexusElite, DoormakerBoss, QueenBoss, TestSubjectBoss.
 
-### Weak Encounters
+### Act 3 - Glory —Weak Encounters
 
 ---
 
 ### DevotedSculptor
+
 - ID: DEVOTED_SCULPTOR
 - Type: Normal (Weak encounter)
 - HP: 162 (ascension: 172)
 - Damage Values: {Savage: 12 (15)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: FORBIDDEN_INCANTATION_MOVE
   FORBIDDEN_INCANTATION_MOVE -> SAVAGE_MOVE -> SAVAGE_MOVE (repeat)
   ```
+
 - Moves:
   - FORBIDDEN_INCANTATION_MOVE: Gain 9 Ritual [Buff]
   - SAVAGE_MOVE: Deal SavageDamage [SingleAttack]
@@ -1077,16 +1239,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### ScrollOfBiting
+
 - ID: SCROLL_OF_BITING
 - Type: Normal (Weak and Normal encounters)
 - HP: 24-26 (ascension: 26-28)
 - Damage Values: {Bite: 7 (8)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BITE_MOVE
   BITE_MOVE -> BITE_MOVE (repeat)
   ```
+
 - Moves:
   - BITE_MOVE: Deal BiteDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies FlyPower(1)
@@ -1094,16 +1259,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### TurretOperator
+
 - ID: TURRET_OPERATOR
 - Type: Normal (Weak encounter)
 - HP: 28-30 (ascension: 30-32)
 - Damage Values: {Shoot: 9 (10)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: DEPLOY_TURRET_MOVE
   DEPLOY_TURRET_MOVE -> SHOOT_MOVE -> SHOOT_MOVE (repeat)
   ```
+
 - Moves:
   - DEPLOY_TURRET_MOVE: Summon turret/apply power [Buff]
   - SHOOT_MOVE: Deal ShootDamage [SingleAttack]
@@ -1111,18 +1279,20 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 
 ---
 
-### Normal Encounters
+### Act 3 - Glory —Normal Encounters
 
 ---
 
 ### Axebot
+
 - ID: AXEBOT
 - Type: Normal
 - HP: 40-44 (ascension: 42-46)
 - Damage Values: {OneTwo: 5 (6) x2, HammerUppercut: 8 (10)}
 - Block Values: {BootUp: 10}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND (or BOOT_UP if spawned with stock override)
   BOOT_UP_MOVE -> RAND
   RAND: weighted branches:
@@ -1131,6 +1301,7 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
     HAMMER_UPPERCUT_MOVE (weight 2)
   All -> RAND
   ```
+
 - Moves:
   - BOOT_UP_MOVE: Gain 10 Block + 1 Strength [Defend + Buff]
   - ONE_TWO_MOVE: Deal OneTwoDamage x2 [MultiAttack]
@@ -1141,18 +1312,21 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Fabricator
+
 - ID: FABRICATOR
 - Type: Normal
 - HP: 150 (ascension: 155)
 - Damage Values: {FabricatingStrike: 18 (21), Disintegrate: 11 (13)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: fabricateBranch CONDITIONAL:
     if CanFabricate (<4 alive allies): RAND(Fabricate, FabricatingStrike; equal weight)
     else: DISINTEGRATE_MOVE
   All -> fabricateBranch
   ```
+
 - Moves:
   - FABRICATE_MOVE: Spawn 1 defense bot + 1 aggro bot [Summon]
   - FABRICATING_STRIKE_MOVE: Deal FabricatingStrikeDamage + spawn 1 aggro bot [SingleAttack + Summon]
@@ -1162,16 +1336,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Zapbot
+
 - ID: ZAPBOT
 - Type: Minion (spawned by Fabricator)
 - HP: 23-28 (ascension: 24-29)
 - Damage Values: {Zap: 14 (15)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: ZAP
   ZAP -> ZAP (repeat)
   ```
+
 - Moves:
   - ZAP: Deal ZapDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies HighVoltage(2) power
@@ -1179,66 +1356,78 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Stabbot
+
 - ID: STABBOT
 - Type: Minion (spawned by Fabricator)
 - HP: 23-28 (ascension: 24-29)
 - Damage Values: {Stab: 3 (4) x3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: STAB_MOVE
   STAB_MOVE -> STAB_MOVE (repeat)
   ```
+
 - Moves:
   - STAB_MOVE: Deal StabDamage x3 [MultiAttack]
 
 ---
 
 ### Guardbot
+
 - ID: GUARDBOT
 - Type: Minion (spawned by Fabricator)
 - HP: 21-25 (ascension: 22-26)
 - Damage Values: none
 - Block Values: {Guard: variable (gives block to Fabricator)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: GUARD_MOVE
   GUARD_MOVE -> GUARD_MOVE (repeat)
   ```
+
 - Moves:
   - GUARD_MOVE: Give block to all allied Fabricators [Defend]
 
 ---
 
 ### Noisebot
+
 - ID: NOISEBOT
 - Type: Minion (spawned by Fabricator)
 - HP: 23-28 (ascension: 24-29)
 - Damage Values: none
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: NOISE_MOVE
   NOISE_MOVE -> NOISE_MOVE (repeat)
   ```
+
 - Moves:
   - NOISE_MOVE: Add 2 Dazed (1 to discard, 1 to random draw) [Status]
 
 ---
 
 ### FrogKnight
+
 - ID: FROG_KNIGHT
 - Type: Normal
 - HP: 191 (ascension: 199)
 - Damage Values: {StrikeDownEvil: 21 (23), TongueLash: 13 (14), BeetleCharge: 35 (40)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: TONGUE_LASH
   TONGUE_LASH -> STRIKE_DOWN_EVIL -> FOR_THE_QUEEN -> CONDITIONAL:
     if HP >= 50% or already charged: TONGUE_LASH
     if HP < 50% and not charged: BEETLE_CHARGE -> TONGUE_LASH
   ```
+
 - Moves:
   - TONGUE_LASH: Deal TongueLashDamage + apply 2 Frail [SingleAttack + Debuff]
   - STRIKE_DOWN_EVIL: Deal StrikeDownEvilDamage [SingleAttack]
@@ -1249,16 +1438,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### GlobeHead
+
 - ID: GLOBE_HEAD
 - Type: Normal
 - HP: 148 (ascension: 158)
 - Damage Values: {ThunderStrike: 6 (7) x3, ShockingSlap: 13 (14), GalvanicBurst: 16 (17)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SHOCKING_SLAP
   SHOCKING_SLAP -> THUNDER_STRIKE -> GALVANIC_BURST -> SHOCKING_SLAP (cycle)
   ```
+
 - Moves:
   - SHOCKING_SLAP: Deal ShockingSlapDamage + apply 2 Frail [SingleAttack + Debuff]
   - THUNDER_STRIKE: Deal ThunderStrikeDamage x3 [MultiAttack]
@@ -1268,16 +1460,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### OwlMagistrate
+
 - ID: OWL_MAGISTRATE
 - Type: Normal
 - HP: 82 (ascension: 86)
 - Damage Values: {Judgement: 10 (12), Sentence: 16 (18)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: JUDGEMENT_MOVE
   JUDGEMENT_MOVE -> SENTENCE_MOVE -> JUDGEMENT_MOVE (alternating)
   ```
+
 - Moves:
   - JUDGEMENT_MOVE: Deal JudgementDamage + apply debuff [SingleAttack + Debuff]
   - SENTENCE_MOVE: Deal SentenceDamage [SingleAttack]
@@ -1286,16 +1481,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### SlimedBerserker
+
 - ID: SLIMED_BERSERKER
 - Type: Normal
 - HP: 60-65 (ascension: 64-69)
 - Damage Values: {Slash: 8 (9), Slam: 14 (16)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLASH_MOVE
   SLASH_MOVE -> SLAM_MOVE -> ENRAGE_MOVE -> SLASH_MOVE (cycle)
   ```
+
 - Moves:
   - SLASH_MOVE: Deal SlashDamage [SingleAttack]
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
@@ -1305,16 +1503,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### TheLost
+
 - ID: THE_LOST
 - Type: Normal (part of TheLostAndForgotten encounter)
 - HP: 50-54 (ascension: 53-57)
 - Damage Values: {DarkSlash: 9 (10), ShadowStrike: 13 (15)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: DARK_SLASH_MOVE
   DARK_SLASH -> SHADOW_STRIKE -> DARK_SLASH (alternating)
   ```
+
 - Moves:
   - DARK_SLASH_MOVE: Deal DarkSlashDamage [SingleAttack]
   - SHADOW_STRIKE_MOVE: Deal ShadowStrikeDamage [SingleAttack]
@@ -1322,40 +1523,46 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### TheForgotten
+
 - ID: THE_FORGOTTEN
 - Type: Normal (part of TheLostAndForgotten encounter)
 - HP: 50-54 (ascension: 53-57)
 - Damage Values: {Haunt: 7 (8), WailOfSorrow: 11 (13)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: HAUNT_MOVE
   HAUNT -> WAIL_OF_SORROW -> HAUNT (alternating)
   ```
+
 - Moves:
   - HAUNT_MOVE: Deal HauntDamage + apply debuff [SingleAttack + Debuff]
   - WAIL_OF_SORROW_MOVE: Deal WailOfSorrowDamage [SingleAttack]
 
 ---
 
-### Elite Encounters
+### Act 3 - Glory —Elite Encounters
 
 ---
 
 ### FlailKnight
+
 - ID: FLAIL_KNIGHT
 - Type: Elite (part of KnightsElite)
 - HP: 101 (ascension: 108)
 - Damage Values: {Flail: 9 (10) x2, Ram: 15 (17)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAM_MOVE
   All -> RAND:
     WAR_CHANT (CannotRepeat)
     FLAIL_MOVE (weight 2)
     RAM_MOVE (weight 2)
   ```
+
 - Moves:
   - WAR_CHANT: Gain 3 Strength [Buff]
   - FLAIL_MOVE: Deal FlailDamage x2 [MultiAttack]
@@ -1364,19 +1571,22 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### MagiKnight
+
 - ID: MAGI_KNIGHT
 - Type: Elite (part of KnightsElite)
 - HP: 101 (ascension: 108)
 - Damage Values: {MagicMissile: 5 (6) x3, ArcaneBlast: 15 (17)}
 - Block Values: {ArcaneSiege: 12 (14)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: MAGIC_MISSILE_MOVE
   All -> RAND:
     MAGIC_MISSILE (CannotRepeat)
     ARCANE_BLAST (weight 2)
     ARCANE_SIEGE (CannotRepeat)
   ```
+
 - Moves:
   - MAGIC_MISSILE_MOVE: Deal MagicMissileDamage x3 [MultiAttack]
   - ARCANE_BLAST_MOVE: Deal ArcaneBlastDamage [SingleAttack]
@@ -1385,19 +1595,22 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### SpectralKnight
+
 - ID: SPECTRAL_KNIGHT
 - Type: Elite (part of KnightsElite)
 - HP: 101 (ascension: 108)
 - Damage Values: {GhostSlash: 12 (14), PhantomRush: 5 (6) x2}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: GHOST_SLASH_MOVE
   All -> RAND:
     GHOST_SLASH (CannotRepeat)
     PHANTOM_RUSH (weight 2)
     ETHEREAL_SHIFT (CannotRepeat)
   ```
+
 - Moves:
   - GHOST_SLASH_MOVE: Deal GhostSlashDamage [SingleAttack]
   - PHANTOM_RUSH_MOVE: Deal PhantomRushDamage x2 [MultiAttack]
@@ -1406,16 +1619,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### MechaKnight
+
 - ID: MECHA_KNIGHT
 - Type: Elite
 - HP: 155 (ascension: 165)
 - Damage Values: {SteelSlash: 14 (16), MissileSalvo: 4 (5) x4, OverdriveStrike: 24 (28)}
 - Block Values: {ShieldUp: 16 (18)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: STEEL_SLASH_MOVE
   STEEL_SLASH -> MISSILE_SALVO -> SHIELD_UP -> OVERDRIVE_STRIKE -> STEEL_SLASH (cycle)
   ```
+
 - Moves:
   - STEEL_SLASH_MOVE: Deal SteelSlashDamage [SingleAttack]
   - MISSILE_SALVO_MOVE: Deal MissileSalvoDamage x4 [MultiAttack]
@@ -1426,16 +1642,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### SoulNexus
+
 - ID: SOUL_NEXUS
 - Type: Elite
 - HP: 155 (ascension: 165)
 - Damage Values: {SoulDrain: 10 (12), SpiritBarrage: 4 (5) x3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SUMMON_MOVE
   SUMMON -> SOUL_DRAIN -> SPIRIT_BARRAGE -> SUMMON (cycle)
   ```
+
 - Moves:
   - SUMMON_MOVE: Summon Osty minion [Summon]
   - SOUL_DRAIN_MOVE: Deal SoulDrainDamage + heal self [SingleAttack + Heal]
@@ -1445,38 +1664,44 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Osty
+
 - ID: OSTY
 - Type: Minion (summoned by SoulNexus)
 - HP: 1 (fixed)
 - Damage Values: {Haunt: 4 (5)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: HAUNT_MOVE
   HAUNT_MOVE -> HAUNT_MOVE (repeat)
   ```
+
 - Moves:
   - HAUNT_MOVE: Deal HauntDamage [SingleAttack]
 - Special: AfterAddedToRoom: applies Illusion power + MinionPower
 
 ---
 
-### Boss Encounters
+### Act 3 - Glory —Boss Encounters
 
 ---
 
 ### Door
+
 - ID: DOOR
 - Type: Boss (part of DoormakerBoss)
 - HP: 155 (ascension: 165)
 - Damage Values: {DramaticOpen: 25 (28), Enforce: 20, DoorSlam: 15 (15) x2}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: DRAMATIC_OPEN_MOVE
   DRAMATIC_OPEN -> DOOR_SLAM -> ENFORCE -> DRAMATIC_OPEN (cycle)
   DEAD_MOVE -> DEAD_MOVE (if fully dead) or -> DRAMATIC_OPEN (if revived)
   ```
+
 - Moves:
   - DRAMATIC_OPEN_MOVE: Deal DramaticOpenDamage [SingleAttack]
   - ENFORCE_MOVE: Deal 20 damage + gain 3(4 asc) Strength [SingleAttack + Buff]
@@ -1487,16 +1712,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Doormaker
+
 - ID: DOORMAKER
 - Type: Boss (part of DoormakerBoss)
 - HP: 489 (ascension: 512)
 - Damage Values: {LaserBeam: 31 (34), GetBackIn: 40 (45)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: WHAT_IS_IT_MOVE
   WHAT_IS_IT -> BEAM -> GET_BACK_IN -> GET_BACK_IN (repeat)
   ```
+
 - Moves:
   - WHAT_IS_IT_MOVE: Does nothing, speaks dialogue [Stun]
   - BEAM_MOVE: Deal LaserBeamDamage [SingleAttack]
@@ -1506,16 +1734,19 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### Queen
+
 - ID: QUEEN
 - Type: Boss
 - HP: 302 (ascension: 322)
 - Damage Values: {RoyalStrike: 18 (20), Guillotine: 30 (35), RoyalGuardStrike: 15 (17)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SUMMON_GUARD
   SUMMON_GUARD -> ROYAL_STRIKE -> GUILLOTINE -> SUMMON_GUARD (cycle)
   ```
+
 - Moves:
   - SUMMON_GUARD: Summon RoyalGuard minion [Summon]
   - ROYAL_STRIKE_MOVE: Deal RoyalStrikeDamage + debuff [SingleAttack + Debuff]
@@ -1525,17 +1756,20 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 ---
 
 ### TestSubject
+
 - ID: TEST_SUBJECT
 - Type: Boss
 - HP: 255 (ascension: 270)
 - Damage Values: {Discharge: 11 (13) x2, Overload: 28 (32), ChainLightning: 7 (8) x4}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CHARGE_UP_MOVE
   Phase 1: CHARGE_UP -> DISCHARGE -> OVERLOAD -> CHARGE_UP (cycle)
   Phase 2 (at HP threshold): Enhanced cycle with CHAIN_LIGHTNING
   ```
+
 - Moves:
   - CHARGE_UP_MOVE: Gain Strength + buffs [Buff]
   - DISCHARGE_MOVE: Deal DischargeDamage x2 [MultiAttack]
@@ -1549,21 +1783,24 @@ Encounters: DevotedSculptorWeak, ScrollsOfBitingWeak, TurretOperatorWeak, Axebot
 
 Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, CorpseSlugsNormal, CultistsNormal, FossilStalkerNormal, GremlinMercNormal, HauntedShipNormal, LivingFogNormal, PunchConstructNormal, SewerClamNormal, ToadpolesNormal, TwoTailedRatsNormal, PhantasmalGardenersElite, SkulkingColonyElite, TerrorEelElite, LagavulinMatriarchBoss, SoulFyshBoss, WaterfallGiantBoss.
 
-### Weak Encounters
+### Act 4 - Underdocks —Weak Encounters
 
 ---
 
 ### CorpseSlug
+
 - ID: CORPSE_SLUG
 - Type: Normal (Weak and Normal encounters)
 - HP: 25-27 (ascension: 27-29)
 - Damage Values: {WhipSlap: 3 x2, Glomp: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: varies by StarterMoveIdx (0: WhipSlap, 1: Glomp, 2: Goop)
   WHIP_SLAP -> GLOMP -> GOOP -> WHIP_SLAP (cycle)
   ```
+
 - Moves:
   - WHIP_SLAP_MOVE: Deal 3 x2 [MultiAttack]
   - GLOMP_MOVE: Deal GlompDamage [SingleAttack]
@@ -1573,16 +1810,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### Seapunk
+
 - ID: SEAPUNK
 - Type: Normal (Weak encounter)
 - HP: 44-46 (ascension: 47-49)
 - Damage Values: {SeaKick: 11 (12), SpinningKick: 2 x4}
 - Block Values: {BubbleBurp: 7 (8)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SEA_KICK_MOVE
   SEA_KICK_MOVE -> SPINNING_KICK_MOVE -> BUBBLE_BURP_MOVE -> SEA_KICK_MOVE (cycle)
   ```
+
 - Moves:
   - SEA_KICK_MOVE: Deal SeaKickDamage [SingleAttack]
   - SPINNING_KICK_MOVE: Deal SpinningKickDamage x4 [MultiAttack]
@@ -1591,16 +1831,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### SludgeSpinner
+
 - ID: SLUDGE_SPINNER
 - Type: Normal (Weak encounter)
 - HP: 37-39 (ascension: 41-42)
 - Damage Values: {OilSpray: 8 (9), Slam: 11 (12), Rage: 6 (7)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: OIL_SPRAY_MOVE
   OIL_SPRAY_MOVE / SLAM_MOVE / RAGE_MOVE -> RAND(CannotRepeat among all three)
   ```
+
 - Moves:
   - OIL_SPRAY_MOVE: Deal OilSprayDamage and apply 1 Weak [SingleAttack + Debuff]
   - SLAM_MOVE: Deal SlamDamage [SingleAttack]
@@ -1609,18 +1852,21 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### Toadpole
+
 - ID: TOADPOLE
 - Type: Normal (Weak and Normal encounters)
 - HP: 21-25 (ascension: 22-26)
 - Damage Values: {SpikeSpit: 3 x3 (4 x3), Whirl: 7 (8)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INIT_MOVE:
     front: SPIKEN_MOVE
     not front: WHIRL_MOVE
   SPIKEN_MOVE -> SPIKE_SPIT_MOVE -> WHIRL_MOVE -> SPIKEN_MOVE (cycle)
   ```
+
 - Moves:
   - SPIKEN_MOVE: Gain 2 Thorns [Buff]
   - SPIKE_SPIT_MOVE: Remove 2 Thorns, then deal SpikeSpitDamage x3 [MultiAttack]
@@ -1628,21 +1874,24 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 
 ---
 
-### Normal Encounters
+### Act 4 - Underdocks —Normal Encounters
 
 ---
 
 ### CalcifiedCultist
+
 - ID: CALCIFIED_CULTIST
 - Type: Normal (part of CultistsNormal)
 - HP: 38-41 (ascension: 39-42)
 - Damage Values: {DarkStrike: 9 (11)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INCANTATION_MOVE
   INCANTATION_MOVE -> DARK_STRIKE_MOVE -> DARK_STRIKE_MOVE (repeat)
   ```
+
 - Moves:
   - INCANTATION_MOVE: Gain 2 Ritual [Buff]
   - DARK_STRIKE_MOVE: Deal DarkStrikeDamage [SingleAttack]
@@ -1650,16 +1899,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### DampCultist
+
 - ID: DAMP_CULTIST
 - Type: Normal (part of CultistsNormal)
 - HP: 51-53 (ascension: 52-54)
 - Damage Values: {DarkStrike: 1 (3)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INCANTATION_MOVE
   INCANTATION_MOVE -> DARK_STRIKE_MOVE -> DARK_STRIKE_MOVE (repeat)
   ```
+
 - Moves:
   - INCANTATION_MOVE: Gain 5(6 asc) Ritual [Buff]
   - DARK_STRIKE_MOVE: Deal DarkStrikeDamage [SingleAttack]
@@ -1668,16 +1920,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### FossilStalker
+
 - ID: FOSSIL_STALKER
 - Type: Normal
 - HP: 51-53 (ascension: 54-56)
 - Damage Values: {Tackle: 9 (11), Latch: 12 (14), Lash: 3 (4) x2}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: LATCH_MOVE
   All -> RAND(Latch weight2, Tackle weight2, Lash weight2)
   ```
+
 - Moves:
   - TACKLE_MOVE: Deal TackleDamage + apply 1 Frail [SingleAttack + Debuff]
   - LATCH_MOVE: Deal LatchDamage [SingleAttack]
@@ -1687,16 +1942,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### GremlinMerc
+
 - ID: GREMLIN_MERC
 - Type: Normal
 - HP: 47-49 (ascension: 51-53)
 - Damage Values: {Gimme: 7 (8) x2, DoubleSmash: 6 (7) x2, Hehe: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: GIMME_MOVE
   GIMME -> DOUBLE_SMASH -> HEHE -> GIMME (cycle)
   ```
+
 - Moves:
   - GIMME_MOVE: Deal GimmeDamage x2 + steal gold [MultiAttack]
   - DOUBLE_SMASH_MOVE: Deal DoubleSmashDamage x2 + apply 2 Weak + steal gold [MultiAttack + Debuff]
@@ -1706,18 +1964,21 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### HauntedShip
+
 - ID: HAUNTED_SHIP
 - Type: Normal
 - HP: 63 (ascension: 67)
 - Damage Values: {RammingSpeed: 10 (11), Swipe: 13 (14), Stomp: 4 (5) x3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAMMING_SPEED_MOVE
   All moves -> RAND:
     odd rounds: RAMMING_SPEED_MOVE / SWIPE_MOVE / STOMP_MOVE, CannotRepeat
     even rounds: HAUNT_MOVE, UseOnlyOnce
   ```
+
 - Moves:
   - RAMMING_SPEED_MOVE: Deal RammingSpeedDamage and add 2 Wounds to discard [SingleAttack + Status]
   - SWIPE_MOVE: Deal SwipeDamage [SingleAttack]
@@ -1727,16 +1988,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### LivingFog
+
 - ID: LIVING_FOG
 - Type: Normal
 - HP: 80 (ascension: 82)
 - Damage Values: {AdvancedGas: 8 (9), Bloat: 5 (6), SuperGasBlast: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: ADVANCED_GAS_MOVE
   ADVANCED_GAS_MOVE -> BLOAT_MOVE -> SUPER_GAS_BLAST_MOVE -> BLOAT_MOVE (loop)
   ```
+
 - Moves:
   - ADVANCED_GAS_MOVE: Deal AdvancedGasDamage and apply 1 Smoggy [SingleAttack + CardDebuff]
   - BLOAT_MOVE: Summon GasBombs, incrementing from 1 up to 5, then deal BloatDamage [SingleAttack + Summon]
@@ -1745,16 +2009,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### GasBomb
+
 - ID: GAS_BOMB
 - Type: Minion (summoned by LivingFog)
 - HP: 10 (ascension: 12)
 - Damage Values: {Explode: 8 (9)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: EXPLODE_MOVE
   EXPLODE_MOVE (kills self after)
   ```
+
 - Moves:
   - EXPLODE_MOVE: Deal ExplodeDamage + kill self [DeathBlow]
 - Special: AfterAddedToRoom: applies MinionPower. Explodes and dies.
@@ -1762,16 +2029,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### PunchConstruct
+
 - ID: PUNCH_CONSTRUCT
 - Type: Normal
 - HP: 55 (ascension: 60)
 - Damage Values: {StrongPunch: 14 (16), FastPunch: 5 (6) x2}
 - Block Values: {Ready: 10}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: READY_MOVE, or STRONG_PUNCH_MOVE if StartsWithStrongPunch
   READY_MOVE -> STRONG_PUNCH_MOVE -> FAST_PUNCH_MOVE -> READY_MOVE (cycle)
   ```
+
 - Moves:
   - READY_MOVE: Gain 10 Block [Defend]
   - STRONG_PUNCH_MOVE: Deal StrongPunchDamage [SingleAttack]
@@ -1781,16 +2051,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### SewerClam
+
 - ID: SEWER_CLAM
 - Type: Normal
 - HP: 56 (ascension: 58)
 - Damage Values: {Jet: 10 (11)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: JET_MOVE
   JET_MOVE -> PRESSURIZE_MOVE -> JET_MOVE (cycle)
   ```
+
 - Moves:
   - JET_MOVE: Deal JetDamage [SingleAttack]
   - PRESSURIZE_MOVE: Gain 4 Strength [Buff]
@@ -1799,13 +2072,15 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### TwoTailedRat
+
 - ID: TWO_TAILED_RAT
 - Type: Normal
 - HP: 17-21 (ascension: 18-22)
 - Damage Values: {Scratch: 8 (9), DiseaseBite: 6 (7)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: RAND, or StarterMoveIndex:
     0: SCRATCH_MOVE
     1: DISEASE_BITE_MOVE
@@ -1814,6 +2089,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
     before summonable: Scratch weight1, DiseaseBite weight1, Screech weight3, CannotRepeat
     when summonable: Scratch/DiseaseBite/Screech weight 1/12, CallForBackup weight .75
   ```
+
 - Moves:
   - SCRATCH_MOVE: Deal ScratchDamage [SingleAttack]
   - DISEASE_BITE_MOVE: Deal DiseaseBiteDamage [SingleAttack]
@@ -1823,16 +2099,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### FatGremlin
+
 - ID: FAT_GREMLIN
 - Type: Minion (part of GremlinMerc encounter)
 - HP: 13-17 (ascension: 14-18)
 - Damage Values: none
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SPAWNED_MOVE
   SPAWNED_MOVE -> FLEE_MOVE -> FLEE_MOVE (repeat)
   ```
+
 - Moves:
   - SPAWNED_MOVE: Wake up [Stun]
   - FLEE_MOVE: Escape from combat [Escape]
@@ -1841,34 +2120,39 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### SneakyGremlin
+
 - ID: SNEAKY_GREMLIN
 - Type: Minion (part of GremlinMerc encounter)
 - HP: 10-14 (ascension: 11-15)
 - Damage Values: {Tackle: 9 (10)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SPAWNED_MOVE
   SPAWNED_MOVE -> TACKLE_MOVE -> TACKLE_MOVE (repeat)
   ```
+
 - Moves:
   - SPAWNED_MOVE: Wake up [Stun]
   - TACKLE_MOVE: Deal TackleDamage [SingleAttack]
 
 ---
 
-### Elite Encounters
+### Act 4 - Underdocks —Elite Encounters
 
 ---
 
 ### PhantasmalGardener
+
 - ID: PHANTASMAL_GARDENER
 - Type: Elite
 - HP: 28-32 (ascension: 29-33)
 - Damage Values: {Bite: 5, Lash: 7, Flail: 1 x3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: INIT_MOVE by slot:
     first: FLAIL_MOVE
     second: BITE_MOVE
@@ -1876,6 +2160,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
     fourth: ENLARGE_MOVE
   BITE_MOVE -> LASH_MOVE -> FLAIL_MOVE -> ENLARGE_MOVE -> BITE_MOVE (cycle)
   ```
+
 - Moves:
   - BITE_MOVE: Deal BiteDamage [SingleAttack]
   - LASH_MOVE: Deal LashDamage [SingleAttack]
@@ -1886,16 +2171,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### SkulkingColony
+
 - ID: SKULKING_COLONY
 - Type: Elite
 - HP: 79 (ascension: 84)
 - Damage Values: {Smash: 9 (11), Zoom: 16 (17), SuperCrab: 6 (7) x2}
 - Block Values: {Inertia: 10 (13)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SMASH_MOVE
   SMASH_MOVE -> ZOOM_MOVE -> INERTIA_MOVE -> SUPER_CRAB_MOVE -> SMASH_MOVE (cycle)
   ```
+
 - Moves:
   - SMASH_MOVE: Deal SmashDamage and add 4 Dazed to discard [SingleAttack + Status]
   - ZOOM_MOVE: Deal ZoomDamage [SingleAttack]
@@ -1906,17 +2194,20 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### TerrorEel
+
 - ID: TERROR_EEL
 - Type: Elite
 - HP: 140 (ascension: 150)
 - Damage Values: {Crash: 17 (19), Thrash: 3 (4) x3}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: CRASH_MOVE
   CRASH_MOVE -> ThrashMove -> CRASH_MOVE (cycle)
   Shriek stun path: STUN_MOVE -> TERROR_MOVE -> CRASH_MOVE
   ```
+
 - Moves:
   - CRASH_MOVE: Deal CrashDamage [SingleAttack]
   - ThrashMove: Deal ThrashDamage x3 and gain 7 Vigor [MultiAttack + Buff]
@@ -1926,22 +2217,25 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 
 ---
 
-### Boss Encounters
+### Act 4 - Underdocks —Boss Encounters
 
 ---
 
 ### WaterfallGiant
+
 - ID: WATERFALL_GIANT
 - Type: Boss
 - HP: 250 (ascension: 260)
 - Damage Values: {Stomp: 15 (16), Ram: 10 (11), PressureUp: 13 (14), PressureGun: 20 (23) +5 each use}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: PRESSURIZE_MOVE
   PRESSURIZE -> STOMP -> RAM -> SIPHON -> PRESSURE_GUN -> PRESSURE_UP -> STOMP (cycle)
   On SteamEruption death: ABOUT_TO_BLOW -> EXPLODE
   ```
+
 - Moves:
   - PRESSURIZE_MOVE: Apply SteamEruption 15 (20 ascension) [Buff]
   - STOMP_MOVE: Deal StompDamage + apply Weak 1 + apply SteamEruption 3 [SingleAttack + Debuff + Buff]
@@ -1956,16 +2250,19 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### SoulFysh
+
 - ID: SOUL_FYSH
 - Type: Boss
 - HP: 211 (ascension: 221)
 - Damage Values: {DeGas: 16 (17), Gaze: 7 (8), Scream: 11 (12)}
 - Block Values: none
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: BECKON_MOVE
   BECKON -> DE_GAS -> GAZE -> FADE -> SCREAM -> BECKON (cycle)
   ```
+
 - Moves:
   - BECKON_MOVE: Add one Beckon to draw pile and one Beckon to discard pile [Status]
   - DE_GAS_MOVE: Deal DeGasDamage [SingleAttack]
@@ -1977,18 +2274,21 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### LagavulinMatriarch
+
 - ID: LAGAVULIN_MATRIARCH
 - Type: Boss
 - HP: 222 (ascension: 233)
 - Damage Values: {Slash: 19 (21), Disembowel: 9 (10) x2, Slash2: 12 (14)}
 - Block Values: {Slash2: 12 (14)}
 - AI State Machine:
-  ```
+
+  ```text
   INITIAL: SLEEP_MOVE
   SLEEP -> SLEEP_BRANCH
   If Asleep: SLEEP
   Else: SLASH -> DISEMBOWEL -> SLASH2 -> SOUL_SIPHON -> SLASH
   ```
+
 - Moves:
   - SLEEP_MOVE: Does nothing [Sleep]
   - SLASH_MOVE: Deal SlashDamage [SingleAttack]
@@ -2002,6 +2302,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ## Event-Only / Special Monsters
 
 ### Architect
+
 - ID: ARCHITECT
 - Type: Event (TheArchitectEventEncounter)
 - HP: 9999
@@ -2011,6 +2312,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### BigDummy
+
 - ID: BIG_DUMMY
 - Type: Test
 - HP: 9999
@@ -2020,6 +2322,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### Byrdpip
+
 - ID: BYRDPIP
 - Type: Pet/Relic
 - HP: 9999 (invisible health bar)
@@ -2029,6 +2332,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### BattleFriendV1/V2/V3
+
 - ID: BATTLE_FRIEND_V1 / V2 / V3
 - Type: Event (BattlewornDummyEventEncounter)
 - HP: 75 / 150 / 300
@@ -2038,6 +2342,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### MysteriousKnight
+
 - ID: MYSTERIOUS_KNIGHT
 - Type: Event (MysteriousKnightEventEncounter)
 - HP: 80 (ascension: 85)
@@ -2048,6 +2353,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### LivingShield
+
 - ID: LIVING_SHIELD
 - Type: Event/Minion
 - HP: 1
@@ -2057,6 +2363,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### PaelsLegion
+
 - ID: PAELS_LEGION
 - Type: Special (Ancient event)
 - HP: variable
@@ -2066,6 +2373,7 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ---
 
 ### TorchHeadAmalgam
+
 - ID: TORCH_HEAD_AMALGAM
 - Type: Event (Amalgamator)
 - HP: variable
@@ -2080,132 +2388,154 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ### Act 1 - Overgrowth Encounters
 
 ### FuzzyWurmCrawlerWeak
+
 - ID: FUZZY_WURM_CRAWLER_WEAK
 - Act: 1
 - Room Type: Monster (Weak)
 - Monsters: [FuzzyWurmCrawler x1]
 
 ### NibbitsWeak
+
 - ID: NIBBITS_WEAK
 - Act: 1
 - Room Type: Monster (Weak)
 - Monsters: [Nibbit x3, slots: "first", "second", "third"]
 
 ### ShrinkerBeetleWeak
+
 - ID: SHRINKER_BEETLE_WEAK
 - Act: 1
 - Room Type: Monster (Weak)
 - Monsters: [ShrinkerBeetle x2, slots: "first", "second"]
 
 ### SlimesWeak
+
 - ID: SLIMES_WEAK
 - Act: 1
 - Room Type: Monster (Weak)
 - Monsters: [Random mix of LeafSlimeM and TwigSlimeM x2]
 
 ### CubexConstructNormal
+
 - ID: CUBEX_CONSTRUCT_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [CubexConstruct x1]
 
 ### FlyconidNormal
+
 - ID: FLYCONID_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Flyconid x2, slots: "first", "second"]
 
 ### FogmogNormal
+
 - ID: FOGMOG_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Fogmog x1]
 
 ### InkletsNormal
+
 - ID: INKLETS_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Inklet x3, slots: "first", "second", "third"]
 
 ### MawlerNormal
+
 - ID: MAWLER_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Mawler x1]
 
 ### NibbitsNormal
+
 - ID: NIBBITS_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Nibbit x4, slots: "first", "second", "third", "fourth"]
 
 ### OvergrowthCrawlers
+
 - ID: OVERGROWTH_CRAWLERS
 - Act: 1
 - Room Type: Monster
 - Monsters: [Mix of act 1 crawling monsters]
 
 ### RubyRaidersNormal
+
 - ID: RUBY_RAIDERS_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Random selection of 2 from: AssassinRubyRaider, AxeRubyRaider, BruteRubyRaider, CrossbowRubyRaider, TrackerRubyRaider]
 
 ### SlimesNormal
+
 - ID: SLIMES_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [Random mix of LeafSlimeM and TwigSlimeM x3]
 
 ### SlitheringStranglerNormal
+
 - ID: SLITHERING_STRANGLER_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [SlitheringStrangler x1]
 
 ### SnappingJaxfruitNormal
+
 - ID: SNAPPING_JAXFRUIT_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [SnappingJaxfruit x1]
 
 ### VineShamblerNormal
+
 - ID: VINE_SHAMBLER_NORMAL
 - Act: 1
 - Room Type: Monster
 - Monsters: [VineShambler x2]
 
 ### BygoneEffigyElite
+
 - ID: BYGONE_EFFIGY_ELITE
 - Act: 1
 - Room Type: Elite
 - Monsters: [BygoneEffigy x1]
 
 ### ByrdonisElite
+
 - ID: BYRDONIS_ELITE
 - Act: 1
 - Room Type: Elite
 - Monsters: [Byrdonis x1]
 
 ### PhrogParasiteElite
+
 - ID: PHROG_PARASITE_ELITE
 - Act: 1
 - Room Type: Elite
 - Monsters: [PhrogParasite x2, slots: "first", "second"]
 
 ### CeremonialBeastBoss
+
 - ID: CEREMONIAL_BEAST_BOSS
 - Act: 1
 - Room Type: Boss
 - Monsters: [CeremonialBeast x1]
 
 ### TheKinBoss
+
 - ID: THE_KIN_BOSS
 - Act: 1
 - Room Type: Boss
 - Monsters: [KinPriest x1, KinFollower x2-3]
 
 ### VantomBoss
+
 - ID: VANTOM_BOSS
 - Act: 1
 - Room Type: Boss
@@ -2216,126 +2546,147 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ### Act 2 - Hive Encounters
 
 ### BowlbugsWeak
+
 - ID: BOWLBUGS_WEAK
 - Act: 2
 - Room Type: Monster (Weak)
 - Monsters: [Random selection of 2 from: BowlbugEgg, BowlbugNectar, BowlbugRock, BowlbugSilk]
 
 ### ExoskeletonsWeak
+
 - ID: EXOSKELETONS_WEAK
 - Act: 2
 - Room Type: Monster (Weak)
 - Monsters: [Exoskeleton x2, slots: "first", "second"]
 
 ### ThievingHopperWeak
+
 - ID: THIEVING_HOPPER_WEAK
 - Act: 2
 - Room Type: Monster (Weak)
 - Monsters: [ThievingHopper x2]
 
 ### TunnelerWeak
+
 - ID: TUNNELER_WEAK
 - Act: 2
 - Room Type: Monster (Weak)
 - Monsters: [Tunneler x2]
 
 ### BowlbugsNormal
+
 - ID: BOWLBUGS_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Random selection of 3 from: BowlbugEgg, BowlbugNectar, BowlbugRock, BowlbugSilk]
 
 ### ChompersNormal
+
 - ID: CHOMPERS_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Chomper x2 (one ScreamFirst=true, one ScreamFirst=false)]
 
 ### ExoskeletonsNormal
+
 - ID: EXOSKELETONS_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Exoskeleton x4, slots: "first", "second", "third", "fourth"]
 
 ### HunterKillerNormal
+
 - ID: HUNTER_KILLER_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [HunterKiller x1]
 
 ### LouseProgenitorNormal
+
 - ID: LOUSE_PROGENITOR_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [LouseProgenitor x1]
 
 ### MytesNormal
+
 - ID: MYTES_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Myte x3]
 
 ### OvicopterNormal
+
 - ID: OVICOPTER_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Ovicopter x1]
 
 ### SlumberingBeetleNormal
+
 - ID: SLUMBERING_BEETLE_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [SlumberingBeetle x1]
 
 ### SpinyToadNormal
+
 - ID: SPINY_TOAD_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [SpinyToad x1]
 
 ### TheObscuraNormal
+
 - ID: THE_OBSCURA_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [TheObscura x2]
 
 ### TunnelerNormal
+
 - ID: TUNNELER_NORMAL
 - Act: 2
 - Room Type: Monster
 - Monsters: [Tunneler x3]
 
 ### DecimillipedeElite
+
 - ID: DECIMILLIPEDE_ELITE
 - Act: 2
 - Room Type: Elite
 - Monsters: [DecimillipedeSegmentFront, DecimillipedeSegmentMiddle, DecimillipedeSegmentBack]
 
 ### EntomancerElite
+
 - ID: ENTOMANCER_ELITE
 - Act: 2
 - Room Type: Elite
 - Monsters: [Entomancer x1]
 
 ### InfestedPrismsElite
+
 - ID: INFESTED_PRISMS_ELITE
 - Act: 2
 - Room Type: Elite
 - Monsters: [InfestedPrism x2-3]
 
 ### KaiserCrabBoss
+
 - ID: KAISER_CRAB_BOSS
 - Act: 2
 - Room Type: Boss
 - Monsters: [Crusher (left arm), Rocket (right arm)]
 
 ### KnowledgeDemonBoss
+
 - ID: KNOWLEDGE_DEMON_BOSS
 - Act: 2
 - Room Type: Boss
 - Monsters: [KnowledgeDemon x1]
 
 ### TheInsatiableBoss
+
 - ID: THE_INSATIABLE_BOSS
 - Act: 2
 - Room Type: Boss
@@ -2346,108 +2697,126 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ### Act 3 - Glory Encounters
 
 ### DevotedSculptorWeak
+
 - ID: DEVOTED_SCULPTOR_WEAK
 - Act: 3
 - Room Type: Monster (Weak)
 - Monsters: [DevotedSculptor x1]
 
 ### ScrollsOfBitingWeak
+
 - ID: SCROLLS_OF_BITING_WEAK
 - Act: 3
 - Room Type: Monster (Weak)
 - Monsters: [ScrollOfBiting x2]
 
 ### TurretOperatorWeak
+
 - ID: TURRET_OPERATOR_WEAK
 - Act: 3
 - Room Type: Monster (Weak)
 - Monsters: [TurretOperator x2]
 
 ### AxebotsNormal
+
 - ID: AXEBOTS_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [Axebot x2, slots: "front", "back"]
 
 ### ConstructMenagerieNormal
+
 - ID: CONSTRUCT_MENAGERIE_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [Mix of construct-type enemies]
 
 ### FabricatorNormal
+
 - ID: FABRICATOR_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [Fabricator x1 (summons bots)]
 
 ### FrogKnightNormal
+
 - ID: FROG_KNIGHT_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [FrogKnight x1]
 
 ### GlobeHeadNormal
+
 - ID: GLOBE_HEAD_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [GlobeHead x1]
 
 ### OwlMagistrateNormal
+
 - ID: OWL_MAGISTRATE_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [OwlMagistrate x1]
 
 ### ScrollsOfBitingNormal
+
 - ID: SCROLLS_OF_BITING_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [ScrollOfBiting x3]
 
 ### SlimedBerserkerNormal
+
 - ID: SLIMED_BERSERKER_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [SlimedBerserker x1]
 
 ### TheLostAndForgottenNormal
+
 - ID: THE_LOST_AND_FORGOTTEN_NORMAL
 - Act: 3
 - Room Type: Monster
 - Monsters: [TheLost x1, TheForgotten x1]
 
 ### KnightsElite
+
 - ID: KNIGHTS_ELITE
 - Act: 3
 - Room Type: Elite
 - Monsters: [Random 2 from: FlailKnight, MagiKnight, SpectralKnight]
 
 ### MechaKnightElite
+
 - ID: MECHA_KNIGHT_ELITE
 - Act: 3
 - Room Type: Elite
 - Monsters: [MechaKnight x1]
 
 ### SoulNexusElite
+
 - ID: SOUL_NEXUS_ELITE
 - Act: 3
 - Room Type: Elite
 - Monsters: [SoulNexus x1]
 
 ### DoormakerBoss
+
 - ID: DOORMAKER_BOSS
 - Act: 3
 - Room Type: Boss
 - Monsters: [Door x1 (Doormaker spawns automatically)]
 
 ### QueenBoss
+
 - ID: QUEEN_BOSS
 - Act: 3
 - Room Type: Boss
 - Monsters: [Queen x1]
 
 ### TestSubjectBoss
+
 - ID: TEST_SUBJECT_BOSS
 - Act: 3
 - Room Type: Boss
@@ -2458,120 +2827,140 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ### Act 4 - Underdocks Encounters
 
 ### CorpseSlugsWeak
+
 - ID: CORPSE_SLUGS_WEAK
 - Act: 4
 - Room Type: Monster (Weak)
 - Monsters: [CorpseSlug x2]
 
 ### SeapunkWeak
+
 - ID: SEAPUNK_WEAK
 - Act: 4
 - Room Type: Monster (Weak)
 - Monsters: [Seapunk x1]
 
 ### SludgeSpinnerWeak
+
 - ID: SLUDGE_SPINNER_WEAK
 - Act: 4
 - Room Type: Monster (Weak)
 - Monsters: [SludgeSpinner x1]
 
 ### ToadpolesWeak
+
 - ID: TOADPOLES_WEAK
 - Act: 4
 - Room Type: Monster (Weak)
 - Monsters: [Toadpole x2, slots: "first", "second"]
 
 ### CorpseSlugsNormal
+
 - ID: CORPSE_SLUGS_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [CorpseSlug x3 (each starts on different move)]
 
 ### CultistsNormal
+
 - ID: CULTISTS_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [CalcifiedCultist x1, DampCultist x1]
 
 ### FossilStalkerNormal
+
 - ID: FOSSIL_STALKER_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [FossilStalker x1]
 
 ### GremlinMercNormal
+
 - ID: GREMLIN_MERC_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [GremlinMerc x1 (+ FatGremlin, SneakyGremlin)]
 
 ### HauntedShipNormal
+
 - ID: HAUNTED_SHIP_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [HauntedShip x1]
 
 ### LivingFogNormal
+
 - ID: LIVING_FOG_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [LivingFog x1]
 
 ### PunchConstructNormal
+
 - ID: PUNCH_CONSTRUCT_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [PunchConstruct x2]
 
 ### SewerClamNormal
+
 - ID: SEWER_CLAM_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [SewerClam x2]
 
 ### ToadpolesNormal
+
 - ID: TOADPOLES_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [CalcifiedCultist x1, Toadpole x1]
 
 ### TwoTailedRatsNormal
+
 - ID: TWO_TAILED_RATS_NORMAL
 - Act: 4
 - Room Type: Monster
 - Monsters: [TwoTailedRat x3, each starts on a different StarterMoveIndex]
 
 ### PhantasmalGardenersElite
+
 - ID: PHANTASMAL_GARDENERS_ELITE
 - Act: 4
 - Room Type: Elite
 - Monsters: [PhantasmalGardener x4, slots: "first", "second", "third", "fourth"]
 
 ### SkulkingColonyElite
+
 - ID: SKULKING_COLONY_ELITE
 - Act: 4
 - Room Type: Elite
 - Monsters: [SkulkingColony x1]
 
 ### TerrorEelElite
+
 - ID: TERROR_EEL_ELITE
 - Act: 4
 - Room Type: Elite
 - Monsters: [TerrorEel x1]
 
 ### LagavulinMatriarchBoss
+
 - ID: LAGAVULIN_MATRIARCH_BOSS
 - Act: 4
 - Room Type: Boss
 - Monsters: [LagavulinMatriarch x1]
 
 ### SoulFyshBoss
+
 - ID: SOUL_FYSH_BOSS
 - Act: 4
 - Room Type: Boss
 - Monsters: [SoulFysh x1]
 
 ### WaterfallGiantBoss
+
 - ID: WATERFALL_GIANT_BOSS
 - Act: 4
 - Room Type: Boss
@@ -2582,31 +2971,37 @@ Encounters: CorpseSlugsWeak, SeapunkWeak, SludgeSpinnerWeak, ToadpolesWeak, Corp
 ## Event Encounters (not part of normal act pools)
 
 ### BattlewornDummyEventEncounter
+
 - ID: BATTLEWORN_DUMMY_EVENT_ENCOUNTER
 - Room Type: Monster (no rewards)
 - Monsters: [BattleFriendV1 or V2 or V3 depending on setting]
 
 ### DenseVegetationEventEncounter
+
 - ID: DENSE_VEGETATION_EVENT_ENCOUNTER
 - Room Type: Monster
 - Monsters: [VineShambler x1]
 
 ### FakeMerchantEventEncounter
+
 - ID: FAKE_MERCHANT_EVENT_ENCOUNTER
 - Room Type: Monster
 - Monsters: [FakeMerchantMonster x1]
 
 ### MysteriousKnightEventEncounter
+
 - ID: MYSTERIOUS_KNIGHT_EVENT_ENCOUNTER
 - Room Type: Monster
 - Monsters: [MysteriousKnight x1]
 
 ### PunchOffEventEncounter
+
 - ID: PUNCH_OFF_EVENT_ENCOUNTER
 - Room Type: Monster
 - Monsters: [PunchConstruct x1]
 
 ### TheArchitectEventEncounter
+
 - ID: THE_ARCHITECT_EVENT_ENCOUNTER
 - Room Type: Monster (no rewards)
 - Monsters: [Architect x1]

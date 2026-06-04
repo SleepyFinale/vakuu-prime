@@ -24,6 +24,7 @@
 ## 1. Damage Modifiers
 
 ### AccuracyPower
+
 - ID: ACCURACY
 - Type: Buff
 - Stack: Counter
@@ -35,6 +36,7 @@
 - Internal State: None
 
 ### CalcifyPower
+
 - ID: CALCIFY
 - Type: Buff
 - Stack: Counter
@@ -46,6 +48,7 @@
 - Internal State: None
 
 ### ColossusPower
+
 - ID: COLOSSUS
 - Type: Buff
 - Stack: Counter
@@ -58,6 +61,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### ConquerorPower
+
 - ID: CONQUEROR
 - Type: Debuff
 - Stack: Counter
@@ -70,6 +74,7 @@
 - Internal State: None
 
 ### CoveredPower
+
 - ID: COVERED
 - Type: Buff
 - Stack: Single
@@ -84,6 +89,7 @@
 - Internal State: IsInstanced=true; DynamicVars: StringVar
 
 ### DiamondDiademPower
+
 - ID: DIAMOND_DIADEM
 - Type: Buff
 - Stack: Single
@@ -96,6 +102,7 @@
 - Internal State: None
 
 ### DoubleDamagePower
+
 - ID: DOUBLE_DAMAGE
 - Type: Buff
 - Stack: Counter
@@ -108,6 +115,7 @@
 - Internal State: None
 
 ### FlankingPower
+
 - ID: FLANKING
 - Type: Debuff
 - Stack: Counter
@@ -121,6 +129,7 @@
 - Internal State: IsInstanced=true; DynamicVars: StringVar
 
 ### FlutterPower
+
 - ID: FLUTTER
 - Type: Buff
 - Stack: Counter
@@ -133,6 +142,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### GigantificationPower
+
 - ID: GIGANTIFICATION
 - Type: Buff
 - Stack: Counter
@@ -146,6 +156,7 @@
 - Internal State: Data{ commandToModify: AttackCommand? }
 
 ### GuardedPower
+
 - ID: GUARDED
 - Type: Buff
 - Stack: Single
@@ -159,6 +170,7 @@
 - Internal State: IsInstanced=true; DynamicVars: StringVar
 
 ### HangPower
+
 - ID: HANG
 - Type: Debuff
 - Stack: Counter
@@ -170,18 +182,20 @@
 - Internal State: None
 
 ### InterceptPower
+
 - ID: INTERCEPT
 - Type: Buff
 - Stack: Single
 - AllowNegative: false
 - Hooks: [ModifyDamageMultiplicative, AfterTurnEnd]
 - Logic:
-  - ModifyDamageMultiplicative: Guards: if target != owner: return 1; if not poweredAttack: return 0/1 | Actions: returns GetInternalData<Data>().coveredCreatures.Count + 1
+  - ModifyDamageMultiplicative: Guards: if target != owner: return 1; if not poweredAttack: return 0/1 | Actions: returns GetInternalData&lt;Data&gt;().coveredCreatures.Count + 1
   - AfterTurnEnd: Guards: if side == Enemy | Actions: remove self
 - Tick: Removes self on condition
-- Internal State: Data{ coveredCreatures: List<Creature> }; DynamicVars: StringVar
+- Internal State: Data{ coveredCreatures: List&lt;Creature&gt; }; DynamicVars: StringVar
 
 ### KnockdownPower
+
 - ID: KNOCKDOWN
 - Type: Debuff
 - Stack: Counter
@@ -195,6 +209,7 @@
 - Internal State: IsInstanced=true; DynamicVars: StringVar
 
 ### LeadershipPower
+
 - ID: LEADERSHIP
 - Type: Buff
 - Stack: Counter
@@ -206,6 +221,7 @@
 - Internal State: None
 
 ### LethalityPower
+
 - ID: LETHALITY
 - Type: Buff
 - Stack: Counter
@@ -217,6 +233,7 @@
 - Internal State: None
 
 ### PhantomBladesPower
+
 - ID: PHANTOM_BLADES
 - Type: Buff
 - Stack: Counter
@@ -230,6 +247,7 @@
 - Internal State: None
 
 ### ShrinkPower
+
 - ID: SHRINK
 - Type: Debuff
 - Stack: Unknown
@@ -245,6 +263,7 @@
 - Internal State: DynamicVars: DynamicVar, StringVar
 
 ### SlowPower
+
 - ID: SLOW
 - Type: Debuff
 - Stack: Counter
@@ -259,6 +278,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### SoarPower
+
 - ID: SOAR
 - Type: Buff
 - Stack: Single
@@ -270,6 +290,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### StrengthPower
+
 - ID: STRENGTH
 - Type: Buff
 - Stack: Counter
@@ -281,6 +302,7 @@
 - Internal State: None
 
 ### SurroundedPower
+
 - ID: SURROUNDED
 - Type: Debuff
 - Stack: Single
@@ -295,6 +317,7 @@
 - Internal State: Fields: _facing:Direction
 
 ### TankPower
+
 - ID: TANK
 - Type: Buff
 - Stack: Single
@@ -307,6 +330,7 @@
 - Internal State: None
 
 ### TrackingPower
+
 - ID: TRACKING
 - Type: Buff
 - Stack: Counter
@@ -318,6 +342,7 @@
 - Internal State: None
 
 ### VigorPower
+
 - ID: VIGOR
 - Type: Buff
 - Stack: Counter
@@ -331,6 +356,7 @@
 - Internal State: Data{ commandToModify: AttackCommand?, amountWhenAttackStarted: int }
 
 ### VulnerablePower
+
 - ID: VULNERABLE
 - Type: Debuff
 - Stack: Counter
@@ -343,6 +369,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### WeakPower
+
 - ID: WEAK
 - Type: Debuff
 - Stack: Counter
@@ -357,6 +384,7 @@
 ## 2. Block Modifiers
 
 ### DexterityPower
+
 - ID: DEXTERITY
 - Type: Buff
 - Stack: Counter
@@ -368,6 +396,7 @@
 - Internal State: None
 
 ### FastenPower
+
 - ID: FASTEN
 - Type: Buff
 - Stack: Counter
@@ -380,6 +409,7 @@
 - Internal State: None
 
 ### FrailPower
+
 - ID: FRAIL
 - Type: Debuff
 - Stack: Counter
@@ -392,6 +422,7 @@
 - Internal State: None
 
 ### NoBlockPower
+
 - ID: NO_BLOCK
 - Type: Debuff
 - Stack: Counter
@@ -404,6 +435,7 @@
 - Internal State: None
 
 ### ShadowmeldPower
+
 - ID: SHADOWMELD
 - Type: Buff
 - Stack: Counter
@@ -416,6 +448,7 @@
 - Internal State: None
 
 ### UnmovablePower
+
 - ID: UNMOVABLE
 - Type: Buff
 - Stack: Counter
@@ -429,6 +462,7 @@
 ## 3. Turn-Start Effects
 
 ### AggressionPower
+
 - ID: AGGRESSION
 - Type: Buff
 - Stack: Counter
@@ -440,6 +474,7 @@
 - Internal State: None
 
 ### BiasedCognitionPower
+
 - ID: BIASED_COGNITION
 - Type: Debuff
 - Stack: Counter
@@ -451,6 +486,7 @@
 - Internal State: None
 
 ### BlurPower
+
 - ID: BLUR
 - Type: Buff
 - Stack: Counter
@@ -464,6 +500,7 @@
 - Internal State: None
 
 ### CoolantPower
+
 - ID: COOLANT
 - Type: Buff
 - Stack: Counter
@@ -475,6 +512,7 @@
 - Internal State: None
 
 ### CountdownPower
+
 - ID: COUNTDOWN
 - Type: Buff
 - Stack: Counter
@@ -486,6 +524,7 @@
 - Internal State: None
 
 ### CrimsonMantlePower
+
 - ID: CRIMSON_MANTLE
 - Type: Buff
 - Stack: Counter
@@ -497,6 +536,7 @@
 - Internal State: DynamicVars: DamageVar
 
 ### DemonFormPower
+
 - ID: DEMON_FORM
 - Type: Buff
 - Stack: Counter
@@ -508,6 +548,7 @@
 - Internal State: None
 
 ### EntropyPower
+
 - ID: ENTROPY
 - Type: Buff
 - Stack: Counter
@@ -519,6 +560,7 @@
 - Internal State: None
 
 ### FeralPower
+
 - ID: FERAL
 - Type: Buff
 - Stack: Counter
@@ -532,6 +574,7 @@
 - Internal State: Data{ zeroCostAttacksPlayed: int }
 
 ### FurnacePower
+
 - ID: FURNACE
 - Type: Buff
 - Stack: Counter
@@ -543,6 +586,7 @@
 - Internal State: None
 
 ### LoopPower
+
 - ID: LOOP
 - Type: Buff
 - Stack: Counter
@@ -554,6 +598,7 @@
 - Internal State: None
 
 ### NeurosurgePower
+
 - ID: NEUROSURGE
 - Type: Debuff
 - Stack: Counter
@@ -565,6 +610,7 @@
 - Internal State: None
 
 ### NoxiousFumesPower
+
 - ID: NOXIOUS_FUMES
 - Type: Buff
 - Stack: Counter
@@ -576,6 +622,7 @@
 - Internal State: None
 
 ### PlatingPower
+
 - ID: PLATING
 - Type: Buff
 - Stack: Counter
@@ -590,6 +637,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### PoisonPower
+
 - ID: POISON
 - Type: Debuff
 - Stack: Counter
@@ -601,6 +649,7 @@
 - Internal State: None
 
 ### PrepTimePower
+
 - ID: PREP_TIME
 - Type: Buff
 - Stack: Counter
@@ -612,6 +661,7 @@
 - Internal State: None
 
 ### RampartPower
+
 - ID: RAMPART
 - Type: Buff
 - Stack: Counter
@@ -623,6 +673,7 @@
 - Internal State: None
 
 ### RollingBoulderPower
+
 - ID: ROLLING_BOULDER
 - Type: Buff
 - Stack: Counter
@@ -634,6 +685,7 @@
 - Internal State: IsInstanced=true; DynamicVars: DamageVar
 
 ### SandpitPower
+
 - ID: SANDPIT
 - Type: Buff
 - Stack: Counter
@@ -648,9 +700,10 @@
   - AfterOstyRevived: see source for complex logic
   - BeforeTurnEnd: Guards: if side == Enemy
 - Tick: Decrements via PowerCmd.Decrement on trigger
-- Internal State: IsInstanced=true; Fields: _initialAmount:int, _initialTargetPosition:float
+- Internal State: IsInstanced=true; Fields: `_initialAmount:int`, `_initialTargetPosition:float`
 
 ### ShadowStepPower
+
 - ID: SHADOW_STEP
 - Type: Buff
 - Stack: Counter
@@ -662,6 +715,7 @@
 - Internal State: None
 
 ### SummonNextTurnPower
+
 - ID: SUMMON_NEXT_TURN
 - Type: Buff
 - Stack: Counter
@@ -673,6 +727,7 @@
 - Internal State: None
 
 ### WraithFormPower
+
 - ID: WRAITH_FORM
 - Type: Debuff
 - Stack: Counter
@@ -686,6 +741,7 @@
 ## 4. Turn-End Effects
 
 ### BattlewornDummyTimeLimitPower
+
 - ID: BATTLEWORN_DUMMY_TIME_LIMIT
 - Type: Buff
 - Stack: Counter
@@ -697,6 +753,7 @@
 - Internal State: None
 
 ### ConstrictPower
+
 - ID: CONSTRICT
 - Type: Debuff
 - Stack: Counter
@@ -709,6 +766,7 @@
 - Internal State: None
 
 ### ConsumingShadowPower
+
 - ID: CONSUMING_SHADOW
 - Type: Buff
 - Stack: Counter
@@ -720,6 +778,7 @@
 - Internal State: None
 
 ### DebilitatePower
+
 - ID: DEBILITATE
 - Type: Debuff
 - Stack: Counter
@@ -731,6 +790,7 @@
 - Internal State: None
 
 ### DemisePower
+
 - ID: DEMISE
 - Type: Debuff
 - Stack: Counter
@@ -742,6 +802,7 @@
 - Internal State: None
 
 ### EscapeArtistPower
+
 - ID: ESCAPE_ARTIST
 - Type: Buff
 - Stack: Counter
@@ -753,6 +814,7 @@
 - Internal State: None
 
 ### GrapplePower
+
 - ID: GRAPPLE
 - Type: Debuff
 - Stack: Counter
@@ -765,6 +827,7 @@
 - Internal State: IsInstanced=true
 
 ### HatchPower
+
 - ID: HATCH
 - Type: Buff
 - Stack: Counter
@@ -776,6 +839,7 @@
 - Internal State: None
 
 ### HighVoltagePower
+
 - ID: HIGH_VOLTAGE
 - Type: Buff
 - Stack: Counter
@@ -787,6 +851,7 @@
 - Internal State: None
 
 ### IntangiblePower
+
 - ID: INTANGIBLE
 - Type: Buff
 - Stack: Counter
@@ -802,6 +867,7 @@
 - Internal State: None
 
 ### MagicBombPower
+
 - ID: MAGIC_BOMB
 - Type: Debuff
 - Stack: Counter
@@ -814,6 +880,7 @@
 - Internal State: IsInstanced=true
 
 ### NemesisPower
+
 - ID: NEMESIS
 - Type: Buff
 - Stack: Single
@@ -825,6 +892,7 @@
 - Internal State: Fields: _shouldApplyIntangible:bool
 
 ### NoDrawPower
+
 - ID: NO_DRAW
 - Type: Debuff
 - Stack: Single
@@ -837,6 +905,7 @@
 - Internal State: None
 
 ### ReboundPower
+
 - ID: REBOUND
 - Type: Buff
 - Stack: Counter
@@ -849,6 +918,7 @@
 - Internal State: None
 
 ### RegenPower
+
 - ID: REGEN
 - Type: Buff
 - Stack: Counter
@@ -860,6 +930,7 @@
 - Internal State: None
 
 ### RetainHandPower
+
 - ID: RETAIN_HAND
 - Type: Buff
 - Stack: Counter
@@ -872,6 +943,7 @@
 - Internal State: None
 
 ### RitualPower
+
 - ID: RITUAL
 - Type: Buff
 - Stack: Counter
@@ -884,6 +956,7 @@
 - Internal State: Fields: _wasJustAppliedByEnemy:bool
 
 ### SicEmPower
+
 - ID: SIC_EM
 - Type: Debuff
 - Stack: Counter
@@ -896,6 +969,7 @@
 - Internal State: None
 
 ### TemporaryDexterityPower
+
 - ID: TEMPORARY_DEXTERITY
 - Type: Unknown
 - Stack: Counter
@@ -909,6 +983,7 @@
 - Internal State: Fields: _shouldIgnoreNextInstance:bool
 
 ### TemporaryFocusPower
+
 - ID: TEMPORARY_FOCUS
 - Type: Unknown
 - Stack: Counter
@@ -922,6 +997,7 @@
 - Internal State: Fields: _shouldIgnoreNextInstance:bool
 
 ### TemporaryStrengthPower
+
 - ID: TEMPORARY_STRENGTH
 - Type: Unknown
 - Stack: Counter
@@ -935,6 +1011,7 @@
 - Internal State: Fields: _shouldIgnoreNextInstance:bool
 
 ### TerritorialPower
+
 - ID: TERRITORIAL
 - Type: Buff
 - Stack: Counter
@@ -946,6 +1023,7 @@
 - Internal State: None
 
 ### WellLaidPlansPower
+
 - ID: WELL_LAID_PLANS
 - Type: Buff
 - Stack: Counter
@@ -959,6 +1037,7 @@
 ## 5. Card-Play Triggered
 
 ### AfterimagePower
+
 - ID: AFTERIMAGE
 - Type: Buff
 - Stack: Counter
@@ -971,6 +1050,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### ArsenalPower
+
 - ID: ARSENAL
 - Type: Buff
 - Stack: Counter
@@ -982,6 +1062,7 @@
 - Internal State: None
 
 ### BlackHolePower
+
 - ID: BLACK_HOLE
 - Type: Buff
 - Stack: Counter
@@ -994,6 +1075,7 @@
 - Internal State: None
 
 ### BladeOfInkPower
+
 - ID: BLADE_OF_INK
 - Type: Buff
 - Stack: Counter
@@ -1006,6 +1088,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### BurstPower
+
 - ID: BURST
 - Type: Buff
 - Stack: Counter
@@ -1019,6 +1102,7 @@
 - Internal State: None
 
 ### CalamityPower
+
 - ID: CALAMITY
 - Type: Buff
 - Stack: Counter
@@ -1031,6 +1115,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### ChainsOfBindingPower
+
 - ID: CHAINS_OF_BINDING
 - Type: Debuff
 - Stack: Counter
@@ -1039,12 +1124,13 @@
 - Logic:
   - AfterCardDrawn: see source for complex logic
   - BeforeCardPlayed: Guards: if card not owned by owner: skip
-  - ShouldPlay: Guards: if card not owned by owner: skip | Actions: returns !GetInternalData<Data>().boundCardPlayed
+  - ShouldPlay: Guards: if card not owned by owner: skip | Actions: returns !GetInternalData&lt;Data&gt;().boundCardPlayed
   - BeforeTurnEnd: no-op (completed task)
 - Tick: None
 - Internal State: Data{ boundCardPlayed: bool }
 
 ### CurlUpPower
+
 - ID: CURL_UP
 - Type: Buff
 - Stack: Counter
@@ -1057,6 +1143,7 @@
 - Internal State: Data{ playedCard: CardModel? }
 
 ### DanseMacabrePower
+
 - ID: DANSE_MACABRE
 - Type: Buff
 - Stack: Counter
@@ -1068,6 +1155,7 @@
 - Internal State: DynamicVars: EnergyVar
 
 ### DevourLifePower
+
 - ID: DEVOUR_LIFE
 - Type: Buff
 - Stack: Counter
@@ -1079,6 +1167,7 @@
 - Internal State: None
 
 ### DuplicationPower
+
 - ID: DUPLICATION
 - Type: Buff
 - Stack: Counter
@@ -1092,6 +1181,7 @@
 - Internal State: None
 
 ### EchoFormPower
+
 - ID: ECHO_FORM
 - Type: Buff
 - Stack: Counter
@@ -1104,6 +1194,7 @@
 - Internal State: None
 
 ### EnragePower
+
 - ID: ENRAGE
 - Type: Buff
 - Stack: Counter
@@ -1115,6 +1206,7 @@
 - Internal State: None
 
 ### FreeAttackPower
+
 - ID: FREE_ATTACK
 - Type: Buff
 - Stack: Counter
@@ -1127,6 +1219,7 @@
 - Internal State: None
 
 ### FreePowerPower
+
 - ID: FREE
 - Type: Buff
 - Stack: Counter
@@ -1139,6 +1232,7 @@
 - Internal State: None
 
 ### FreeSkillPower
+
 - ID: FREE_SKILL
 - Type: Buff
 - Stack: Counter
@@ -1151,6 +1245,7 @@
 - Internal State: None
 
 ### GalvanicPower
+
 - ID: GALVANIC
 - Type: Buff
 - Stack: Counter
@@ -1164,6 +1259,7 @@
 - Internal State: DynamicVars: StringVar
 
 ### GravityPower
+
 - ID: GRAVITY
 - Type: Buff
 - Stack: Counter
@@ -1177,17 +1273,19 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### HauntPower
+
 - ID: HAUNT
 - Type: Buff
 - Stack: Counter
 - AllowNegative: false
 - Hooks: [AfterCardPlayed]
 - Logic:
-  - AfterCardPlayed: Actions: deal Amount damage to new global::_003C_003Ez__ReadOnlySingleElementList<Creature>(item)
+  - AfterCardPlayed: Actions: deal Amount damage to new global::_003C_003Ez__ReadOnlySingleElementList&lt;Creature&gt;(item)
 - Tick: None
 - Internal State: None
 
 ### HellraiserPower
+
 - ID: HELLRAISER
 - Type: Buff
 - Stack: Single
@@ -1197,9 +1295,10 @@
   - AfterCardDrawnEarly: see source for complex logic
   - BeforeAttack: no-op (completed task)
 - Tick: None
-- Internal State: Fields: _autoplayingCards:HashSet<CardModel>?
+- Internal State: Fields: _autoplayingCards:HashSet&lt;CardModel&gt;?
 
 ### JugglingPower
+
 - ID: JUGGLING
 - Type: Buff
 - Stack: Counter
@@ -1213,6 +1312,7 @@
 - Internal State: Data{ attacksPlayedThisTurn: int }
 
 ### MasterPlannerPower
+
 - ID: MASTER_PLANNER
 - Type: Buff
 - Stack: Single
@@ -1224,6 +1324,7 @@
 - Internal State: None
 
 ### MonologuePower
+
 - ID: MONOLOGUE
 - Type: Buff
 - Stack: Unknown
@@ -1237,6 +1338,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }; IsInstanced=true; DynamicVars: DynamicVar
 
 ### OblivionPower
+
 - ID: OBLIVION
 - Type: Debuff
 - Stack: Counter
@@ -1250,6 +1352,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### OneTwoPunchPower
+
 - ID: ONE_TWO_PUNCH
 - Type: Buff
 - Stack: Counter
@@ -1263,6 +1366,7 @@
 - Internal State: None
 
 ### PainfulStabsPower
+
 - ID: PAINFUL_STABS
 - Type: Buff
 - Stack: Counter
@@ -1276,6 +1380,7 @@
 - Internal State: None
 
 ### PanachePower
+
 - ID: PANACHE
 - Type: Buff
 - Stack: Counter
@@ -1288,6 +1393,7 @@
 - Internal State: Data{ alreadyApplied: bool }; IsInstanced=true; DynamicVars: DynamicVar
 
 ### RagePower
+
 - ID: RAGE
 - Type: Buff
 - Stack: Counter
@@ -1300,6 +1406,7 @@
 - Internal State: None
 
 ### RupturePower
+
 - ID: RUPTURE
 - Type: Buff
 - Stack: Counter
@@ -1313,6 +1420,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### SerpentFormPower
+
 - ID: SERPENT_FORM
 - Type: Buff
 - Stack: Counter
@@ -1325,6 +1433,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### SignalBoostPower
+
 - ID: SIGNAL_BOOST
 - Type: Buff
 - Stack: Counter
@@ -1337,6 +1446,7 @@
 - Internal State: None
 
 ### SkittishPower
+
 - ID: SKITTISH
 - Type: Buff
 - Stack: Counter
@@ -1349,6 +1459,7 @@
 - Internal State: Data{ hasGainedBlockThisTurn: bool }
 
 ### SlothPower
+
 - ID: SLOTH
 - Type: Debuff
 - Stack: Counter
@@ -1362,6 +1473,7 @@
 - Internal State: Fields: _cardsPlayedThisTurn:int
 
 ### SmoggyPower
+
 - ID: SMOGGY
 - Type: Debuff
 - Stack: Single
@@ -1376,6 +1488,7 @@
 - Internal State: None
 
 ### SneakyPower
+
 - ID: SNEAKY
 - Type: Buff
 - Stack: Counter
@@ -1387,6 +1500,7 @@
 - Internal State: None
 
 ### SpiritOfAshPower
+
 - ID: SPIRIT_OF_ASH
 - Type: Buff
 - Stack: Counter
@@ -1398,6 +1512,7 @@
 - Internal State: None
 
 ### StormPower
+
 - ID: STORM
 - Type: Buff
 - Stack: Counter
@@ -1410,6 +1525,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### StranglePower
+
 - ID: STRANGLE
 - Type: Debuff
 - Stack: Counter
@@ -1423,6 +1539,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### SubroutinePower
+
 - ID: SUBROUTINE
 - Type: Buff
 - Stack: Counter
@@ -1435,6 +1552,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### SuckPower
+
 - ID: SUCK
 - Type: Buff
 - Stack: Counter
@@ -1446,6 +1564,7 @@
 - Internal State: None
 
 ### TagTeamPower
+
 - ID: TAG_TEAM
 - Type: Debuff
 - Stack: Counter
@@ -1459,6 +1578,7 @@
 - Internal State: IsInstanced=true; DynamicVars: StringVar
 
 ### TenderPower
+
 - ID: TENDER
 - Type: Debuff
 - Stack: Counter
@@ -1471,6 +1591,7 @@
 - Internal State: Fields: _cardsPlayedThisTurn:int
 
 ### TheSealedThronePower
+
 - ID: THE_SEALED_THRONE
 - Type: Buff
 - Stack: Counter
@@ -1482,6 +1603,7 @@
 - Internal State: None
 
 ### VeilpiercerPower
+
 - ID: VEILPIERCER
 - Type: Buff
 - Stack: Counter
@@ -1494,6 +1616,7 @@
 - Internal State: None
 
 ### VoidFormPower
+
 - ID: VOID_FORM
 - Type: Buff
 - Stack: Counter
@@ -1512,6 +1635,7 @@
 ## 6. Damage Reaction
 
 ### AsleepPower
+
 - ID: ASLEEP
 - Type: Buff
 - Stack: Counter
@@ -1524,7 +1648,8 @@
 - Tick: Decrements via PowerCmd.Decrement on trigger; Removes self on condition
 - Internal State: None
 
-### CurlUpPower
+### CurlUpPower (6. Damage Reaction)
+
 - ID: CURL_UP
 - Type: Buff
 - Stack: Counter
@@ -1537,6 +1662,7 @@
 - Internal State: Data{ playedCard: CardModel? }
 
 ### FlameBarrierPower
+
 - ID: FLAME_BARRIER
 - Type: Buff
 - Stack: Counter
@@ -1548,7 +1674,8 @@
 - Tick: Removes self on condition
 - Internal State: None
 
-### FlutterPower
+### FlutterPower (6. Damage Reaction)
+
 - ID: FLUTTER
 - Type: Buff
 - Stack: Counter
@@ -1561,13 +1688,14 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### HardenedShellPower
+
 - ID: HARDENED_SHELL
 - Type: Buff
 - Stack: Counter
 - AllowNegative: false
 - Hooks: [ModifyHpLostBeforeOstyLate, AfterModifyingHpLostBeforeOsty, AfterDamageReceived, BeforeSideTurnStart]
 - Logic:
-  - ModifyHpLostBeforeOstyLate: Guards: if target != owner: return 1 | Actions: returns Math.Min(amount, (decimal)base.Amount - GetInternalData<Data>().damageReceivedThisTurn)
+  - ModifyHpLostBeforeOstyLate: Guards: if target != owner: return 1 | Actions: returns Math.Min(amount, (decimal)base.Amount - GetInternalData&lt;Data&gt;().damageReceivedThisTurn)
   - AfterModifyingHpLostBeforeOsty: no-op (completed task)
   - AfterDamageReceived: Guards: if target != owner: return 1
   - BeforeSideTurnStart: no-op (completed task)
@@ -1575,6 +1703,7 @@
 - Internal State: Data{ damageReceivedThisTurn: decimal }
 
 ### InfernoPower
+
 - ID: INFERNO
 - Type: Buff
 - Stack: Counter
@@ -1587,6 +1716,7 @@
 - Internal State: DynamicVars: DamageVar
 
 ### PersonalHivePower
+
 - ID: PERSONAL_HIVE
 - Type: Buff
 - Stack: Counter
@@ -1598,6 +1728,7 @@
 - Internal State: None
 
 ### PlowPower
+
 - ID: PLOW
 - Type: Debuff
 - Stack: Counter
@@ -1609,6 +1740,7 @@
 - Internal State: None
 
 ### ReflectPower
+
 - ID: REFLECT
 - Type: Buff
 - Stack: Counter
@@ -1620,7 +1752,8 @@
 - Tick: Decrements via PowerCmd.Decrement on trigger
 - Internal State: None
 
-### RupturePower
+### RupturePower (6. Damage Reaction)
+
 - ID: RUPTURE
 - Type: Buff
 - Stack: Counter
@@ -1634,6 +1767,7 @@
 - Internal State: Data{ int: Dictionary<CardModel, }
 
 ### ShriekPower
+
 - ID: SHRIEK
 - Type: Debuff
 - Stack: Counter
@@ -1645,6 +1779,7 @@
 - Internal State: None
 
 ### SlipperyPower
+
 - ID: SLIPPERY
 - Type: Buff
 - Stack: Counter
@@ -1657,6 +1792,7 @@
 - Internal State: None
 
 ### SlumberPower
+
 - ID: SLUMBER
 - Type: Buff
 - Stack: Counter
@@ -1670,6 +1806,7 @@
 - Internal State: None
 
 ### TheGambitPower
+
 - ID: THE_GAMBIT
 - Type: Debuff
 - Stack: Single
@@ -1681,6 +1818,7 @@
 - Internal State: None
 
 ### ThornsPower
+
 - ID: THORNS
 - Type: Buff
 - Stack: Counter
@@ -1692,6 +1830,7 @@
 - Internal State: None
 
 ### VitalSparkPower
+
 - ID: VITAL_SPARK
 - Type: Buff
 - Stack: Counter
@@ -1701,11 +1840,12 @@
   - AfterDamageReceived: Actions: gain base.DynamicVars.Energy.IntValue energy
   - BeforeSideTurnStart: Guards: if side != Enemy: skip
 - Tick: None
-- Internal State: Data{ playersTriggeredThisTurn: HashSet<Player> }; DynamicVars: EnergyVar
+- Internal State: Data{ playersTriggeredThisTurn: HashSet&lt;Player&gt; }; DynamicVars: EnergyVar
 
 ## 7. Card Draw/Exhaust Triggered
 
 ### AutomationPower
+
 - ID: AUTOMATION
 - Type: Buff
 - Stack: Counter
@@ -1716,7 +1856,8 @@
 - Tick: None
 - Internal State: Data{ cardsLeft: int }; IsInstanced=true; DynamicVars: DynamicVar
 
-### ChainsOfBindingPower
+### ChainsOfBindingPower (7. Card Draw/Exhaust Triggered)
+
 - ID: CHAINS_OF_BINDING
 - Type: Debuff
 - Stack: Counter
@@ -1725,12 +1866,13 @@
 - Logic:
   - AfterCardDrawn: see source for complex logic
   - BeforeCardPlayed: Guards: if card not owned by owner: skip
-  - ShouldPlay: Guards: if card not owned by owner: skip | Actions: returns !GetInternalData<Data>().boundCardPlayed
+  - ShouldPlay: Guards: if card not owned by owner: skip | Actions: returns !GetInternalData&lt;Data&gt;().boundCardPlayed
   - BeforeTurnEnd: no-op (completed task)
 - Tick: None
 - Internal State: Data{ boundCardPlayed: bool }
 
 ### ConfusedPower
+
 - ID: CONFUSED
 - Type: Debuff
 - Stack: Single
@@ -1742,6 +1884,7 @@
 - Internal State: Fields: _testEnergyCostOverride:int
 
 ### CorrosiveWavePower
+
 - ID: CORROSIVE_WAVE
 - Type: Buff
 - Stack: Counter
@@ -1754,6 +1897,7 @@
 - Internal State: None
 
 ### DarkEmbracePower
+
 - ID: DARK_EMBRACE
 - Type: Buff
 - Stack: Counter
@@ -1766,6 +1910,7 @@
 - Internal State: Data{ etherealCount: int }
 
 ### FeelNoPainPower
+
 - ID: FEEL_NO_PAIN
 - Type: Buff
 - Stack: Counter
@@ -1776,7 +1921,8 @@
 - Tick: None
 - Internal State: None
 
-### GalvanicPower
+### GalvanicPower (7. Card Draw/Exhaust Triggered)
+
 - ID: GALVANIC
 - Type: Buff
 - Stack: Counter
@@ -1790,6 +1936,7 @@
 - Internal State: DynamicVars: StringVar
 
 ### HexPower
+
 - ID: HEX
 - Type: Debuff
 - Stack: Single
@@ -1804,6 +1951,7 @@
 - Internal State: None
 
 ### IterationPower
+
 - ID: ITERATION
 - Type: Buff
 - Stack: Counter
@@ -1815,6 +1963,7 @@
 - Internal State: None
 
 ### PagestormPower
+
 - ID: PAGESTORM
 - Type: Buff
 - Stack: Counter
@@ -1825,7 +1974,8 @@
 - Tick: None
 - Internal State: None
 
-### PhantomBladesPower
+### PhantomBladesPower (7. Card Draw/Exhaust Triggered)
+
 - ID: PHANTOM_BLADES
 - Type: Buff
 - Stack: Counter
@@ -1839,6 +1989,7 @@
 - Internal State: None
 
 ### PillarOfCreationPower
+
 - ID: PILLAR_OF_CREATION
 - Type: Buff
 - Stack: Counter
@@ -1850,6 +2001,7 @@
 - Internal State: None
 
 ### RingingPower
+
 - ID: RINGING
 - Type: Debuff
 - Stack: Single
@@ -1864,7 +2016,8 @@
 - Tick: Removes self on condition
 - Internal State: None
 
-### SmoggyPower
+### SmoggyPower (7. Card Draw/Exhaust Triggered)
+
 - ID: SMOGGY
 - Type: Debuff
 - Stack: Single
@@ -1879,6 +2032,7 @@
 - Internal State: None
 
 ### SmokestackPower
+
 - ID: SMOKESTACK
 - Type: Buff
 - Stack: Counter
@@ -1890,6 +2044,7 @@
 - Internal State: None
 
 ### SpeedsterPower
+
 - ID: SPEEDSTER
 - Type: Buff
 - Stack: Counter
@@ -1901,6 +2056,7 @@
 - Internal State: None
 
 ### SwordSagePower
+
 - ID: SWORD_SAGE
 - Type: Buff
 - Stack: Counter
@@ -1915,6 +2071,7 @@
 - Internal State: None
 
 ### TangledPower
+
 - ID: TANGLED
 - Type: Debuff
 - Stack: Counter
@@ -1930,6 +2087,7 @@
 - Internal State: DynamicVars: EnergyVar
 
 ### TrashToTreasurePower
+
 - ID: TRASH_TO_TREASURE
 - Type: Buff
 - Stack: Counter
@@ -1943,6 +2101,7 @@
 ## 8. Block Persistence
 
 ### BlockNextTurnPower
+
 - ID: BLOCK_NEXT_TURN
 - Type: Buff
 - Stack: Counter
@@ -1954,6 +2113,7 @@
 - Internal State: None
 
 ### SelfFormingClayPower
+
 - ID: SELF_FORMING_CLAY
 - Type: Buff
 - Stack: Counter
@@ -1965,6 +2125,7 @@
 - Internal State: None
 
 ### ToricToughnessPower
+
 - ID: TORIC_TOUGHNESS
 - Type: Buff
 - Stack: Counter
@@ -1978,6 +2139,7 @@
 ## 9. Energy/Cost Modifiers
 
 ### ClarityPower
+
 - ID: CLARITY
 - Type: Buff
 - Stack: Counter
@@ -1990,6 +2152,7 @@
 - Internal State: None
 
 ### CorruptionPower
+
 - ID: CORRUPTION
 - Type: Buff
 - Stack: Single
@@ -2001,6 +2164,7 @@
 - Internal State: None
 
 ### CuriousPower
+
 - ID: CURIOUS
 - Type: Buff
 - Stack: Counter
@@ -2012,6 +2176,7 @@
 - Internal State: None
 
 ### DemesnePower
+
 - ID: DEMESNE
 - Type: Buff
 - Stack: Counter
@@ -2024,6 +2189,7 @@
 - Internal State: None
 
 ### DrawCardsNextTurnPower
+
 - ID: DRAW_CARDS_NEXT_TURN
 - Type: Buff
 - Stack: Counter
@@ -2035,7 +2201,8 @@
 - Tick: Removes self on condition
 - Internal State: None
 
-### FreeAttackPower
+### FreeAttackPower (9. Energy/Cost Modifiers)
+
 - ID: FREE_ATTACK
 - Type: Buff
 - Stack: Counter
@@ -2047,7 +2214,8 @@
 - Tick: Decrements via PowerCmd.Decrement on trigger
 - Internal State: None
 
-### FreePowerPower
+### FreePowerPower (9. Energy/Cost Modifiers)
+
 - ID: FREE
 - Type: Buff
 - Stack: Counter
@@ -2059,7 +2227,8 @@
 - Tick: Decrements via PowerCmd.Decrement on trigger
 - Internal State: None
 
-### FreeSkillPower
+### FreeSkillPower (9. Energy/Cost Modifiers)
+
 - ID: FREE_SKILL
 - Type: Buff
 - Stack: Counter
@@ -2072,6 +2241,7 @@
 - Internal State: None
 
 ### FriendshipPower
+
 - ID: FRIENDSHIP
 - Type: Buff
 - Stack: Counter
@@ -2083,6 +2253,7 @@
 - Internal State: None
 
 ### MachineLearningPower
+
 - ID: MACHINE_LEARNING
 - Type: Buff
 - Stack: Counter
@@ -2094,6 +2265,7 @@
 - Internal State: None
 
 ### MindRotPower
+
 - ID: MIND_ROT
 - Type: Debuff
 - Stack: Counter
@@ -2106,6 +2278,7 @@
 - Internal State: None
 
 ### OrbitPower
+
 - ID: ORBIT
 - Type: Buff
 - Stack: Counter
@@ -2117,6 +2290,7 @@
 - Internal State: Data{ energySpent: int, triggerCount: int }; IsInstanced=true; DynamicVars: EnergyVar
 
 ### PaleBlueDotPower
+
 - ID: PALE_BLUE_DOT
 - Type: Buff
 - Stack: Counter
@@ -2129,6 +2303,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### PyrePower
+
 - ID: PYRE
 - Type: Buff
 - Stack: Counter
@@ -2139,7 +2314,8 @@
 - Tick: None
 - Internal State: None
 
-### SwordSagePower
+### SwordSagePower (9. Energy/Cost Modifiers)
+
 - ID: SWORD_SAGE
 - Type: Buff
 - Stack: Counter
@@ -2153,7 +2329,8 @@
 - Tick: None
 - Internal State: None
 
-### TangledPower
+### TangledPower (9. Energy/Cost Modifiers)
+
 - ID: TANGLED
 - Type: Debuff
 - Stack: Counter
@@ -2169,6 +2346,7 @@
 - Internal State: DynamicVars: EnergyVar
 
 ### ToolsOfTheTradePower
+
 - ID: TOOLS_OF_THE_TRADE
 - Type: Buff
 - Stack: Counter
@@ -2181,6 +2359,7 @@
 - Internal State: None
 
 ### TyrannyPower
+
 - ID: TYRANNY
 - Type: Buff
 - Stack: Counter
@@ -2192,7 +2371,8 @@
 - Tick: None
 - Internal State: None
 
-### VeilpiercerPower
+### VeilpiercerPower (9. Energy/Cost Modifiers)
+
 - ID: VEILPIERCER
 - Type: Buff
 - Stack: Counter
@@ -2204,7 +2384,8 @@
 - Tick: Decrements via PowerCmd.Decrement on trigger
 - Internal State: None
 
-### VoidFormPower
+### VoidFormPower (9. Energy/Cost Modifiers)
+
 - ID: VOID_FORM
 - Type: Buff
 - Stack: Counter
@@ -2221,6 +2402,7 @@
 - Internal State: Data{ cardsPlayedThisTurn: int }
 
 ### WasteAwayPower
+
 - ID: WASTE_AWAY
 - Type: Debuff
 - Stack: Counter
@@ -2234,6 +2416,7 @@
 ## 10. Death Prevention
 
 ### AdaptablePower
+
 - ID: ADAPTABLE
 - Type: Buff
 - Stack: Single
@@ -2249,6 +2432,7 @@
 - Internal State: Data{ isReviving: bool }
 
 ### CrabRagePower
+
 - ID: CRAB_RAGE
 - Type: Buff
 - Stack: Single
@@ -2260,6 +2444,7 @@
 - Internal State: DynamicVars: BlockVar
 
 ### DampenPower
+
 - ID: DAMPEN
 - Type: Debuff
 - Stack: None
@@ -2270,9 +2455,10 @@
   - AfterDeath: Actions: remove self
   - AfterRemoved: no-op (completed task)
 - Tick: Removes self on condition
-- Internal State: Data{ casters: HashSet<Creature>, int: Dictionary<CardModel, }
+- Internal State: Data{ casters: HashSet&lt;Creature&gt;, int: Dictionary<CardModel, }
 
 ### DieForYouPower
+
 - ID: DIE_FOR_YOU
 - Type: Buff
 - Stack: Single
@@ -2287,6 +2473,7 @@
 - Internal State: None
 
 ### DoorRevivalPower
+
 - ID: DOOR_REVIVAL
 - Type: Buff
 - Stack: Single
@@ -2303,6 +2490,7 @@
 - Internal State: Data{ isHalfDead: bool }
 
 ### IllusionPower
+
 - ID: ILLUSION
 - Type: Buff
 - Stack: Single
@@ -2319,6 +2507,7 @@
 - Internal State: Data{ isReviving: bool }; Fields: _followUpStateId:string?
 
 ### InfestedPower
+
 - ID: INFESTED
 - Type: Buff
 - Stack: Single
@@ -2331,6 +2520,7 @@
 - Internal State: None
 
 ### MinionPower
+
 - ID: MINION
 - Type: Buff
 - Stack: Single
@@ -2343,6 +2533,7 @@
 - Internal State: None
 
 ### PossessSpeedPower
+
 - ID: POSSESS_SPEED
 - Type: Buff
 - Stack: Single
@@ -2355,6 +2546,7 @@
 - Internal State: Data{ decimal: Dictionary<Creature, }
 
 ### PossessStrengthPower
+
 - ID: POSSESS_STRENGTH
 - Type: Buff
 - Stack: Single
@@ -2367,6 +2559,7 @@
 - Internal State: Data{ decimal: Dictionary<Creature, }
 
 ### RavenousPower
+
 - ID: RAVENOUS
 - Type: Buff
 - Stack: Counter
@@ -2378,6 +2571,7 @@
 - Internal State: None
 
 ### ReattachPower
+
 - ID: REATTACH
 - Type: Buff
 - Stack: Single
@@ -2393,6 +2587,7 @@
 - Internal State: Data{ isReviving: bool }
 
 ### SteamEruptionPower
+
 - ID: STEAM_ERUPTION
 - Type: Buff
 - Stack: Counter
@@ -2407,6 +2602,7 @@
 - Internal State: None
 
 ### StockPower
+
 - ID: STOCK
 - Type: Buff
 - Stack: Counter
@@ -2419,6 +2615,7 @@
 - Internal State: None
 
 ### SurprisePower
+
 - ID: SURPRISE
 - Type: Buff
 - Stack: Single
@@ -2433,6 +2630,7 @@
 ## 11. Special/Unique Mechanics
 
 ### AccelerantPower
+
 - ID: ACCELERANT
 - Type: Buff
 - Stack: Counter
@@ -2444,6 +2642,7 @@
 - Internal State: None
 
 ### AnticipatePower
+
 - ID: ANTICIPATE
 - Type: Unknown
 - Stack: Unknown
@@ -2455,6 +2654,7 @@
 - Internal State: None
 
 ### ArtifactPower
+
 - ID: ARTIFACT
 - Type: Buff
 - Stack: Counter
@@ -2467,6 +2667,7 @@
 - Internal State: None
 
 ### BackAttackLeftPower
+
 - ID: BACK_ATTACK_LEFT
 - Type: Buff
 - Stack: Single
@@ -2478,6 +2679,7 @@
 - Internal State: None
 
 ### BackAttackRightPower
+
 - ID: BACK_ATTACK_RIGHT
 - Type: Buff
 - Stack: Single
@@ -2489,6 +2691,7 @@
 - Internal State: None
 
 ### BarricadePower
+
 - ID: BARRICADE
 - Type: Buff
 - Stack: Single
@@ -2501,6 +2704,7 @@
 - Internal State: DynamicVars: StringVar
 
 ### BeaconOfHopePower
+
 - ID: BEACON_OF_HOPE
 - Type: Buff
 - Stack: Counter
@@ -2512,6 +2716,7 @@
 - Internal State: None
 
 ### BufferPower
+
 - ID: BUFFER
 - Type: Buff
 - Stack: Counter
@@ -2524,6 +2729,7 @@
 - Internal State: None
 
 ### BurrowedPower
+
 - ID: BURROWED
 - Type: Buff
 - Stack: Single
@@ -2537,6 +2743,7 @@
 - Internal State: None
 
 ### CallOfTheVoidPower
+
 - ID: CALL_OF_THE_VOID
 - Type: Buff
 - Stack: Counter
@@ -2548,6 +2755,7 @@
 - Internal State: None
 
 ### ChildOfTheStarsPower
+
 - ID: CHILD_OF_THE_STARS
 - Type: Buff
 - Stack: Counter
@@ -2559,6 +2767,7 @@
 - Internal State: None
 
 ### CoordinatePower
+
 - ID: COORDINATE
 - Type: Unknown
 - Stack: Unknown
@@ -2570,6 +2779,7 @@
 - Internal State: None
 
 ### CreativeAiPower
+
 - ID: CREATIVE_AI
 - Type: Buff
 - Stack: Counter
@@ -2581,6 +2791,7 @@
 - Internal State: None
 
 ### CrueltyPower
+
 - ID: CRUELTY
 - Type: Buff
 - Stack: Counter
@@ -2592,6 +2803,7 @@
 - Internal State: None
 
 ### CrushUnderPower
+
 - ID: CRUSH_UNDER
 - Type: Unknown
 - Stack: Unknown
@@ -2603,6 +2815,7 @@
 - Internal State: None
 
 ### DarkShacklesPower
+
 - ID: DARK_SHACKLES
 - Type: Unknown
 - Stack: Unknown
@@ -2614,6 +2827,7 @@
 - Internal State: None
 
 ### DisintegrationPower
+
 - ID: DISINTEGRATION
 - Type: Debuff
 - Stack: Counter
@@ -2625,6 +2839,7 @@
 - Internal State: None
 
 ### DoomPower
+
 - ID: DOOM
 - Type: Debuff
 - Stack: Counter
@@ -2636,6 +2851,7 @@
 - Internal State: None
 
 ### DrumOfBattlePower
+
 - ID: DRUM_OF_BATTLE
 - Type: Buff
 - Stack: Counter
@@ -2647,6 +2863,7 @@
 - Internal State: None
 
 ### DyingStarPower
+
 - ID: DYING_STAR
 - Type: Unknown
 - Stack: Unknown
@@ -2658,6 +2875,7 @@
 - Internal State: None
 
 ### EnergyNextTurnPower
+
 - ID: ENERGY_NEXT_TURN
 - Type: Buff
 - Stack: Counter
@@ -2669,6 +2887,7 @@
 - Internal State: None
 
 ### EnfeeblingTouchPower
+
 - ID: ENFEEBLING_TOUCH
 - Type: Unknown
 - Stack: Unknown
@@ -2680,6 +2899,7 @@
 - Internal State: None
 
 ### EnvenomPower
+
 - ID: ENVENOM
 - Type: Buff
 - Stack: Counter
@@ -2691,6 +2911,7 @@
 - Internal State: None
 
 ### FanOfKnivesPower
+
 - ID: FAN_OF_KNIVES
 - Type: Buff
 - Stack: Single
@@ -2702,6 +2923,7 @@
 - Internal State: None
 
 ### FeedingFrenzyPower
+
 - ID: FEEDING_FRENZY
 - Type: Unknown
 - Stack: Unknown
@@ -2713,6 +2935,7 @@
 - Internal State: None
 
 ### FlexPotionPower
+
 - ID: FLEX_POTION
 - Type: Unknown
 - Stack: Unknown
@@ -2724,6 +2947,7 @@
 - Internal State: None
 
 ### FocusPower
+
 - ID: FOCUS
 - Type: Buff
 - Stack: Counter
@@ -2735,6 +2959,7 @@
 - Internal State: None
 
 ### FocusedStrikePower
+
 - ID: FOCUSED_STRIKE
 - Type: Unknown
 - Stack: Unknown
@@ -2746,6 +2971,7 @@
 - Internal State: None
 
 ### ForbiddenGrimoirePower
+
 - ID: FORBIDDEN_GRIMOIRE
 - Type: Buff
 - Stack: Counter
@@ -2757,6 +2983,7 @@
 - Internal State: None
 
 ### ForegoneConclusionPower
+
 - ID: FOREGONE_CONCLUSION
 - Type: Buff
 - Stack: Counter
@@ -2768,6 +2995,7 @@
 - Internal State: None
 
 ### GenesisPower
+
 - ID: GENESIS
 - Type: Buff
 - Stack: Counter
@@ -2779,6 +3007,7 @@
 - Internal State: None
 
 ### HailstormPower
+
 - ID: HAILSTORM
 - Type: Buff
 - Stack: Counter
@@ -2790,6 +3019,7 @@
 - Internal State: DynamicVars: DynamicVar
 
 ### HammerTimePower
+
 - ID: HAMMER_TIME
 - Type: Buff
 - Stack: Single
@@ -2801,6 +3031,7 @@
 - Internal State: None
 
 ### HardToKillPower
+
 - ID: HARD_TO_KILL
 - Type: Buff
 - Stack: Counter
@@ -2813,6 +3044,7 @@
 - Internal State: None
 
 ### HeistPower
+
 - ID: HEIST
 - Type: Buff
 - Stack: Counter
@@ -2824,6 +3056,7 @@
 - Internal State: IsInstanced=true
 
 ### HelicalDartPower
+
 - ID: HELICAL_DART
 - Type: Unknown
 - Stack: Unknown
@@ -2835,6 +3068,7 @@
 - Internal State: None
 
 ### HelloWorldPower
+
 - ID: HELLO_WORLD
 - Type: Buff
 - Stack: Counter
@@ -2846,6 +3080,7 @@
 - Internal State: None
 
 ### HotfixPower
+
 - ID: HOTFIX
 - Type: Unknown
 - Stack: Unknown
@@ -2857,6 +3092,7 @@
 - Internal State: None
 
 ### ImbalancedPower
+
 - ID: IMBALANCED
 - Type: Debuff
 - Stack: Single
@@ -2868,6 +3104,7 @@
 - Internal State: None
 
 ### ImprovementPower
+
 - ID: IMPROVEMENT
 - Type: Buff
 - Stack: Counter
@@ -2879,6 +3116,7 @@
 - Internal State: None
 
 ### InfiniteBladesPower
+
 - ID: INFINITE_BLADES
 - Type: Buff
 - Stack: Counter
@@ -2890,6 +3128,7 @@
 - Internal State: None
 
 ### JuggernautPower
+
 - ID: JUGGERNAUT
 - Type: Buff
 - Stack: Counter
@@ -2901,6 +3140,7 @@
 - Internal State: None
 
 ### LightningRodPower
+
 - ID: LIGHTNING_ROD
 - Type: Buff
 - Stack: Counter
@@ -2912,6 +3152,7 @@
 - Internal State: None
 
 ### ManglePower
+
 - ID: MANGLE
 - Type: Unknown
 - Stack: Unknown
@@ -2923,6 +3164,7 @@
 - Internal State: None
 
 ### MayhemPower
+
 - ID: MAYHEM
 - Type: Buff
 - Stack: Counter
@@ -2934,6 +3176,7 @@
 - Internal State: None
 
 ### MonarchsGazePower
+
 - ID: MONARCHS_GAZE
 - Type: Buff
 - Stack: Counter
@@ -2945,6 +3188,7 @@
 - Internal State: None
 
 ### MonarchsGazeStrengthDownPower
+
 - ID: MONARCHS_GAZE_STRENGTH_DOWN
 - Type: Unknown
 - Stack: Unknown
@@ -2956,6 +3200,7 @@
 - Internal State: None
 
 ### NecroMasteryPower
+
 - ID: NECRO_MASTERY
 - Type: Buff
 - Stack: Counter
@@ -2967,6 +3212,7 @@
 - Internal State: None
 
 ### NightmarePower
+
 - ID: NIGHTMARE
 - Type: Buff
 - Stack: Counter
@@ -2978,6 +3224,7 @@
 - Internal State: Data{ selectedCard: CardModel? }; IsInstanced=true; DynamicVars: StringVar
 
 ### NostalgiaPower
+
 - ID: NOSTALGIA
 - Type: Buff
 - Stack: Counter
@@ -2989,6 +3236,7 @@
 - Internal State: None
 
 ### OutbreakPower
+
 - ID: OUTBREAK
 - Type: Buff
 - Stack: Counter
@@ -3000,6 +3248,7 @@
 - Internal State: Data{ timesPoisoned: int }; DynamicVars: RepeatVar
 
 ### PaperCutsPower
+
 - ID: PAPER_CUTS
 - Type: Buff
 - Stack: Counter
@@ -3011,6 +3260,7 @@
 - Internal State: None
 
 ### ParryPower
+
 - ID: PARRY
 - Type: Buff
 - Stack: Counter
@@ -3022,6 +3272,7 @@
 - Internal State: None
 
 ### PiercingWailPower
+
 - ID: PIERCING_WAIL
 - Type: Unknown
 - Stack: Unknown
@@ -3033,6 +3284,7 @@
 - Internal State: None
 
 ### RadiancePower
+
 - ID: RADIANCE
 - Type: Buff
 - Stack: Counter
@@ -3044,6 +3296,7 @@
 - Internal State: DynamicVars: EnergyVar
 
 ### ReaperFormPower
+
 - ID: REAPER_FORM
 - Type: Buff
 - Stack: Counter
@@ -3055,6 +3308,7 @@
 - Internal State: None
 
 ### ReptileTrinketPower
+
 - ID: REPTILE_TRINKET
 - Type: Unknown
 - Stack: Unknown
@@ -3066,6 +3320,7 @@
 - Internal State: None
 
 ### RoyaltiesPower
+
 - ID: ROYALTIES
 - Type: Buff
 - Stack: Counter
@@ -3077,6 +3332,7 @@
 - Internal State: None
 
 ### SeekingEdgePower
+
 - ID: SEEKING_EDGE
 - Type: Buff
 - Stack: Single
@@ -3088,6 +3344,7 @@
 - Internal State: None
 
 ### SentryModePower
+
 - ID: SENTRY_MODE
 - Type: Buff
 - Stack: Counter
@@ -3099,6 +3356,7 @@
 - Internal State: None
 
 ### SetupStrikePower
+
 - ID: SETUP_STRIKE
 - Type: Unknown
 - Stack: Unknown
@@ -3110,6 +3368,7 @@
 - Internal State: None
 
 ### ShacklingPotionPower
+
 - ID: SHACKLING_POTION
 - Type: Unknown
 - Stack: Unknown
@@ -3121,6 +3380,7 @@
 - Internal State: None
 
 ### ShroudPower
+
 - ID: SHROUD
 - Type: Buff
 - Stack: Counter
@@ -3132,6 +3392,7 @@
 - Internal State: None
 
 ### SleightOfFleshPower
+
 - ID: SLEIGHT_OF_FLESH
 - Type: Buff
 - Stack: Counter
@@ -3143,6 +3404,7 @@
 - Internal State: None
 
 ### SpectrumShiftPower
+
 - ID: SPECTRUM_SHIFT
 - Type: Buff
 - Stack: Counter
@@ -3154,6 +3416,7 @@
 - Internal State: None
 
 ### SpeedPotionPower
+
 - ID: SPEED_POTION
 - Type: Unknown
 - Stack: Unknown
@@ -3165,6 +3428,7 @@
 - Internal State: None
 
 ### SpinnerPower
+
 - ID: SPINNER
 - Type: Buff
 - Stack: Counter
@@ -3176,6 +3440,7 @@
 - Internal State: None
 
 ### StampedePower
+
 - ID: STAMPEDE
 - Type: Buff
 - Stack: Counter
@@ -3187,6 +3452,7 @@
 - Internal State: None
 
 ### StarNextTurnPower
+
 - ID: STAR_NEXT_TURN
 - Type: Buff
 - Stack: Counter
@@ -3198,6 +3464,7 @@
 - Internal State: None
 
 ### StratagemPower
+
 - ID: STRATAGEM
 - Type: Buff
 - Stack: Counter
@@ -3209,6 +3476,7 @@
 - Internal State: None
 
 ### SwipePower
+
 - ID: SWIPE
 - Type: Buff
 - Stack: Single
@@ -3220,6 +3488,7 @@
 - Internal State: IsInstanced=true; Fields: _stolenCard:CardModel?
 
 ### SynchronizePower
+
 - ID: SYNCHRONIZE
 - Type: Unknown
 - Stack: Unknown
@@ -3231,6 +3500,7 @@
 - Internal State: None
 
 ### TheBombPower
+
 - ID: THE_BOMB
 - Type: Buff
 - Stack: Counter
@@ -3242,6 +3512,7 @@
 - Internal State: IsInstanced=true; DynamicVars: DamageVar
 
 ### TheHuntPower
+
 - ID: THE_HUNT
 - Type: Buff
 - Stack: Counter
@@ -3253,6 +3524,7 @@
 - Internal State: None
 
 ### ThieveryPower
+
 - ID: THIEVERY
 - Type: Buff
 - Stack: Counter
@@ -3264,6 +3536,7 @@
 - Internal State: IsInstanced=true; DynamicVars: GoldVar
 
 ### ThunderPower
+
 - ID: THUNDER
 - Type: Buff
 - Stack: Counter
@@ -3275,6 +3548,7 @@
 - Internal State: None
 
 ### ViciousPower
+
 - ID: VICIOUS
 - Type: Buff
 - Stack: Counter
@@ -3290,7 +3564,7 @@
 ## Appendix: All Powers Alphabetical Index
 
 | Power | ID | Type | Stack | AllowNeg | Hooks |
-|-------|-----|------|-------|----------|-------|
+| ----- | --- | ------ | ----- | ---------- | ------- |
 | AccelerantPower | ACCELERANT | Buff | Counter | false | (none) |
 | AccuracyPower | ACCURACY | Buff | Counter | false | ModifyDamageAdditive |
 | AdaptablePower | ADAPTABLE | Buff | Single | false | AfterDeath, ShouldAllowHitting, ShouldStopCombatFromEnding +2 more |
@@ -3553,4 +3827,4 @@
 | WraithFormPower | WRAITH_FORM | Debuff | Counter | false | AfterSideTurnStart |
 
 ---
-*End of reference.*
+End of reference.

@@ -20,7 +20,6 @@ from sts2_env.cli.play_run import (
     CHARACTERS,
     DEFAULT_CHARACTER_INDEX,
     PHASE_LABELS,
-    ROOM_LABELS,
     describe_action,
     describe_card,
     describe_enemy_intents,
@@ -28,6 +27,7 @@ from sts2_env.cli.play_run import (
     display_text,
 )
 from sts2_env.core.combat import CombatState
+from sts2_env.map.labels import map_point_label
 from sts2_env.core.enums import PotionTargetType, TargetType
 from sts2_env.core.rng import INT_MAX
 from sts2_env.run.reward_objects import CardBundlesReward, CardReward, PotionReward, RelicReward
@@ -159,7 +159,11 @@ def serialize_run(
         "player_won": summary["player_won"],
         "last_description": last_description,
         "actions": [
-            {"index": index, "label": describe_action(action), "kind": action.get("action", "")}
+            {
+                "index": index,
+                "label": describe_action(action, mgr.run_state.current_act),
+                "kind": action.get("action", ""),
+            }
             for index, action in enumerate(actions)
         ],
         "screen": _screen(mgr, actions, combat),
@@ -326,13 +330,14 @@ def _map_screen(mgr: RunManager, actions: list[dict[str, Any]]) -> dict:
     all_points = act_map.all_points()
     max_row = max((point.row for point in all_points), default=0)
     columns = sorted({point.col for point in all_points})
+    act = run_state.current_act
     for row_index in range(max_row, 0, -1):
         row = []
         for point in act_map.get_row(row_index):
             coord = (point.col, point.row)
             row.append({
                 "coord": coord,
-                "label": ROOM_LABELS.get(point.point_type.name, display_name(point.point_type.name)),
+                "label": map_point_label(point.point_type, act),
                 "reachable": coord in reachable,
                 "action_index": reachable.get(coord),
                 "visited": point.coord in visited,
@@ -346,11 +351,11 @@ def _map_screen(mgr: RunManager, actions: list[dict[str, Any]]) -> dict:
             continue
         paths.append({
             "coord": (point.col, point.row),
-            "label": ROOM_LABELS.get(point.point_type.name, display_name(point.point_type.name)),
+            "label": map_point_label(point.point_type, act),
             "next": [
                 {
                     "coord": (child.col, child.row),
-                    "label": ROOM_LABELS.get(child.point_type.name, display_name(child.point_type.name)),
+                    "label": map_point_label(child.point_type, act),
                 }
                 for child in sorted(point.children, key=lambda child: child.col)
             ],

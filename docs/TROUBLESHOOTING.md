@@ -229,7 +229,7 @@ dotnet --list-sdks
 
 **Solution:** Download Godot 4.5.1 Mono from the official releases and configure the path:
 
-1. Download from: https://github.com/godotengine/godot/releases/tag/4.5.1-stable
+1. Download from: <https://github.com/godotengine/godot/releases/tag/4.5.1-stable>
 2. Extract to a known location (e.g., `C:/megadot/`)
 3. The `.csproj` already defaults to `C:/megadot/Godot_v4.5.1-stable_mono_win64/`
 4. Adjust the `GodotPath` in the csproj if your path differs
@@ -315,6 +315,7 @@ Check that observation values are properly normalized (the observation encoder d
 **Cause:** The action mask might not be working correctly, or the reward signal is too sparse (only win/loss at episode end). With sparse reward, the agent finds END_TURN to be the "safest" action.
 
 **Solution:**
+
 1. Verify action masking: the mask should have card-play actions enabled when the player has energy and playable cards.
 2. Add reward shaping: small negative penalty for HP loss encourages the agent to play defensively rather than passively.
 3. Use entropy coefficient (`--ent-coef 0.01` or higher) to encourage exploration during training.
