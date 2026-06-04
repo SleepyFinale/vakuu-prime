@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Debug;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Exceptions;
 using MegaCrit.Sts2.Core.Extensions;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -79,6 +81,15 @@ public static class CardSelectCmd
 		}
 	}
 
+	public static void Reset()
+	{
+		if (!TestMode.IsOn && _selectorStack.Count > 0)
+		{
+			Log.Warn($"CardSelectCmd.Reset: clearing {_selectorStack.Count} leaked selector(s) from the stack.");
+			_selectorStack.Clear();
+		}
+	}
+
 	public static IDisposable UseSelector(MegaCrit.Sts2.Core.TestSupport.ICardSelector selector)
 	{
 		if (_selectorStack.Count > 0)
@@ -104,11 +115,23 @@ public static class CardSelectCmd
 		return false;
 	}
 
+	private static void ReportSoftlock()
+	{
+		string text = "A selection screen was about to be shown with 0 options. Returning empty to prevent softlock.";
+		Log.Error(text);
+		SentryService.CaptureException(new SoftlockException(text));
+	}
+
 	public static async Task<CardModel?> FromChooseACardScreen(PlayerChoiceContext context, IReadOnlyList<CardModel> cards, Player player, bool canSkip = false)
 	{
 		if (cards.Count > 3)
 		{
 			throw new ArgumentException("Only works with less than 3 cards", "cards");
+		}
+		if (cards.Count == 0)
+		{
+			ReportSoftlock();
+			return null;
 		}
 		uint choiceId = RunManager.Instance.PlayerChoiceSynchronizer.ReserveChoiceId(player);
 		await context.SignalPlayerChoiceBegun(PlayerChoiceOptions.None);
@@ -152,6 +175,11 @@ public static class CardSelectCmd
 		{
 			return Array.Empty<CardModel>();
 		}
+		if (cards.Count == 0)
+		{
+			ReportSoftlock();
+			return Array.Empty<CardModel>();
+		}
 		List<CardModel> result;
 		if (!prefs.RequireManualConfirmation && cards.Count <= prefs.MinSelect)
 		{
@@ -188,9 +216,14 @@ public static class CardSelectCmd
 		return result;
 	}
 
-	public static async Task<IEnumerable<CardModel>> FromSimpleGrid(PlayerChoiceContext context, IReadOnlyList<CardModel> cards, Player player, CardSelectorPrefs prefs)
+	public static async Task<IEnumerable<CardModel>> FromSimpleGrid(PlayerChoiceContext context, IReadOnlyList<CardModel> cardsIn, Player player, CardSelectorPrefs prefs)
 	{
 		if (CombatManager.Instance.IsEnding)
+		{
+			return Array.Empty<CardModel>();
+		}
+		List<CardModel> cards = cardsIn.ToList();
+		if (cards.Count == 0)
 		{
 			return Array.Empty<CardModel>();
 		}
@@ -216,7 +249,7 @@ public static class CardSelectCmd
 					NOverlayStack.Instance.Push(nSimpleCardSelectScreen);
 					result = (await nSimpleCardSelectScreen.CardsSelected()).ToList();
 				}
-				List<int> indexes = result.Select(cards.IndexOf<CardModel>).ToList();
+				List<int> indexes = result.Select((CardModel c) => cards.IndexOf(c)).ToList();
 				RunManager.Instance.PlayerChoiceSynchronizer.SyncLocalChoice(player, choiceId, PlayerChoiceResult.FromIndexes(indexes));
 			}
 			else
@@ -233,6 +266,10 @@ public static class CardSelectCmd
 	public static async Task<IEnumerable<CardModel>> FromDeckForUpgrade(Player player, CardSelectorPrefs prefs)
 	{
 		List<CardModel> list = PileType.Deck.GetPile(player).Cards.Where((CardModel c) => c.IsUpgradable).ToList();
+		if (list.Count == 0)
+		{
+			return Array.Empty<CardModel>();
+		}
 		IEnumerable<CardModel> enumerable;
 		if (list.Count <= prefs.MinSelect && !prefs.RequireManualConfirmation)
 		{
@@ -266,6 +303,10 @@ public static class CardSelectCmd
 	public static async Task<IEnumerable<CardModel>> FromDeckForTransformation(Player player, CardSelectorPrefs prefs, Func<CardModel, CardTransformation>? cardToTransformation = null)
 	{
 		List<CardModel> list = PileType.Deck.GetPile(player).Cards.Where((CardModel c) => c.Type != CardType.Quest && c.IsTransformable).ToList();
+		if (list.Count == 0)
+		{
+			return Array.Empty<CardModel>();
+		}
 		IEnumerable<CardModel> enumerable;
 		if (list.Count <= prefs.MinSelect && !prefs.RequireManualConfirmation)
 		{
@@ -375,6 +416,10 @@ public static class CardSelectCmd
 		{
 			list = list.OrderBy(sortingOrder).ToList();
 		}
+		if (list.Count == 0)
+		{
+			return Array.Empty<CardModel>();
+		}
 		IEnumerable<CardModel> enumerable;
 		if (!prefs.RequireManualConfirmation && list.Count <= prefs.MinSelect)
 		{
@@ -416,15 +461,19 @@ public static class CardSelectCmd
 		{
 			NPlayerHand.Instance?.CancelAllCardPlay();
 		}
-		List<CardModel> cards = PileType.Hand.GetPile(player).Cards.Where(filter ?? ((Func<CardModel, bool>)((CardModel _) => true))).ToList();
+		List<CardModel> list = PileType.Hand.GetPile(player).Cards.Where(filter ?? ((Func<CardModel, bool>)((CardModel _) => true))).ToList();
 		IEnumerable<CardModel> result;
-		if (cards.Count == 0)
+		if (list.Count == 0)
 		{
-			result = cards;
+			result = list;
 		}
-		else if (!prefs.RequireManualConfirmation && cards.Count <= prefs.MinSelect)
+		else if (!prefs.RequireManualConfirmation && list.Count <= prefs.MinSelect)
 		{
-			result = cards;
+			result = list;
+		}
+		else if (Selector != null)
+		{
+			result = await Selector.GetSelectedCards(list, prefs.MinSelect, prefs.MaxSelect);
 		}
 		else
 		{
@@ -432,7 +481,7 @@ public static class CardSelectCmd
 			await context.SignalPlayerChoiceBegun(PlayerChoiceOptions.CancelPlayCardActions);
 			if (ShouldSelectLocalCard(player))
 			{
-				result = ((Selector == null) ? (await NCombatRoom.Instance.Ui.Hand.SelectCards(prefs, filter, source)) : (await Selector.GetSelectedCards(cards, prefs.MinSelect, prefs.MaxSelect)));
+				result = await NCombatRoom.Instance.Ui.Hand.SelectCards(prefs, filter, source);
 				RunManager.Instance.PlayerChoiceSynchronizer.SyncLocalChoice(player, choiceId, PlayerChoiceResult.FromMutableCombatCards(result));
 			}
 			else
@@ -470,11 +519,15 @@ public static class CardSelectCmd
 		{
 			NPlayerHand.Instance?.CancelAllCardPlay();
 		}
-		List<CardModel> cards = PileType.Hand.GetPile(player).Cards.Where((CardModel c) => c.IsUpgradable).ToList();
+		List<CardModel> list = PileType.Hand.GetPile(player).Cards.Where((CardModel c) => c.IsUpgradable).ToList();
 		CardModel result;
-		if (cards.Count <= 1)
+		if (list.Count <= 1)
 		{
-			result = cards.FirstOrDefault();
+			result = list.FirstOrDefault();
+		}
+		else if (Selector != null)
+		{
+			result = (await Selector.GetSelectedCards(list, 1, 1)).FirstOrDefault();
 		}
 		else
 		{
@@ -482,7 +535,7 @@ public static class CardSelectCmd
 			await context.SignalPlayerChoiceBegun(PlayerChoiceOptions.CancelPlayCardActions);
 			if (ShouldSelectLocalCard(player))
 			{
-				result = ((Selector == null) ? (await NCombatRoom.Instance.Ui.Hand.SelectCards(new CardSelectorPrefs(new LocString("gameplay_ui", "CHOOSE_CARD_UPGRADE_HEADER"), 1), (CardModel c) => c.IsUpgradable, source, NPlayerHand.Mode.UpgradeSelect)).FirstOrDefault() : (await Selector.GetSelectedCards(cards, 1, 1)).FirstOrDefault());
+				result = (await NCombatRoom.Instance.Ui.Hand.SelectCards(new CardSelectorPrefs(new LocString("gameplay_ui", "CHOOSE_CARD_UPGRADE_HEADER"), 1), (CardModel c) => c.IsUpgradable, source, NPlayerHand.Mode.UpgradeSelect)).FirstOrDefault();
 				RunManager.Instance.PlayerChoiceSynchronizer.SyncLocalChoice(player, choiceId, PlayerChoiceResult.FromMutableCombatCard(result));
 			}
 			else
@@ -501,9 +554,18 @@ public static class CardSelectCmd
 		{
 			return Array.Empty<CardModel>();
 		}
+		if (bundles.Count == 0)
+		{
+			ReportSoftlock();
+			return Array.Empty<CardModel>();
+		}
 		uint choiceId = RunManager.Instance.PlayerChoiceSynchronizer.ReserveChoiceId(player);
 		IReadOnlyList<CardModel> readOnlyList;
-		if (ShouldSelectLocalCard(player))
+		if (TestMode.IsOn)
+		{
+			readOnlyList = bundles[0];
+		}
+		else if (ShouldSelectLocalCard(player))
 		{
 			NChooseABundleSelectionScreen nChooseABundleSelectionScreen = NChooseABundleSelectionScreen.ShowScreen(bundles);
 			readOnlyList = (await nChooseABundleSelectionScreen.CardsSelected()).FirstOrDefault() ?? Array.Empty<CardModel>();

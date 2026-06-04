@@ -28,7 +28,7 @@ public sealed class IntangiblePower : PowerModel
 		{
 			return amount;
 		}
-		return Math.Min(GetDamageCap(dealer), amount);
+		return Math.Min(GetDamageCap(target, dealer), amount);
 	}
 
 	public override Task AfterModifyingHpLostAfterOsty()
@@ -43,7 +43,7 @@ public sealed class IntangiblePower : PowerModel
 		{
 			return decimal.MaxValue;
 		}
-		return GetDamageCap(dealer);
+		return GetDamageCap(target, dealer);
 	}
 
 	public override Task AfterModifyingDamageAmount(CardModel? cardSource)
@@ -60,10 +60,10 @@ public sealed class IntangiblePower : PowerModel
 		}
 	}
 
-	private int GetDamageCap(Creature? dealer)
+	private int GetDamageCap(Creature target, Creature? dealer)
 	{
 		Player player = dealer?.Player ?? dealer?.PetOwner;
-		if (player == null || !player.Relics.Any((RelicModel r) => r is TheBoot))
+		if (player == null || !player.Relics.Any((RelicModel r) => r is TheBoot) || target == player.Creature)
 		{
 			return 1;
 		}

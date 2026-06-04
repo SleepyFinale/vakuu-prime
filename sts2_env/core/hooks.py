@@ -717,6 +717,15 @@ def should_draw(combat: CombatState, drawing_owner: Creature, from_hand_draw: bo
         if result is False:
             power.after_preventing_draw(owner, combat)
             return False
+    if drawing_owner.side == CombatSide.PLAYER:
+        for creature in combat.all_creatures:
+            for power in creature.powers.values():
+                should_block = getattr(power, "should_block_player_draw", None)
+                if not callable(should_block):
+                    continue
+                result = should_block(drawing_owner, from_hand_draw)
+                if result is False:
+                    return False
     for owner, relic in _iter_relic_listeners(combat):
         if owner is not drawing_owner:
             continue

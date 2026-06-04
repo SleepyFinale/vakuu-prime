@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Text.Json;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Platform.Steam;
 using MegaCrit.Sts2.Core.Saves;
+using MegaCrit.Sts2.Core.TestSupport;
 using Steamworks;
 
 namespace MegaCrit.Sts2.Core.Modding;
@@ -19,74 +22,321 @@ public static class ModManager
 {
 	public delegate void MetricsUploadHook(SerializableRun run, bool isVictory, ulong localPlayerId);
 
-	private static List<Mod> _mods = new List<Mod>();
+	private static bool _allowInitForTests;
 
-	private static List<Mod> _loadedMods = new List<Mod>();
+	private static List<Mod> _mods = new List<Mod>();
 
 	private static bool _initialized;
 
 	private static Callback<ItemInstalled_t>? _steamItemInstalledCallback;
 
-	public static IReadOnlyList<Mod> AllMods => _mods;
+	private static ModSettings? _settings;
 
-	public static IReadOnlyList<Mod> LoadedMods => _loadedMods;
+	private static IModManagerFileIo? _fileIo;
 
-	public static bool PlayerAgreedToModLoading => SaveManager.Instance.SettingsSave.ModSettings?.PlayerAgreedToModLoading ?? false;
+	private static readonly Dictionary<string, string> _circularDependencies = new Dictionary<string, string>();
+
+	private static bool? _hasHarmonyPatches;
+
+	public static IReadOnlyList<Mod> Mods => _mods;
+
+	public static bool PlayerAgreedToModLoading => _settings?.PlayerAgreedToModLoading ?? false;
 
 	public static event Action<Mod>? OnModDetected;
 
 	public static event MetricsUploadHook? OnMetricsUpload;
 
-	public static void Initialize()
+	public static void Initialize(IModManagerFileIo fileIo, ModSettings? settings)
 	{
+		_settings = settings;
+		_fileIo = fileIo;
 		if (CommandLineHelper.HasArg("nomods"))
 		{
 			Log.Info("'nomods' passed as executable argument, skipping mod initialization");
-			return;
 		}
-		AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolveFailure;
-		string executablePath = OS.GetExecutablePath();
-		string directoryName = Path.GetDirectoryName(executablePath);
-		using DirAccess dirAccess = DirAccess.Open(Path.Combine(directoryName, "mods"));
-		if (dirAccess != null)
+		else
 		{
-			LoadModsInDirRecursive(dirAccess, ModSource.ModsDirectory);
+			if (TestMode.IsOn && !_allowInitForTests)
+			{
+				return;
+			}
+			_allowInitForTests = false;
+			AppDomain.CurrentDomain.AssemblyResolve += HandleAssemblyResolveFailure;
+			string executablePath = OS.GetExecutablePath();
+			string directoryName = Path.GetDirectoryName(executablePath);
+			string path = Path.Combine(directoryName, "mods");
+			if (fileIo.DirectoryExists(path))
+			{
+				ReadModsInDirRecursive(path, ModSource.ModsDirectory, null);
+			}
+			if (SteamInitializer.Initialized)
+			{
+				ReadSteamMods();
+			}
+			if (_mods.Count == 0)
+			{
+				return;
+			}
+			SortModList(_settings?.ModList ?? new List<SettingsSaveMod>());
+			foreach (Mod mod2 in _mods)
+			{
+				TryLoadMod(mod2);
+			}
+			if (IsRunningModded())
+			{
+				int value = _mods.Count((Mod m) => m.state == ModLoadState.Loaded);
+				Log.Info($" --- RUNNING MODDED! --- Loaded {value} mods ({_mods.Count} total)");
+			}
+			_initialized = true;
+			if (_settings == null)
+			{
+				return;
+			}
+			List<SettingsSaveMod> list = new List<SettingsSaveMod>();
+			foreach (Mod mod in _mods)
+			{
+				SettingsSaveMod settingsSaveMod = new SettingsSaveMod(mod);
+				bool isEnabled = _settings.ModList.FirstOrDefault((SettingsSaveMod m) => m.Id == mod.manifest?.id)?.IsEnabled ?? true;
+				settingsSaveMod.IsEnabled = isEnabled;
+				list.Add(settingsSaveMod);
+			}
+			_settings.ModList = list;
 		}
-		if (SteamInitializer.Initialized)
-		{
-			InitializeSteamMods();
-		}
-		_loadedMods = _mods.Where((Mod m) => m.wasLoaded).ToList();
-		if (_loadedMods.Count > 0)
-		{
-			Log.Info($" --- RUNNING MODDED! --- Loaded {_loadedMods.Count} mods ({_mods.Count} total)");
-		}
-		_initialized = true;
 	}
 
-	private static void LoadModsInDirRecursive(DirAccess dirAccess, ModSource source)
+	public static void ResetForTests()
 	{
-		string[] files = dirAccess.GetFiles();
-		foreach (string text in files)
+		if (TestMode.IsOff)
 		{
-			if (text.EndsWith(".pck"))
+			throw new NotImplementedException("Tried to reset ModManager outside of tests! This is not allowed, as we cannot unload DLLs or PCKs");
+		}
+		_mods.Clear();
+		_initialized = false;
+		_settings = null;
+		_fileIo = null;
+		_allowInitForTests = true;
+		_circularDependencies.Clear();
+	}
+
+	private static void SortModList(List<SettingsSaveMod> manualOrdering)
+	{
+		List<int> list = new List<int>();
+		Dictionary<Mod, List<Mod>> dictionary = new Dictionary<Mod, List<Mod>>();
+		for (int i = 0; i < _mods.Count; i++)
+		{
+			Mod mod = _mods[i];
+			int num = 0;
+			if (mod.manifest?.dependencies != null)
 			{
-				Log.Info("Found mod pck file " + dirAccess.GetCurrentDir() + "/" + text);
-				TryLoadModFromPck(text, dirAccess, source);
+				foreach (string dependencyName in mod.manifest.dependencies)
+				{
+					Mod mod2 = _mods.FirstOrDefault((Mod m) => m.manifest?.id == dependencyName);
+					if (mod2 != null)
+					{
+						num++;
+						if (!dictionary.TryGetValue(mod2, out var value))
+						{
+							value = (dictionary[mod2] = new List<Mod>());
+						}
+						value.Add(mod);
+					}
+				}
+			}
+			list.Add(num);
+		}
+		HashSet<int> seenMods = new HashSet<int>();
+		List<int> currentChain = new List<int>();
+		for (int num2 = 0; num2 < _mods.Count; num2++)
+		{
+			List<int> list3 = HasCircularDependenciesRecursive(num2, seenMods, currentChain, list);
+			if (list3 == null)
+			{
+				continue;
+			}
+			string value2 = string.Join(", ", list3.Select((int index) => _mods[index].manifest?.id));
+			foreach (int item in list3)
+			{
+				string text = _mods[item].manifest?.id;
+				if (text != null)
+				{
+					_circularDependencies[text] = value2;
+				}
 			}
 		}
-		string[] directories = dirAccess.GetDirectories();
-		foreach (string path in directories)
+		PriorityQueue<Mod, int> priorityQueue = new PriorityQueue<Mod, int>();
+		Dictionary<string, int> dictionary2 = new Dictionary<string, int>();
+		for (int num3 = 0; num3 < manualOrdering.Count; num3++)
 		{
-			using DirAccess dirAccess2 = DirAccess.Open(Path.Combine(dirAccess.GetCurrentDir(), path));
-			if (dirAccess2 != null)
+			dictionary2[manualOrdering[num3].Id] = num3;
+		}
+		for (int num4 = 0; num4 < _mods.Count; num4++)
+		{
+			Mod mod3 = _mods[num4];
+			if (list[num4] == 0)
 			{
-				LoadModsInDirRecursive(dirAccess2, source);
+				int value3;
+				int priority = (dictionary2.TryGetValue(mod3.manifest.id, out value3) ? value3 : 999999999);
+				priorityQueue.Enqueue(mod3, priority);
+			}
+		}
+		if (priorityQueue.Count == 0)
+		{
+			Log.Error($"Detected {_mods.Count} mods, but all of them have dependencies! Something seems wrong");
+		}
+		List<Mod> list4 = new List<Mod>();
+		while (priorityQueue.Count > 0)
+		{
+			Mod mod4 = priorityQueue.Dequeue();
+			list4.Add(mod4);
+			if (!dictionary.TryGetValue(mod4, out var value4))
+			{
+				continue;
+			}
+			foreach (Mod item2 in value4)
+			{
+				int num5 = _mods.IndexOf(item2);
+				if (num5 < 0)
+				{
+					throw new InvalidOperationException("Bug in mod sorting logic!");
+				}
+				list[num5]--;
+				if (list[num5] == 0)
+				{
+					int value5;
+					int priority2 = (dictionary2.TryGetValue(item2.manifest.id, out value5) ? value5 : 999999999);
+					priorityQueue.Enqueue(item2, priority2);
+				}
+			}
+		}
+		bool flag = false;
+		if (_mods.Count != list4.Count)
+		{
+			Log.Error($"We found {_mods.Count} mods, but after sorting, we only have {list4.Count}! This should never happen");
+		}
+		if (manualOrdering.Count != list4.Count)
+		{
+			flag = true;
+		}
+		else
+		{
+			for (int num6 = 0; num6 < manualOrdering.Count; num6++)
+			{
+				if (manualOrdering[num6].Id != list4[num6].manifest?.id)
+				{
+					flag = true;
+					break;
+				}
+			}
+		}
+		if (flag)
+		{
+			Log.Info("Mods have been re-sorted because we detected a change or dependency order was broken. New sorting order:");
+			for (int num7 = 0; num7 < list4.Count; num7++)
+			{
+				Log.Info($"  {num7}: {list4[num7].manifest?.name} ({list4[num7].manifest?.id})");
+			}
+		}
+		_mods = list4;
+	}
+
+	private static List<int>? HasCircularDependenciesRecursive(int modIndex, HashSet<int> seenMods, List<int> currentChain, List<int> dependencyCounts)
+	{
+		if (currentChain.Contains(modIndex))
+		{
+			List<int> list = currentChain.ToList();
+			list.Add(modIndex);
+			dependencyCounts[modIndex]--;
+			return list;
+		}
+		if (seenMods.Contains(modIndex))
+		{
+			return null;
+		}
+		seenMods.Add(modIndex);
+		Mod mod = _mods[modIndex];
+		currentChain.Add(modIndex);
+		List<int> list2 = null;
+		if (mod.manifest?.dependencies != null)
+		{
+			foreach (string dependencyName in mod.manifest.dependencies)
+			{
+				int num = _mods.FindIndex((Mod m) => m.manifest?.id == dependencyName);
+				if (num >= 0)
+				{
+					List<int> list3 = HasCircularDependenciesRecursive(num, seenMods, currentChain, dependencyCounts);
+					if (list2 == null)
+					{
+						list2 = list3;
+					}
+				}
+			}
+		}
+		currentChain.RemoveAt(currentChain.Count - 1);
+		return list2;
+	}
+
+	private static void ReadModsInDirRecursive(string path, ModSource source, List<Mod>? newMods)
+	{
+		string[] array = _fileIo?.GetFilesAt(path) ?? Array.Empty<string>();
+		foreach (string text in array)
+		{
+			if (text.EndsWith(".json"))
+			{
+				string text2 = Path.Combine(path, text);
+				Log.Info("Found mod manifest file " + text2);
+				Mod mod = ReadModManifest(text2, source);
+				if (mod != null)
+				{
+					_mods.Add(mod);
+					newMods?.Add(mod);
+				}
+			}
+		}
+		string[] array2 = _fileIo?.GetDirectoriesAt(path) ?? Array.Empty<string>();
+		foreach (string path2 in array2)
+		{
+			string path3 = Path.Combine(path, path2);
+			if (_fileIo.DirectoryExists(path3))
+			{
+				ReadModsInDirRecursive(path3, source, newMods);
 			}
 		}
 	}
 
-	private static void InitializeSteamMods()
+	private static Mod? ReadModManifest(string filename, ModSource source)
+	{
+		if (_fileIo == null)
+		{
+			return null;
+		}
+		try
+		{
+			using Stream utf8Json = _fileIo.OpenStream(filename, Godot.FileAccess.ModeFlags.Read);
+			ModManifest modManifest = JsonSerializer.Deserialize(utf8Json, JsonSerializationUtility.GetTypeInfo<ModManifest>());
+			if (modManifest == null)
+			{
+				throw new InvalidOperationException("JSON deserialization returned null when trying to deserialize mod manifest!");
+			}
+			if (modManifest.id == null)
+			{
+				Log.Error("Mod manifest " + filename + " is missing the 'id' field! This is not allowed. The mod will not be loaded.");
+				return null;
+			}
+			return new Mod
+			{
+				path = filename.GetBaseDir(),
+				modSource = source,
+				manifest = modManifest
+			};
+		}
+		catch (Exception ex)
+		{
+			Log.Error($"Caught {ex.GetType()} trying to deserialize mod manifest json at path {filename}:\n{ex}");
+			return null;
+		}
+	}
+
+	private static void ReadSteamMods()
 	{
 		uint numSubscribedItems = SteamUGC.GetNumSubscribedItems();
 		PublishedFileId_t[] array = new PublishedFileId_t[numSubscribedItems];
@@ -94,12 +344,12 @@ public static class ModManager
 		for (int i = 0; i < numSubscribedItems; i++)
 		{
 			PublishedFileId_t workshopItemId = array[i];
-			TryLoadModFromSteam(workshopItemId);
+			TryReadModFromSteam(workshopItemId, null);
 		}
 		_steamItemInstalledCallback = Callback<ItemInstalled_t>.Create(OnSteamWorkshopItemInstalled);
 	}
 
-	private static void TryLoadModFromSteam(PublishedFileId_t workshopItemId)
+	private static void TryReadModFromSteam(PublishedFileId_t workshopItemId, List<Mod>? newMods)
 	{
 		if (!SteamUGC.GetItemInstallInfo(workshopItemId, out var punSizeOnDisk, out var pchFolder, 256u, out var punTimeStamp))
 		{
@@ -107,109 +357,189 @@ public static class ModManager
 			return;
 		}
 		Log.Info($"Looking for mods to load from Steam Workshop mod {workshopItemId.m_PublishedFileId} in {pchFolder} (size {punSizeOnDisk}, last modified {punTimeStamp})");
-		using DirAccess dirAccess = DirAccess.Open(pchFolder);
-		if (dirAccess == null)
+		if (_fileIo != null && !_fileIo.DirectoryExists(pchFolder))
 		{
 			Log.Warn("Could not open Steam Workshop folder: " + pchFolder);
 		}
 		else
 		{
-			LoadModsInDirRecursive(dirAccess, ModSource.SteamWorkshop);
+			ReadModsInDirRecursive(pchFolder, ModSource.SteamWorkshop, newMods);
 		}
 	}
 
 	private static void OnSteamWorkshopItemInstalled(ItemInstalled_t ev)
 	{
-		if ((ulong)ev.m_unAppID.m_AppId == 2868840)
+		if ((ulong)ev.m_unAppID.m_AppId != 2868840)
 		{
-			Log.Info($"Detected new Steam Workshop item installation, id: {ev.m_nPublishedFileId.m_PublishedFileId}");
-			TryLoadModFromSteam(ev.m_nPublishedFileId);
+			return;
+		}
+		Log.Info($"Detected new Steam Workshop item installation, id: {ev.m_nPublishedFileId.m_PublishedFileId}");
+		List<Mod> list = new List<Mod>();
+		TryReadModFromSteam(ev.m_nPublishedFileId, list);
+		foreach (Mod item in list)
+		{
+			item.state = ModLoadState.AddedAtRuntime;
+			ModManager.OnModDetected?.Invoke(item);
 		}
 	}
 
-	private static void TryLoadModFromPck(string pckFilename, DirAccess dirAccess, ModSource source)
+	private static void TryLoadMod(Mod mod)
 	{
 		Assembly assembly = null;
-		string pckName = Path.GetFileNameWithoutExtension(pckFilename);
-		bool flag = SaveManager.Instance.SettingsSave.ModSettings?.IsModDisabled(pckName, source) ?? false;
-		bool flag2 = _mods.Any((Mod m) => m.manifest?.pckName == pckName);
-		if (!PlayerAgreedToModLoading || flag || flag2 || _initialized)
+		if (mod.manifest == null)
 		{
-			if (_initialized)
+			throw new InvalidOperationException("Tried to load mod before its manifest was loaded!");
+		}
+		string modId = mod.manifest.id;
+		bool flag = _settings?.IsModDisabled(modId, mod.modSource) ?? false;
+		bool flag2 = _mods.Any((Mod m) => m.manifest?.id == modId && m.state == ModLoadState.Loaded);
+		string value;
+		if (_initialized)
+		{
+			Log.Info("Skipping loading mod " + modId + ", can't load mods at runtime");
+			mod.state = ModLoadState.AddedAtRuntime;
+		}
+		else if (flag)
+		{
+			Log.Info("Skipping loading mod " + modId + ", it is set to disabled in settings");
+			mod.state = ModLoadState.Disabled;
+		}
+		else if (!PlayerAgreedToModLoading)
+		{
+			Log.Info("Skipping loading mod " + modId + ", user has not yet seen the mods warning");
+			mod.state = ModLoadState.Disabled;
+		}
+		else if (flag2)
+		{
+			LocString locString = new LocString("main_menu_ui", "MOD_ERROR.DUPLICATE_ID");
+			locString.Add("id", modId);
+			Log.Error("Tried to load mod with id " + modId + ", but a mod is already loaded with that name!");
+			mod.state = ModLoadState.Failed;
+			int num = 1;
+			List<LocString> list = new List<LocString>(num);
+			CollectionsMarshal.SetCount(list, num);
+			Span<LocString> span = CollectionsMarshal.AsSpan(list);
+			int index = 0;
+			span[index] = locString;
+			mod.errors = list;
+		}
+		else if (_circularDependencies.TryGetValue(modId, out value))
+		{
+			LocString locString2 = new LocString("main_menu_ui", "MOD_ERROR.CIRCULAR_DEPENDENCY");
+			locString2.Add("id", modId);
+			locString2.Add("dependencyChain", value);
+			Log.Error($"Tried to load mod with id {modId}, but it is part of a circular dependency chain: {value}!");
+			mod.state = ModLoadState.Failed;
+			int index = 1;
+			List<LocString> list2 = new List<LocString>(index);
+			CollectionsMarshal.SetCount(list2, index);
+			Span<LocString> span = CollectionsMarshal.AsSpan(list2);
+			int num = 0;
+			span[num] = locString2;
+			mod.errors = list2;
+		}
+		else
+		{
+			HashSet<string> hashSet = new HashSet<string>();
+			List<string>? dependencies = mod.manifest.dependencies;
+			if (dependencies != null && dependencies.Count > 0)
 			{
-				Log.Info("Skipping loading mod " + pckFilename + ", can't load mods at runtime");
+				foreach (Mod mod2 in _mods)
+				{
+					if (mod2.state == ModLoadState.Loaded && mod2.manifest?.id != null && mod.manifest.dependencies.Contains(mod2.manifest.id))
+					{
+						hashSet.Add(mod2.manifest.id);
+					}
+				}
+				if (hashSet.Count != mod.manifest.dependencies.Count)
+				{
+					List<string> list3 = new List<string>();
+					foreach (string dependency in mod.manifest.dependencies)
+					{
+						if (!hashSet.Contains(dependency))
+						{
+							list3.Add(dependency);
+						}
+					}
+					string text = string.Join(",", list3);
+					LocString locString3 = new LocString("main_menu_ui", "MOD_ERROR.MISSING_DEPENDENCY");
+					locString3.Add("id", mod.manifest.id);
+					locString3.Add("missingCount", list3.Count);
+					locString3.Add("missingDependencies", text);
+					Log.Error($"Tried to load mod {modId}, but it depends on mods which have not been loaded: {text}!");
+					mod.state = ModLoadState.Failed;
+					int num = 1;
+					List<LocString> list4 = new List<LocString>(num);
+					CollectionsMarshal.SetCount(list4, num);
+					Span<LocString> span = CollectionsMarshal.AsSpan(list4);
+					int index = 0;
+					span[index] = locString3;
+					mod.errors = list4;
+				}
 			}
-			else if (flag)
-			{
-				Log.Info("Skipping loading mod " + pckFilename + ", it is set to disabled in settings");
-			}
-			else if (!PlayerAgreedToModLoading)
-			{
-				Log.Info("Skipping loading mod " + pckFilename + ", user has not yet seen the mods warning");
-			}
-			else if (flag2)
-			{
-				Log.Warn("Tried to load mod with PCK name " + pckName + ", but a mod is already loaded with that name!");
-			}
-			Mod mod = new Mod
-			{
-				pckName = pckName,
-				modSource = source,
-				manifest = null,
-				wasLoaded = false
-			};
-			_mods.Add(mod);
+		}
+		if (mod.state != ModLoadState.None)
+		{
 			ModManager.OnModDetected?.Invoke(mod);
 			return;
 		}
+		List<LocString> list5 = null;
 		try
 		{
-			if (!File.Exists(Path.Combine(dirAccess.GetCurrentDir(), pckFilename)))
+			bool flag3 = false;
+			string text2 = Path.Combine(mod.path, modId + ".dll");
+			if (mod.manifest.hasDll)
 			{
-				throw new InvalidOperationException("PCK not found at path " + pckFilename + "!");
-			}
-			string text = pckName + ".dll";
-			if (dirAccess.FileExists(text))
-			{
-				Log.Info("Loading assembly DLL " + text);
-				AssemblyLoadContext loadContext = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
-				if (loadContext != null)
+				if (_fileIo != null && _fileIo.FileExists(text2))
 				{
-					assembly = loadContext.LoadFromAssemblyPath(Path.Combine(dirAccess.GetCurrentDir(), text));
+					Log.Info("Loading assembly DLL " + text2);
+					AssemblyLoadContext loadContext = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
+					if (loadContext != null)
+					{
+						assembly = loadContext.LoadFromAssemblyPath(text2);
+						flag3 = true;
+					}
+				}
+				else
+				{
+					Log.Error($"Mod manifest for mod {mod.manifest.id} declares that it should load an assembly, but no assembly at path {text2} was found!");
 				}
 			}
-			if (!ProjectSettings.LoadResourcePack(Path.Combine(dirAccess.GetCurrentDir(), pckFilename)))
+			string text3 = Path.Combine(mod.path, modId + ".pck");
+			if (mod.manifest.hasPck)
 			{
-				throw new InvalidOperationException("Godot errored while loading PCK file " + pckName + "!");
+				if (_fileIo != null && _fileIo.FileExists(text3))
+				{
+					Log.Info("Loading Godot PCK " + text3);
+					if (!ProjectSettings.LoadResourcePack(text3))
+					{
+						throw new InvalidOperationException("Godot errored while loading PCK file " + modId + "!");
+					}
+					flag3 = true;
+				}
+				else
+				{
+					Log.Error($"Mod manifest for mod {mod.manifest.id} declares that it should load a PCK, but no PCK at path {text3} was found!");
+				}
 			}
-			if (!ResourceLoader.Exists("res://mod_manifest.json"))
+			if (!flag3)
 			{
-				throw new InvalidOperationException(pckFilename + " did not supply a mod manifest!");
+				Log.Warn("Neither a DLL nor a PCK was loaded for mod " + mod.manifest.id + ", something seems wrong!");
 			}
-			using FileAccessStream utf8Json = new FileAccessStream("res://mod_manifest.json", Godot.FileAccess.ModeFlags.Read);
-			ModManifest modManifest = JsonSerializer.Deserialize(utf8Json, JsonSerializationUtility.GetTypeInfo<ModManifest>());
-			if (modManifest == null)
-			{
-				throw new InvalidOperationException("JSON deserialization returned null when trying to deserialize mod manifest!");
-			}
-			if (!string.Equals(modManifest.pckName, pckName, StringComparison.OrdinalIgnoreCase))
-			{
-				throw new InvalidOperationException($"PCK name in mod manifest {modManifest.pckName} does not match the pck {pckName} we're currently loading!");
-			}
-			bool? assemblyLoadedSuccessfully = null;
+			bool? flag4 = null;
 			if (assembly != null)
 			{
-				assemblyLoadedSuccessfully = true;
-				List<Type> list = (from t in assembly.GetTypes()
+				flag4 = true;
+				List<Type> list6 = (from t in assembly.GetTypes()
 					where t.GetCustomAttribute<ModInitializerAttribute>() != null
 					select t).ToList();
-				if (list.Count > 0)
+				if (list6.Count > 0)
 				{
-					foreach (Type item in list)
+					foreach (Type item in list6)
 					{
 						Log.Info($"Calling initializer method of type {item} for {assembly}");
-						bool flag3 = CallModInitializer(item);
-						assemblyLoadedSuccessfully = assemblyLoadedSuccessfully.Value && flag3;
+						bool flag5 = CallModInitializer(item);
+						flag4 = flag4.Value && flag5;
 					}
 				}
 				else
@@ -217,32 +547,47 @@ public static class ModManager
 					try
 					{
 						Log.Info($"No ModInitializerAttribute detected. Calling Harmony.PatchAll for {assembly}");
-						Harmony harmony = new Harmony((modManifest.author ?? "unknown") + "." + pckName);
+						Harmony harmony = new Harmony((mod.manifest.author ?? "unknown") + "." + modId);
 						harmony.PatchAll(assembly);
 					}
-					catch (Exception value)
+					catch (Exception value2)
 					{
-						Log.Error($"Exception caught while trying to run PatchAll on assembly {assembly}:\n{value}");
-						assemblyLoadedSuccessfully = false;
+						Log.Error($"Exception caught while trying to run PatchAll on assembly {assembly}:\n{value2}");
+						flag4 = false;
 					}
 				}
 			}
-			Log.Info($"Finished mod initialization for '{modManifest.name}' ({modManifest.pckName}).");
-			Mod mod2 = new Mod
+			if (flag4 == false)
 			{
-				pckName = pckName,
-				modSource = source,
-				manifest = modManifest,
-				wasLoaded = true,
-				assembly = assembly,
-				assemblyLoadedSuccessfully = assemblyLoadedSuccessfully
-			};
-			_mods.Add(mod2);
-			ModManager.OnModDetected?.Invoke(mod2);
+				if (list5 == null)
+				{
+					list5 = new List<LocString>();
+				}
+				LocString locString4 = new LocString("main_menu_ui", "MOD_ERROR.ASSEMBLY_LOAD");
+				locString4.Add("id", mod.manifest.id);
+				list5.Add(locString4);
+			}
+			Log.Info($"Finished mod initialization for '{mod.manifest.name}' ({modId}).");
+			mod.state = ModLoadState.Loaded;
+			mod.assembly = assembly;
+			mod.errors = list5;
+			ModManager.OnModDetected?.Invoke(mod);
 		}
-		catch (Exception value2)
+		catch (Exception ex)
 		{
-			Log.Error($"Error loading mod {pckFilename}: {value2}");
+			Log.Error($"Exception thrown while loading mod {modId}: {ex}");
+			if (list5 == null)
+			{
+				list5 = new List<LocString>();
+			}
+			LocString locString5 = new LocString("main_menu_ui", "MOD_ERROR.EXCEPTION");
+			locString5.Add("exceptionType", ex.GetType().ToString());
+			locString5.Add("id", mod.manifest.id);
+			list5.Add(locString5);
+			mod.state = ModLoadState.Failed;
+			mod.assembly = assembly;
+			mod.errors = list5;
+			ModManager.OnModDetected?.Invoke(mod);
 		}
 	}
 
@@ -265,7 +610,6 @@ public static class ModManager
 		}
 		try
 		{
-			Log.Info($"Calling initializer method {initializerType.Name}.{customAttribute.initializerMethod}...");
 			method.Invoke(null, null);
 		}
 		catch (Exception value)
@@ -280,9 +624,9 @@ public static class ModManager
 	{
 		foreach (Mod mod in _mods)
 		{
-			if (mod.wasLoaded)
+			if (mod.state == ModLoadState.Loaded)
 			{
-				string text = $"res://{mod.manifest.pckName}/localization/{language}/{file}";
+				string text = $"res://{mod.manifest.id}/localization/{language}/{file}";
 				if (ResourceLoader.Exists(text))
 				{
 					yield return text;
@@ -291,13 +635,15 @@ public static class ModManager
 		}
 	}
 
-	public static List<string>? GetModNameList()
+	public static List<string>? GetGameplayRelevantModNameList()
 	{
-		if (LoadedMods.Count == 0)
+		if (!IsRunningModded())
 		{
 			return null;
 		}
-		return LoadedMods.Select((Mod m) => m.manifest.pckName + m.manifest.version).ToList();
+		return (from m in GetLoadedMods()
+			where m.manifest?.affectsGameplay ?? true
+			select m.manifest?.id + "-" + m.manifest?.version).ToList();
 	}
 
 	private static Assembly HandleAssemblyResolveFailure(object? source, ResolveEventArgs ev)
@@ -318,6 +664,38 @@ public static class ModManager
 	public static void CallMetricsHooks(SerializableRun run, bool isVictory, ulong localPlayerId)
 	{
 		ModManager.OnMetricsUpload?.Invoke(run, isVictory, localPlayerId);
+	}
+
+	public static bool IsRunningModded()
+	{
+		return _mods.Any(delegate(Mod m)
+		{
+			ModLoadState state = m.state;
+			return (uint)(state - 1) <= 1u;
+		});
+	}
+
+	public static bool HasHarmonyPatches()
+	{
+		try
+		{
+			bool valueOrDefault = _hasHarmonyPatches == true;
+			if (!_hasHarmonyPatches.HasValue)
+			{
+				valueOrDefault = Harmony.GetAllPatchedMethods().Any();
+				_hasHarmonyPatches = valueOrDefault;
+			}
+		}
+		catch
+		{
+			_hasHarmonyPatches = true;
+		}
+		return _hasHarmonyPatches.Value;
+	}
+
+	public static IEnumerable<Mod> GetLoadedMods()
+	{
+		return _mods.Where((Mod m) => m.state == ModLoadState.Loaded);
 	}
 
 	public static void Dispose()

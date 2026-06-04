@@ -43,6 +43,8 @@ public class ActionQueueSet
 
 	private uint _nextId;
 
+	private bool _isInCombat;
+
 	public bool IsEmpty
 	{
 		get
@@ -95,7 +97,7 @@ public class ActionQueueSet
 			gameAction.Cancel();
 			return;
 		}
-		if (queue.isCancellingPlayerDrivenCombatActions && IsGameActionPlayerDriven(gameAction) && gameAction.ActionType != GameActionType.NonCombat)
+		if (queue.isCancellingPlayerDrivenCombatActions && IsGameActionPlayerDriven(gameAction) && gameAction.ActionType != GameActionType.NonCombat && gameAction.ActionType != GameActionType.Any)
 		{
 			_logger.Debug($"Attempted to enqueue GameAction {gameAction} to player queue owned by {gameAction.OwnerId}, but it's currently cancelling all non-hook actions due to end of turn");
 			gameAction.Cancel();
@@ -142,7 +144,21 @@ public class ActionQueueSet
 				_logger.VeryDebug($"Queue for player {actionQueue.ownerId} is empty");
 				continue;
 			}
+			while (actionQueue.actions.Count > 0 && actionQueue.actions[0].State == GameActionState.Canceled)
+			{
+				_logger.Warn($"Removing canceled action {actionQueue.actions[0]} from front of player queue {actionQueue.ownerId}");
+				actionQueue.actions.RemoveAt(0);
+			}
+			if (actionQueue.actions.Count <= 0)
+			{
+				continue;
+			}
 			GameAction gameAction2 = actionQueue.actions[0];
+			if (_isInCombat && gameAction2.ActionType == GameActionType.NonCombat)
+			{
+				_logger.VeryDebug($"We are currently in combat and candidate action {gameAction2} has type {gameAction2.ActionType}");
+				continue;
+			}
 			if (actionQueue.isPaused && gameAction2.ActionType == GameActionType.CombatPlayPhaseOnly)
 			{
 				_logger.VeryDebug($"Queue for player {actionQueue.ownerId} is paused and candidate action {gameAction2} has type {gameAction2.ActionType}");
@@ -241,7 +257,7 @@ public class ActionQueueSet
 			for (int i = 0; i < actionQueue.actions.Count; i++)
 			{
 				GameAction gameAction = actionQueue.actions[i];
-				if (IsGameActionPlayerDriven(gameAction) && gameAction.ActionType != GameActionType.NonCombat && gameAction.State == GameActionState.WaitingForExecution)
+				if (IsGameActionPlayerDriven(gameAction) && gameAction.ActionType != GameActionType.NonCombat && gameAction.ActionType != GameActionType.Any && gameAction.State == GameActionState.WaitingForExecution)
 				{
 					_logger.VeryDebug($"Cancelling non-hook action {actionQueue.actions[i]}");
 					gameAction.Cancel();
@@ -270,7 +286,8 @@ public class ActionQueueSet
 
 	public void CombatEnded()
 	{
-		_logger.Debug("Cancelling all non-executing combat actions in all queues");
+		_logger.Debug("Combat ended. Cancelling all non-executing combat actions in all queues");
+		_isInCombat = false;
 		foreach (ActionQueue actionQueue in _actionQueues)
 		{
 			for (int i = 0; i < actionQueue.actions.Count; i++)
@@ -300,6 +317,8 @@ public class ActionQueueSet
 
 	public void CombatStarted()
 	{
+		_logger.Debug("Combat started.");
+		_isInCombat = true;
 		foreach (ActionQueue actionQueue in _actionQueues)
 		{
 			actionQueue.isCancellingCombatActions = false;

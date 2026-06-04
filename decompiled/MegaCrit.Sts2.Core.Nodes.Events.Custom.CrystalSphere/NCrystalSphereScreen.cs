@@ -213,8 +213,8 @@ public class NCrystalSphereScreen : Control, IOverlayScreen, IScreenContext
 		_bigDivinationButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(SetBigDivination));
 		_smallDivinationButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(SetSmallDivination));
 		_proceedButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OnProceedButtonPressed));
-		_smallDivinationButton.SetHotkeys(new string[1] { MegaInput.viewExhaustPileAndTabRight });
-		_bigDivinationButton.SetHotkeys(new string[1] { MegaInput.viewDeckAndTabLeft });
+		_smallDivinationButton.SetHotkeys(new string[1] { MegaInput.viewDrawPile });
+		_bigDivinationButton.SetHotkeys(new string[1] { MegaInput.viewDiscardPile });
 		UpdateDivinationsLeft();
 		_proceedButton.Disable();
 		_proceedButton.UpdateText(NProceedButton.ProceedLoc);

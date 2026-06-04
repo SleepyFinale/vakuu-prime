@@ -20,8 +20,8 @@ public sealed class SecretTechnique : CardModel
 	protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay cardPlay)
 	{
 		CardSelectorPrefs prefs = new CardSelectorPrefs(base.SelectionScreenPrompt, 1);
-		List<CardModel> cards = PileType.Draw.GetPile(base.Owner).Cards.Where((CardModel c) => c.Type == CardType.Skill).ToList();
-		CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, cards, base.Owner, prefs)).FirstOrDefault();
+		List<CardModel> cardsIn = PileType.Draw.GetPile(base.Owner).Cards.Where((CardModel c) => c.Type == CardType.Skill).ToList();
+		CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, cardsIn, base.Owner, prefs)).FirstOrDefault();
 		if (cardModel != null)
 		{
 			await CardPileCmd.Add(cardModel, PileType.Hand);

@@ -68,7 +68,7 @@ public sealed class Vambrace : RelicModel
 		{
 			return 1m;
 		}
-		if (target != base.Owner.Creature)
+		if (cardSource.Owner != base.Owner)
 		{
 			return 1m;
 		}

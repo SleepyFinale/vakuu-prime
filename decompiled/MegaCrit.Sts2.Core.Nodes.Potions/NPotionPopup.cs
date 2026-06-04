@@ -16,6 +16,7 @@ using MegaCrit.Sts2.Core.Extensions;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
@@ -42,9 +43,13 @@ public class NPotionPopup : Control
 
 		public new static readonly StringName _Input = "_Input";
 
+		public new static readonly StringName _ExitTree = "_ExitTree";
+
 		public static readonly StringName Remove = "Remove";
 
-		public static readonly StringName RefreshUseButton = "RefreshUseButton";
+		public static readonly StringName DisconnectSignals = "DisconnectSignals";
+
+		public static readonly StringName RefreshButtons = "RefreshButtons";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -64,6 +69,8 @@ public class NPotionPopup : Control
 		public static readonly StringName _hoverTipBounds = "_hoverTipBounds";
 
 		public static readonly StringName _tween = "_tween";
+
+		public static readonly StringName _markedForRemoval = "_markedForRemoval";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -82,6 +89,10 @@ public class NPotionPopup : Control
 
 	private Tween? _tween;
 
+	private bool _markedForRemoval;
+
+	private Player? _subscribedPlayer;
+
 	private PotionModel? Potion => _holder.Potion?.Model;
 
 	public bool IsUsable => _useButton.IsEnabled;
@@ -94,9 +105,10 @@ public class NPotionPopup : Control
 	{
 		get
 		{
-			if (!NPlayerHand.Instance.IsInCardSelection)
+			NPlayerHand? instance = NPlayerHand.Instance;
+			if (instance == null || !instance.IsInCardSelection)
 			{
-				return NOverlayStack.Instance.Peek() is ICardSelector;
+				return NOverlayStack.Instance?.Peek() is ICardSelector;
 			}
 			return true;
 		}
@@ -145,9 +157,23 @@ public class NPotionPopup : Control
 				CombatManager.Instance.TurnStarted += OnTurnStarted;
 				CombatManager.Instance.PlayerEndedTurn += OnPlayerEndTurnStatusChanged;
 				CombatManager.Instance.PlayerUnendedTurn += OnPlayerEndTurnStatusChanged;
-				NOverlayStack.Instance.Changed += Remove;
-				NCapstoneContainer.Instance.Changed += Remove;
-				RefreshUseButton();
+				if (NOverlayStack.Instance != null)
+				{
+					NOverlayStack.Instance.Changed += Remove;
+				}
+				else
+				{
+					Log.Warn("NOverlayStack.Instance was null when creating potion popup");
+				}
+				if (NCapstoneContainer.Instance != null)
+				{
+					NCapstoneContainer.Instance.Changed += Remove;
+				}
+				else
+				{
+					Log.Warn("NCapstoneContainer.Instance was null when creating potion popup");
+				}
+				RefreshButtons();
 				break;
 			case PotionUsage.AnyTime:
 				_useButton.Enable();
@@ -158,6 +184,8 @@ public class NPotionPopup : Control
 			default:
 				throw new ArgumentOutOfRangeException("Usage");
 			}
+			_subscribedPlayer = Potion.Owner;
+			_subscribedPlayer.CanRemovePotionsChanged += RefreshButtons;
 			if (!Potion.Owner.CanRemovePotions)
 			{
 				_useButton.Disable();
@@ -180,23 +208,18 @@ public class NPotionPopup : Control
 				this.TryGrabFocus();
 			}
 		}
+		string locKey;
 		if (Potion == null)
 		{
-			_useButton.SetLocKey("POTION_POPUP.drink");
+			locKey = "POTION_POPUP.drink";
 		}
 		else
 		{
 			TargetType targetType = Potion.TargetType;
-			bool flag = ((targetType == TargetType.AnyEnemy || targetType == TargetType.TargetedNoCreature) ? true : false);
-			if (flag || Potion.CanThrowAtAlly())
-			{
-				_useButton.SetLocKey("POTION_POPUP.throw");
-			}
-			else
-			{
-				_useButton.SetLocKey("POTION_POPUP.drink");
-			}
+			bool flag = (((uint)(targetType - 2) <= 1u || targetType == TargetType.TargetedNoCreature) ? true : false);
+			locKey = ((!flag && !Potion.CanThrowAtAlly()) ? "POTION_POPUP.drink" : "POTION_POPUP.throw");
 		}
+		_useButton.SetLocKey(locKey);
 		_tween?.Kill();
 		base.Modulate = Colors.Transparent;
 		_popupContainer.Position += Vector2.Up * 25f;
@@ -244,7 +267,7 @@ public class NPotionPopup : Control
 				throw new InvalidOperationException($"Tried to discard potion {_holder.Potion.Model} but it's not in the player's belt!");
 			}
 			_holder.DisableUntilPotionRemoved();
-			DiscardPotionGameAction action = new DiscardPotionGameAction(owner, (uint)num);
+			DiscardPotionGameAction action = new DiscardPotionGameAction(owner, (uint)num, CombatManager.Instance.IsInProgress);
 			RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(action);
 		}
 	}
@@ -254,7 +277,7 @@ public class NPotionPopup : Control
 		if (inputEvent is InputEventMouseButton { ButtonIndex: var buttonIndex } inputEventMouseButton)
 		{
 			bool flag = (((ulong)(buttonIndex - 1) <= 1uL) ? true : false);
-			if (flag && inputEventMouseButton.IsReleased())
+			if (flag && inputEventMouseButton.IsReleased() && !GetGlobalRect().HasPoint(GetGlobalMousePosition()))
 			{
 				Remove();
 			}
@@ -266,52 +289,90 @@ public class NPotionPopup : Control
 		}
 	}
 
+	public override void _ExitTree()
+	{
+		if (!_markedForRemoval)
+		{
+			_markedForRemoval = true;
+			NHoverTipSet.shouldBlockHoverTips = false;
+			NHoverTipSet.Remove(_hoverTipBounds);
+			DisconnectSignals();
+		}
+		_tween?.Kill();
+	}
+
 	public void Remove()
 	{
-		NHoverTipSet.shouldBlockHoverTips = false;
-		NHoverTipSet.Remove(_hoverTipBounds);
+		if (!_markedForRemoval)
+		{
+			_markedForRemoval = true;
+			NHoverTipSet.shouldBlockHoverTips = false;
+			NHoverTipSet.Remove(_hoverTipBounds);
+			DisconnectSignals();
+			_useButton.Disable();
+			_discardButton.Disable();
+			_tween?.Kill();
+			_tween = CreateTween().SetParallel();
+			_tween.TweenProperty(this, "modulate", Colors.Transparent, 0.10000000149011612).SetTrans(Tween.TransitionType.Sine);
+			_tween.TweenProperty(_popupContainer, "position:y", -25f, 0.20000000298023224).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Sine);
+			_tween.Chain().TweenCallback(Callable.From(this.QueueFreeSafely));
+		}
+	}
+
+	private void DisconnectSignals()
+	{
 		CombatManager.Instance.StateTracker.CombatStateChanged -= OnCombatStateChanged;
 		CombatManager.Instance.TurnStarted -= OnTurnStarted;
 		CombatManager.Instance.PlayerEndedTurn -= OnPlayerEndTurnStatusChanged;
 		CombatManager.Instance.PlayerUnendedTurn -= OnPlayerEndTurnStatusChanged;
-		NOverlayStack.Instance.Changed -= Remove;
-		NCapstoneContainer.Instance.Changed -= Remove;
-		Callable.From(delegate
+		if (_subscribedPlayer != null)
 		{
-			_useButton.Disable();
-			_discardButton.Disable();
-		}).CallDeferred();
-		_tween?.Kill();
-		_tween = CreateTween().SetParallel();
-		_tween.TweenProperty(this, "modulate", Colors.Transparent, 0.10000000149011612).SetTrans(Tween.TransitionType.Sine);
-		_tween.TweenProperty(_popupContainer, "position:y", -25f, 0.20000000298023224).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Sine);
-		_tween.Chain().TweenCallback(Callable.From(this.QueueFreeSafely));
+			_subscribedPlayer.CanRemovePotionsChanged -= RefreshButtons;
+		}
+		if (NOverlayStack.Instance != null)
+		{
+			NOverlayStack.Instance.Changed -= Remove;
+		}
+		if (NCapstoneContainer.Instance != null)
+		{
+			NCapstoneContainer.Instance.Changed -= Remove;
+		}
 	}
 
 	private void OnTurnStarted(CombatState _)
 	{
-		RefreshUseButton();
+		RefreshButtons();
 	}
 
 	private void OnPlayerEndTurnStatusChanged(Player _, bool __)
 	{
-		RefreshUseButton();
+		RefreshButtons();
 	}
 
 	private void OnPlayerEndTurnStatusChanged(Player _)
 	{
-		RefreshUseButton();
+		RefreshButtons();
 	}
 
 	private void OnCombatStateChanged(CombatState _)
 	{
-		RefreshUseButton();
+		RefreshButtons();
 	}
 
-	private void RefreshUseButton()
+	private void RefreshButtons()
 	{
+		if (_markedForRemoval)
+		{
+			return;
+		}
 		Creature creature = Potion?.Owner.Creature;
-		if (creature != null && CombatManager.Instance.IsInProgress && creature.CombatState.CurrentSide == creature.Side && !InACardSelectScreen && !CombatManager.Instance.PlayerActionsDisabled)
+		_discardButton.Enable();
+		PotionModel? potion = Potion;
+		if (potion != null && potion.Usage == PotionUsage.AnyTime)
+		{
+			_useButton.Enable();
+		}
+		else if (creature != null && CombatManager.Instance.IsInProgress && creature.CombatState?.CurrentSide == creature.Side && creature.IsAlive && !InACardSelectScreen && !CombatManager.Instance.PlayerActionsDisabled)
 		{
 			_useButton.Enable();
 		}
@@ -319,12 +380,22 @@ public class NPotionPopup : Control
 		{
 			_useButton.Disable();
 		}
+		PotionModel potion2 = Potion;
+		if (potion2 != null)
+		{
+			Player owner = potion2.Owner;
+			if (owner != null && !owner.CanRemovePotions)
+			{
+				_useButton.Disable();
+				_discardButton.Disable();
+			}
+		}
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(7);
+		List<MethodInfo> list = new List<MethodInfo>(9);
 		list.Add(new MethodInfo(MethodName.Create, new PropertyInfo(Variant.Type.Object, "", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false), MethodFlags.Normal | MethodFlags.Static, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "holder", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -342,8 +413,10 @@ public class NPotionPopup : Control
 		{
 			new PropertyInfo(Variant.Type.Object, "inputEvent", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("InputEvent"), exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Remove, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.RefreshUseButton, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.DisconnectSignals, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.RefreshButtons, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -379,15 +452,27 @@ public class NPotionPopup : Control
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName._ExitTree && args.Count == 0)
+		{
+			_ExitTree();
+			ret = default(godot_variant);
+			return true;
+		}
 		if (method == MethodName.Remove && args.Count == 0)
 		{
 			Remove();
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.RefreshUseButton && args.Count == 0)
+		if (method == MethodName.DisconnectSignals && args.Count == 0)
 		{
-			RefreshUseButton();
+			DisconnectSignals();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.RefreshButtons && args.Count == 0)
+		{
+			RefreshButtons();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -429,11 +514,19 @@ public class NPotionPopup : Control
 		{
 			return true;
 		}
+		if (method == MethodName._ExitTree)
+		{
+			return true;
+		}
 		if (method == MethodName.Remove)
 		{
 			return true;
 		}
-		if (method == MethodName.RefreshUseButton)
+		if (method == MethodName.DisconnectSignals)
+		{
+			return true;
+		}
+		if (method == MethodName.RefreshButtons)
 		{
 			return true;
 		}
@@ -471,6 +564,11 @@ public class NPotionPopup : Control
 		if (name == PropertyName._tween)
 		{
 			_tween = VariantUtils.ConvertTo<Tween>(in value);
+			return true;
+		}
+		if (name == PropertyName._markedForRemoval)
+		{
+			_markedForRemoval = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
 		return base.SetGodotClassPropertyValue(in name, in value);
@@ -522,6 +620,11 @@ public class NPotionPopup : Control
 			value = VariantUtils.CreateFrom(in _tween);
 			return true;
 		}
+		if (name == PropertyName._markedForRemoval)
+		{
+			value = VariantUtils.CreateFrom(in _markedForRemoval);
+			return true;
+		}
 		return base.GetGodotClassPropertyValue(in name, out value);
 	}
 
@@ -535,6 +638,7 @@ public class NPotionPopup : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._discardButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._hoverTipBounds, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._tween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._markedForRemoval, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsUsable, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.InACardSelectScreen, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
@@ -550,6 +654,7 @@ public class NPotionPopup : Control
 		info.AddProperty(PropertyName._discardButton, Variant.From(in _discardButton));
 		info.AddProperty(PropertyName._hoverTipBounds, Variant.From(in _hoverTipBounds));
 		info.AddProperty(PropertyName._tween, Variant.From(in _tween));
+		info.AddProperty(PropertyName._markedForRemoval, Variant.From(in _markedForRemoval));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -579,6 +684,10 @@ public class NPotionPopup : Control
 		if (info.TryGetProperty(PropertyName._tween, out var value6))
 		{
 			_tween = value6.As<Tween>();
+		}
+		if (info.TryGetProperty(PropertyName._markedForRemoval, out var value7))
+		{
+			_markedForRemoval = value7.As<bool>();
 		}
 	}
 }

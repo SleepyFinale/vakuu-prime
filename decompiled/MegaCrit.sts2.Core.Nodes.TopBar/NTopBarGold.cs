@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -61,6 +63,8 @@ public class NTopBarGold : NClickableControl
 
 	private bool _alreadyRunning;
 
+	private CancellationTokenSource? _animCts;
+
 	public override void _Ready()
 	{
 		_goldLabel = GetNode<MegaLabel>("%GoldLabel");
@@ -72,6 +76,8 @@ public class NTopBarGold : NClickableControl
 	public override void _ExitTree()
 	{
 		base._ExitTree();
+		_animCts?.Cancel();
+		_animCts?.Dispose();
 		if (_player != null)
 		{
 			_player.GoldChanged -= UpdateGold;
@@ -105,34 +111,47 @@ public class NTopBarGold : NClickableControl
 		{
 			return;
 		}
+		_animCts?.Dispose();
+		_animCts = new CancellationTokenSource();
+		CancellationToken ct = _animCts.Token;
 		_alreadyRunning = true;
-		Tween tween = CreateTween().SetParallel();
-		tween.TweenProperty(_goldPopupLabel, "modulate:a", 1f, 0.15000000596046448);
-		tween.TweenProperty(_goldPopupLabel, "position:y", _goldPopupLabel.Position.Y + 30f, 0.25);
-		await ToSignal(tween, Tween.SignalName.Finished);
-		await Task.Delay(150);
-		while (_additionalGold != 0)
+		try
 		{
-			int num = 1;
-			if (Mathf.Abs(_additionalGold) > 100)
+			Tween tween = CreateTween().SetParallel();
+			tween.TweenProperty(_goldPopupLabel, "modulate:a", 1f, 0.15000000596046448);
+			tween.TweenProperty(_goldPopupLabel, "position:y", _goldPopupLabel.Position.Y + 30f, 0.25);
+			await tween.AwaitFinished(ct);
+			await Task.Delay(150, ct);
+			while (_additionalGold != 0)
 			{
-				num = 75;
+				ct.ThrowIfCancellationRequested();
+				int num = 1;
+				if (Mathf.Abs(_additionalGold) > 100)
+				{
+					num = 75;
+				}
+				else if (Mathf.Abs(_additionalGold) > 50)
+				{
+					num = 10;
+				}
+				_additionalGold = ((_additionalGold > 0) ? (_additionalGold - num) : (_additionalGold + num));
+				_goldPopupLabel.SetTextAutoSize(((_additionalGold >= 0) ? "+" : "") + _additionalGold);
+				_goldLabel.SetTextAutoSize($"{_player.Gold - _additionalGold}");
+				await Task.Delay((int)Mathf.Lerp(10f, 20f, Mathf.Max(0, 10 - Mathf.Abs(_additionalGold))), ct);
 			}
-			else if (Mathf.Abs(_additionalGold) > 50)
-			{
-				num = 10;
-			}
-			_additionalGold = ((_additionalGold > 0) ? (_additionalGold - num) : (_additionalGold + num));
-			_goldPopupLabel.SetTextAutoSize(((_additionalGold >= 0) ? "+" : "") + _additionalGold);
-			_goldLabel.SetTextAutoSize($"{_player.Gold - _additionalGold}");
-			await Task.Delay((int)Mathf.Lerp(10f, 20f, Mathf.Max(0, 10 - Mathf.Abs(_additionalGold))));
+			await Task.Delay(250, ct);
+			Tween tween2 = CreateTween().SetParallel();
+			tween2.TweenProperty(_goldPopupLabel, "modulate:a", 0f, 0.10000000149011612);
+			tween2.TweenProperty(_goldPopupLabel, "position:y", _goldPopupLabel.Position.Y - 30f, 0.25).FromCurrent();
+			_goldLabel.SetTextAutoSize($"{_player.Gold}");
 		}
-		await Task.Delay(250);
-		Tween tween2 = CreateTween().SetParallel();
-		tween2.TweenProperty(_goldPopupLabel, "modulate:a", 0f, 0.10000000149011612);
-		tween2.TweenProperty(_goldPopupLabel, "position:y", _goldPopupLabel.Position.Y - 30f, 0.25).FromCurrent();
-		_goldLabel.SetTextAutoSize($"{_player.Gold}");
-		_alreadyRunning = false;
+		catch (OperationCanceledException)
+		{
+		}
+		finally
+		{
+			_alreadyRunning = false;
+		}
 	}
 
 	protected override void OnFocus()

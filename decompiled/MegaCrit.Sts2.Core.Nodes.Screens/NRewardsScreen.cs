@@ -37,6 +37,8 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 	{
 		public new static readonly StringName _Ready = "_Ready";
 
+		public static readonly StringName DisallowSkipping = "DisallowSkipping";
+
 		public static readonly StringName RewardCollectedFrom = "RewardCollectedFrom";
 
 		public static readonly StringName RewardSkippedFrom = "RewardSkippedFrom";
@@ -109,6 +111,8 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		public static readonly StringName _lastRewardFocused = "_lastRewardFocused";
 
 		public static readonly StringName _isTerminal = "_isTerminal";
+
+		public static readonly StringName _skipDisallowed = "_skipDisallowed";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -149,6 +153,8 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 	private Control? _lastRewardFocused;
 
 	private bool _isTerminal;
+
+	private bool _skipDisallowed;
 
 	private readonly TaskCompletionSource _closedCompletionSource = new TaskCompletionSource();
 
@@ -297,6 +303,15 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		TaskHelper.RunSafely(RelicFtueCheck());
 	}
 
+	public void DisallowSkipping()
+	{
+		_skipDisallowed = true;
+		if (_proceedButton.IsSkip)
+		{
+			_proceedButton.Disable();
+		}
+	}
+
 	private async Task RelicFtueCheck()
 	{
 		if (SaveManager.Instance.SeenFtue("obtain_relic_ftue"))
@@ -352,6 +367,7 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 				_fadeTween.TweenProperty(GetNode<Control>("Rewards"), "modulate:a", 0f, 0.25);
 				NOverlayStack.Instance.HideBackstop();
 				_proceedButton.UpdateText(NProceedButton.ProceedLoc);
+				TryEnableProceedButton();
 				_proceedButton.SetPulseState(isPulsing: true);
 				_rewardsContainer.FocusMode = FocusModeEnum.None;
 				IsComplete = true;
@@ -369,6 +385,7 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		{
 			_targetDragPos.Y = 35f;
 		}
+		ActiveScreenContext.Instance.Update();
 		for (int i = 0; i < _rewardButtons.Count; i++)
 		{
 			_rewardButtons[i].FocusNeighborLeft = _rewardButtons[i].GetPath();
@@ -465,7 +482,7 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 
 	private void TryEnableProceedButton()
 	{
-		if (Hook.ShouldProceedToNextMapPoint(_runState) && !_proceedButton.IsEnabled)
+		if ((!_skipDisallowed || !_proceedButton.IsSkip) && Hook.ShouldProceedToNextMapPoint(_runState) && !_proceedButton.IsEnabled)
 		{
 			if (_isTerminal && _rewardButtons.Count == 0)
 			{
@@ -576,8 +593,9 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(17);
+		List<MethodInfo> list = new List<MethodInfo>(18);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.DisallowSkipping, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.RewardCollectedFrom, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "button", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -630,6 +648,12 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.DisallowSkipping && args.Count == 0)
+		{
+			DisallowSkipping();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -736,6 +760,10 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName.DisallowSkipping)
 		{
 			return true;
 		}
@@ -874,6 +902,11 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 			_isTerminal = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
+		if (name == PropertyName._skipDisallowed)
+		{
+			_skipDisallowed = VariantUtils.ConvertTo<bool>(in value);
+			return true;
+		}
 		return base.SetGodotClassPropertyValue(in name, in value);
 	}
 
@@ -982,6 +1015,11 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 			value = VariantUtils.CreateFrom(in _isTerminal);
 			return true;
 		}
+		if (name == PropertyName._skipDisallowed)
+		{
+			value = VariantUtils.CreateFrom(in _skipDisallowed);
+			return true;
+		}
 		return base.GetGodotClassPropertyValue(in name, out value);
 	}
 
@@ -1003,6 +1041,7 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._fadeTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._lastRewardFocused, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._isTerminal, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._skipDisallowed, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsComplete, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Int, PropertyName.ScreenType, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.UseSharedBackstop, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -1028,6 +1067,7 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		info.AddProperty(PropertyName._fadeTween, Variant.From(in _fadeTween));
 		info.AddProperty(PropertyName._lastRewardFocused, Variant.From(in _lastRewardFocused));
 		info.AddProperty(PropertyName._isTerminal, Variant.From(in _isTerminal));
+		info.AddProperty(PropertyName._skipDisallowed, Variant.From(in _skipDisallowed));
 		info.AddSignalEventDelegate(SignalName.Completed, backing_Completed);
 	}
 
@@ -1087,9 +1127,13 @@ public class NRewardsScreen : Control, IOverlayScreen, IScreenContext
 		{
 			_isTerminal = value13.As<bool>();
 		}
-		if (info.TryGetSignalEventDelegate<CompletedEventHandler>(SignalName.Completed, out var value14))
+		if (info.TryGetProperty(PropertyName._skipDisallowed, out var value14))
 		{
-			backing_Completed = value14;
+			_skipDisallowed = value14.As<bool>();
+		}
+		if (info.TryGetSignalEventDelegate<CompletedEventHandler>(SignalName.Completed, out var value15))
+		{
+			backing_Completed = value15;
 		}
 	}
 

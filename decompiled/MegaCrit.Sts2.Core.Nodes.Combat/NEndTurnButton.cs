@@ -473,7 +473,7 @@ public class NEndTurnButton : NButton
 	protected override void OnEnable()
 	{
 		base.OnEnable();
-		_hoverTween?.CustomStep(999.0);
+		_hoverTween?.FastForwardToCompletion();
 		_image.Texture = _normalTexture;
 		_image.Modulate = Colors.White;
 		_label.Modulate = StsColors.cream;
@@ -483,7 +483,7 @@ public class NEndTurnButton : NButton
 	{
 		base.OnDisable();
 		NHoverTipSet.Remove(this);
-		_hoverTween?.CustomStep(999.0);
+		_hoverTween?.FastForwardToCompletion();
 		_image.Modulate = StsColors.gray;
 		_label.Modulate = StsColors.gray;
 		StartOrStopPulseVfx();

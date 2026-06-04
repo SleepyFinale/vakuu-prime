@@ -49,11 +49,15 @@ public class CombatManager
 
 	private CombatState? _state;
 
+	private CancellationTokenSource? _combatCts;
+
 	private PendingLossState? _pendingLoss;
 
 	private bool _playerActionsDisabled;
 
 	public static CombatManager Instance { get; } = new CombatManager();
+
+	private CancellationToken CombatCt => _combatCts?.Token ?? default(CancellationToken);
 
 	public CardModel? DebugForcedTopCardOnNextShuffle { get; private set; }
 
@@ -200,6 +204,9 @@ public class CombatManager
 
 	public void AfterCombatRoomLoaded()
 	{
+		_combatCts?.Cancel();
+		_combatCts?.Dispose();
+		_combatCts = new CancellationTokenSource();
 		TaskHelper.RunSafely(StartCombatInternal());
 	}
 
@@ -212,11 +219,13 @@ public class CombatManager
 		foreach (Creature creature in _state.Creatures)
 		{
 			await AfterCreatureAdded(creature);
+			CombatCt.ThrowIfCancellationRequested();
 		}
 		RunManager.Instance.ActionExecutor.Pause();
 		RunManager.Instance.ActionQueueSynchronizer.SetCombatState(ActionSynchronizerCombatState.NotPlayPhase);
 		IsInProgress = true;
 		await Hook.BeforeCombatStart(_state.RunState, _state);
+		CombatCt.ThrowIfCancellationRequested();
 		NRunMusicController.Instance?.UpdateTrack();
 		NCombatRulesFtue ftue = null;
 		if (SaveManager.Instance.SeenFtue("combat_rules_ftue"))
@@ -229,6 +238,7 @@ public class CombatManager
 			NModalContainer.Instance?.Add(ftue, showBackstop: false);
 		}
 		await Cmd.CustomScaledWait(0.5f, 1f);
+		CombatCt.ThrowIfCancellationRequested();
 		await StartTurn();
 		ftue?.Start();
 	}
@@ -239,29 +249,40 @@ public class CombatManager
 		{
 			return;
 		}
+		CombatCt.ThrowIfCancellationRequested();
 		bool isExtraPlayerTurn;
 		List<Creature> creaturesStartingTurn;
 		List<Player> playersStartingTurn;
 		using (_playerReadyLock.EnterScope())
 		{
 			isExtraPlayerTurn = _playersTakingExtraTurn.Count > 0;
-			if (_state.CurrentSide == CombatSide.Player && isExtraPlayerTurn)
+			CombatState? state = _state;
+			if (state != null && state.CurrentSide == CombatSide.Player && isExtraPlayerTurn)
 			{
 				creaturesStartingTurn = _playersTakingExtraTurn.Select((Player p) => p.Creature).ToList();
 				playersStartingTurn = _playersTakingExtraTurn.ToList();
 			}
 			else
 			{
-				creaturesStartingTurn = _state.CreaturesOnCurrentSide.ToList();
-				playersStartingTurn = ((_state.CurrentSide == CombatSide.Player) ? _state.Players.ToList() : new List<Player>());
+				creaturesStartingTurn = _state?.CreaturesOnCurrentSide.ToList() ?? new List<Creature>();
+				CombatState? state2 = _state;
+				playersStartingTurn = ((state2 == null || state2.CurrentSide != CombatSide.Player) ? new List<Player>() : (_state?.Players.ToList() ?? new List<Player>()));
 			}
 		}
-		foreach (Creature item in creaturesStartingTurn)
+		foreach (Creature item2 in creaturesStartingTurn)
 		{
-			item.BeforeTurnStart(_state.RoundNumber, _state.CurrentSide);
+			if (_state != null)
+			{
+				item2.BeforeTurnStart(_state.RoundNumber, _state.CurrentSide);
+			}
 		}
-		await Hook.BeforeSideTurnStart(_state, _state.CurrentSide);
-		if (_state.CurrentSide == CombatSide.Player)
+		if (_state != null)
+		{
+			await Hook.BeforeSideTurnStart(_state, _state.CurrentSide);
+			CombatCt.ThrowIfCancellationRequested();
+		}
+		CombatState? state3 = _state;
+		if (state3 != null && state3.CurrentSide == CombatSide.Player)
 		{
 			PlayerActionsDisabled = false;
 			using (_playerReadyLock.EnterScope())
@@ -286,43 +307,88 @@ public class CombatManager
 			NCombatRoom.Instance?.AddChildSafely(NEnemyTurnBanner.Create());
 		}
 		await Cmd.CustomScaledWait(0.5f, 0.8f);
-		foreach (Creature item2 in creaturesStartingTurn)
-		{
-			await item2.AfterTurnStart(_state.RoundNumber, _state.CurrentSide);
-		}
+		CombatCt.ThrowIfCancellationRequested();
 		foreach (Creature item3 in creaturesStartingTurn)
 		{
-			await Hook.AfterBlockCleared(_state, item3);
-		}
-		foreach (Player item4 in playersStartingTurn)
-		{
-			HookPlayerChoiceContext hookPlayerChoiceContext = new HookPlayerChoiceContext(item4, LocalContext.NetId.Value, GameActionType.CombatPlayPhaseOnly);
-			Task task = SetupPlayerTurn(item4, hookPlayerChoiceContext);
-			await hookPlayerChoiceContext.AssignTaskAndWaitForPauseOrCompletion(task);
-		}
-		await Hook.AfterSideTurnStart(_state, _state.CurrentSide);
-		if (_state.CurrentSide == CombatSide.Player)
-		{
-			foreach (Player item5 in playersStartingTurn)
+			if (_state != null)
 			{
-				HookPlayerChoiceContext hookPlayerChoiceContext2 = new HookPlayerChoiceContext(item5, LocalContext.NetId.Value, GameActionType.CombatPlayPhaseOnly);
-				Task task2 = item5.PlayerCombatState.OrbQueue.AfterTurnStart(hookPlayerChoiceContext2);
-				await hookPlayerChoiceContext2.AssignTaskAndWaitForPauseOrCompletion(task2);
+				await item3.AfterTurnStart(_state.RoundNumber, _state.CurrentSide);
+				CombatCt.ThrowIfCancellationRequested();
+			}
+		}
+		foreach (Creature item4 in creaturesStartingTurn)
+		{
+			if (_state != null)
+			{
+				await Hook.AfterBlockCleared(_state, item4);
+				CombatCt.ThrowIfCancellationRequested();
+			}
+		}
+		List<(HookPlayerChoiceContext, Task)> setupPlayerTurnContext = new List<(HookPlayerChoiceContext, Task)>();
+		foreach (Player item5 in playersStartingTurn)
+		{
+			if (LocalContext.NetId.HasValue)
+			{
+				HookPlayerChoiceContext playerChoiceContext = new HookPlayerChoiceContext(item5, LocalContext.NetId.Value, GameActionType.CombatPlayPhaseOnly);
+				Task task = SetupPlayerTurn(item5, playerChoiceContext);
+				await playerChoiceContext.WaitForPauseOrCompletionWithoutAssigningTask(task);
+				CombatCt.ThrowIfCancellationRequested();
+				setupPlayerTurnContext.Add((playerChoiceContext, task));
+			}
+		}
+		if (_state != null)
+		{
+			await Hook.AfterSideTurnStart(_state, _state.CurrentSide);
+			CombatCt.ThrowIfCancellationRequested();
+		}
+		CombatState? state4 = _state;
+		if (state4 != null && state4.CurrentSide == CombatSide.Player)
+		{
+			foreach (Player item6 in playersStartingTurn)
+			{
+				if (item6.PlayerCombatState != null && LocalContext.NetId.HasValue)
+				{
+					HookPlayerChoiceContext hookPlayerChoiceContext = new HookPlayerChoiceContext(item6, LocalContext.NetId.Value, GameActionType.CombatPlayPhaseOnly);
+					Task task2 = item6.PlayerCombatState.OrbQueue.AfterTurnStart(hookPlayerChoiceContext);
+					await hookPlayerChoiceContext.AssignTaskAndWaitForPauseOrCompletion(task2);
+					CombatCt.ThrowIfCancellationRequested();
+				}
 			}
 			RunManager.Instance.ChecksumTracker.GenerateChecksum("After player turn start", null);
-			foreach (Player player in _state.Players)
+			if (_state == null)
 			{
-				if (player.Creature.IsDead || !playersStartingTurn.Contains(player))
+				return;
+			}
+			foreach (Player player2 in _state.Players)
+			{
+				if (player2.Creature.IsDead || !playersStartingTurn.Contains(player2))
 				{
-					Log.Info($"Setting player {player.NetId} to ready at start of turn. IsDead: {player.Creature.IsDead}. IsStartingTurn: {playersStartingTurn.Contains(player)}");
-					SetReadyToEndTurn(player, canBackOut: false);
+					Log.Info($"Setting player {player2.NetId} to ready at start of turn. IsDead: {player2.Creature.IsDead}. IsStartingTurn: {playersStartingTurn.Contains(player2)}");
+					SetReadyToEndTurn(player2, canBackOut: false);
+					if (AllPlayersReadyToEndTurn())
+					{
+						return;
+					}
 				}
-				else
+			}
+			foreach (var item7 in playersStartingTurn.Zip(setupPlayerTurnContext))
+			{
+				(HookPlayerChoiceContext, Task) item = item7.Second;
+				var (player, _) = item7;
+				var (hookPlayerChoiceContext2, setupPlayerTurnTask) = item;
+				if (_state == null)
 				{
-					await Hook.BeforePlayPhaseStart(_state, player);
+					return;
+				}
+				if (!player.Creature.IsDead)
+				{
+					Task task3 = Hook.BeforePlayPhaseStart(hookPlayerChoiceContext2, setupPlayerTurnTask, _state, player);
+					await hookPlayerChoiceContext2.AssignTaskAndWaitForPauseOrCompletion(task3);
+					CombatCt.ThrowIfCancellationRequested();
 				}
 			}
 			await CheckWinCondition();
+			CombatCt.ThrowIfCancellationRequested();
 			if (IsInProgress)
 			{
 				RunManager.Instance.ActionExecutor.Unpause();
@@ -335,10 +401,15 @@ public class CombatManager
 		else
 		{
 			IsEnemyTurnStarted = true;
-			this.TurnStarted?.Invoke(_state);
+			if (_state != null)
+			{
+				this.TurnStarted?.Invoke(_state);
+			}
 			RunManager.Instance.ChecksumTracker.GenerateChecksum("After enemy turn start", null);
 			await WaitForUnpause();
+			CombatCt.ThrowIfCancellationRequested();
 			await CheckWinCondition();
+			CombatCt.ThrowIfCancellationRequested();
 			if (IsInProgress)
 			{
 				await ExecuteEnemyTurn(actionDuringEnemyTurn);
@@ -352,7 +423,13 @@ public class CombatManager
 		{
 			return;
 		}
-		if (Hook.ShouldPlayerResetEnergy(_state, player))
+		if (_state == null || player.PlayerCombatState == null)
+		{
+			Log.Warn($"Combat state is null. Assuming that the run has been cleaned up. (CombatState: {_state} PlayerCombatState: {player.PlayerCombatState})");
+			return;
+		}
+		CombatState state = _state;
+		if (Hook.ShouldPlayerResetEnergy(state, player))
 		{
 			SfxCmd.Play("event:/sfx/ui/gain_energy");
 			player.PlayerCombatState.ResetEnergy();
@@ -361,11 +438,14 @@ public class CombatManager
 		{
 			player.PlayerCombatState.AddMaxEnergyToCurrent();
 		}
-		await Hook.AfterEnergyReset(_state, player);
-		await Hook.BeforeHandDraw(_state, player, playerChoiceContext);
-		decimal handDraw = Hook.ModifyHandDraw(_state, player, 5m, out IEnumerable<AbstractModel> modifiers);
-		await Hook.AfterModifyingHandDraw(_state, modifiers);
-		if (_state.RoundNumber == 1)
+		await Hook.AfterEnergyReset(state, player);
+		CombatCt.ThrowIfCancellationRequested();
+		await Hook.BeforeHandDraw(state, player, playerChoiceContext);
+		CombatCt.ThrowIfCancellationRequested();
+		decimal handDraw = Hook.ModifyHandDraw(state, player, 5m, out IEnumerable<AbstractModel> modifiers);
+		await Hook.AfterModifyingHandDraw(state, modifiers);
+		CombatCt.ThrowIfCancellationRequested();
+		if (state.RoundNumber == 1)
 		{
 			CardPile pile = PileType.Draw.GetPile(player);
 			List<CardModel> list = pile.Cards.Where((CardModel c) => c.Enchantment?.ShouldStartAtBottomOfDrawPile ?? false).ToList();
@@ -382,19 +462,24 @@ public class CombatManager
 			handDraw = Math.Min(handDraw, 10m);
 		}
 		await CardPileCmd.Draw(playerChoiceContext, handDraw, player, fromHandDraw: true);
-		await Hook.AfterPlayerTurnStart(_state, playerChoiceContext, player);
+		CombatCt.ThrowIfCancellationRequested();
+		await Hook.AfterPlayerTurnStart(state, playerChoiceContext, player);
 	}
 
 	public void SetReadyToEndTurn(Player player, bool canBackOut, Func<Task>? actionDuringEnemyTurn = null)
 	{
 		using (_playerReadyLock.EnterScope())
 		{
+			if (_playersReadyToEndTurn.Contains(player))
+			{
+				return;
+			}
 			_playersReadyToEndTurn.Add(player);
 		}
 		this.PlayerEndedTurn?.Invoke(player, canBackOut);
 		if (AllPlayersReadyToEndTurn())
 		{
-			Log.LogMessage(LogLevel.Debug, LogType.GameSync, "All players ready to end turn");
+			Log.Debug("All players ready to end turn");
 			GameAction currentlyRunningAction = RunManager.Instance.ActionExecutor.CurrentlyRunningAction;
 			if (currentlyRunningAction != null && ActionQueueSet.IsGameActionPlayerDriven(currentlyRunningAction))
 			{
@@ -471,17 +556,21 @@ public class CombatManager
 
 	private async Task EndEnemyTurn()
 	{
+		CombatCt.ThrowIfCancellationRequested();
 		if (_state.CurrentSide != CombatSide.Enemy)
 		{
-			throw new InvalidOperationException($"EndPlayerTurn called while the current side is {_state.CurrentSide}!");
+			throw new InvalidOperationException($"EndEnemyTurn called while the current side is {_state.CurrentSide}!");
 		}
 		await WaitForUnpause();
+		CombatCt.ThrowIfCancellationRequested();
 		await EndEnemyTurnInternal();
+		CombatCt.ThrowIfCancellationRequested();
 		await CheckWinCondition();
 		if (!IsEnding)
 		{
 			SwitchSides();
 			await WaitForUnpause();
+			CombatCt.ThrowIfCancellationRequested();
 			await StartTurn();
 		}
 	}
@@ -518,9 +607,12 @@ public class CombatManager
 		}
 	}
 
-	public void Reset()
+	public void Reset(bool graceful)
 	{
-		if (_state != null)
+		_combatCts?.Cancel();
+		_combatCts?.Dispose();
+		_combatCts = null;
+		if (graceful && _state != null)
 		{
 			foreach (Creature item in _state.Creatures.ToList())
 			{
@@ -536,6 +628,7 @@ public class CombatManager
 		IsPlayPhase = false;
 		IsEnemyTurnStarted = false;
 		History.Clear();
+		RunManager.Instance.ActionQueueSynchronizer.SetCombatState(ActionSynchronizerCombatState.NotInCombat);
 	}
 
 	public async Task HandlePlayerDeath(Player player)
@@ -550,7 +643,7 @@ public class CombatManager
 				player.PlayerCombatState.ExhaustPile,
 				player.PlayerCombatState.PlayPile
 			}.SelectMany((CardPile p) => p.Cards).ToArray();
-			await CardPileCmd.RemoveFromCombat(cards, isBeingPlayed: false);
+			await CardPileCmd.RemoveFromCombat(cards);
 			await PlayerCmd.SetEnergy(0m, player);
 			await PlayerCmd.SetStars(0m, player);
 		}
@@ -597,8 +690,7 @@ public class CombatManager
 		room.OnCombatEnded();
 		if (RunManager.Instance.NetService.Type != NetGameType.Replay)
 		{
-			string profileScopedPath = SaveManager.Instance.GetProfileScopedPath("replays/latest.mcr");
-			RunManager.Instance.CombatReplayWriter.WriteReplay(profileScopedPath, stopRecording: true);
+			RunManager.Instance.WriteReplay(stopRecording: true);
 		}
 		foreach (Player player2 in combatState.Players)
 		{
@@ -627,11 +719,17 @@ public class CombatManager
 			AchievementsHelper.AfterBossDefeated(localPlayer);
 		}
 		combatState.MultiplayerScalingModel?.OnCombatFinished();
-		this.CombatWon?.Invoke(room);
+		if (_state != null)
+		{
+			this.CombatWon?.Invoke(room);
+		}
 		RunManager.Instance.ActionExecutor.Unpause();
 		RunManager.Instance.ActionQueueSynchronizer.SetCombatState(ActionSynchronizerCombatState.NotInCombat);
 		NRunMusicController.Instance?.UpdateTrack();
-		this.CombatEnded?.Invoke(room);
+		if (_state != null)
+		{
+			this.CombatEnded?.Invoke(room);
+		}
 	}
 
 	public void RemoveCreature(Creature creature)
@@ -666,6 +764,7 @@ public class CombatManager
 		{
 			return;
 		}
+		CombatCt.ThrowIfCancellationRequested();
 		if (actionDuringEnemyTurn != null)
 		{
 			await actionDuringEnemyTurn();
@@ -680,6 +779,7 @@ public class CombatManager
 					await nCreature.PerformIntent();
 				}
 				await enemy.TakeTurn();
+				CombatCt.ThrowIfCancellationRequested();
 				await WaitForUnpause();
 				await CheckWinCondition();
 				if (!IsInProgress)
@@ -700,6 +800,7 @@ public class CombatManager
 
 	private async Task AfterAllPlayersReadyToEndTurn(Func<Task>? actionDuringEnemyTurn = null)
 	{
+		CombatCt.ThrowIfCancellationRequested();
 		EndingPlayerTurnPhaseOne = true;
 		RunManager.Instance.ActionQueueSynchronizer.SetCombatState(ActionSynchronizerCombatState.EndTurnPhaseOne);
 		await WaitUntilQueueIsEmptyOrWaitingOnNonPlayerDrivenAction();
@@ -734,13 +835,21 @@ public class CombatManager
 
 	public async Task EndPlayerTurnPhaseOneInternal()
 	{
-		if (_state.CurrentSide != CombatSide.Player)
+		if (_state == null)
 		{
-			throw new InvalidOperationException($"EndPlayerTurn called while the current side is {_state.CurrentSide}!");
+			return;
+		}
+		CombatState? state = _state;
+		if (state == null || state.CurrentSide != CombatSide.Player)
+		{
+			throw new InvalidOperationException($"EndPlayerTurn called while the current side is {_state?.CurrentSide}!");
 		}
 		await WaitForUnpause();
 		IsPlayPhase = false;
-		await Hook.BeforeTurnEnd(_state, _state.CurrentSide);
+		if (_state != null)
+		{
+			await Hook.BeforeTurnEnd(_state, _state.CurrentSide);
+		}
 		if (await CheckWinCondition())
 		{
 			return;
@@ -748,20 +857,26 @@ public class CombatManager
 		List<Player> playersEndingTurn;
 		using (_playerReadyLock.EnterScope())
 		{
-			playersEndingTurn = ((_playersTakingExtraTurn.Count > 0) ? _playersTakingExtraTurn.ToList() : _state.Players.ToList());
+			playersEndingTurn = ((_playersTakingExtraTurn.Count > 0) ? _playersTakingExtraTurn.ToList() : (_state?.Players.ToList() ?? new List<Player>()));
 		}
 		List<Task> playerEndTasks = new List<Task>();
 		foreach (Player item in playersEndingTurn)
 		{
-			HookPlayerChoiceContext hookPlayerChoiceContext = new HookPlayerChoiceContext(item, LocalContext.NetId.Value, GameActionType.Combat);
-			Task task = DoTurnEnd(item, hookPlayerChoiceContext);
-			await hookPlayerChoiceContext.AssignTaskAndWaitForPauseOrCompletion(task);
-			playerEndTasks.Add(task);
+			if (LocalContext.NetId.HasValue)
+			{
+				HookPlayerChoiceContext hookPlayerChoiceContext = new HookPlayerChoiceContext(item, LocalContext.NetId.Value, GameActionType.Combat);
+				Task task = DoTurnEnd(item, hookPlayerChoiceContext);
+				await hookPlayerChoiceContext.AssignTaskAndWaitForPauseOrCompletion(task);
+				playerEndTasks.Add(task);
+			}
 		}
 		await Task.WhenAll(playerEndTasks);
-		foreach (Player item2 in playersEndingTurn)
+		if (_state != null)
 		{
-			await Hook.BeforeFlush(_state, item2);
+			foreach (Player item2 in playersEndingTurn)
+			{
+				await Hook.BeforeFlush(_state, item2);
+			}
 		}
 		RunManager.Instance.ChecksumTracker.GenerateChecksum("After player turn phase one end", null);
 		await CheckWinCondition();
@@ -820,6 +935,7 @@ public class CombatManager
 
 	private async Task AfterAllPlayersReadyToBeginEnemyTurn(Func<Task>? actionDuringEnemyTurn = null)
 	{
+		CombatCt.ThrowIfCancellationRequested();
 		EndingPlayerTurnPhaseTwo = true;
 		RunManager.Instance.ActionQueueSynchronizer.SetCombatState(ActionSynchronizerCombatState.NotPlayPhase);
 		this.AboutToSwitchToEnemyTurn?.Invoke(_state);
@@ -872,6 +988,10 @@ public class CombatManager
 
 	public async Task SwitchFromPlayerToEnemySide(Func<Task>? actionDuringEnemyTurn = null)
 	{
+		if (_state == null)
+		{
+			return;
+		}
 		List<Player> list;
 		using (_playerReadyLock.EnterScope())
 		{
@@ -889,6 +1009,10 @@ public class CombatManager
 		SwitchSides();
 		foreach (Player item in list)
 		{
+			if (_state == null)
+			{
+				return;
+			}
 			await Hook.AfterTakingExtraTurn(_state, item);
 		}
 		await WaitForUnpause();
@@ -897,6 +1021,10 @@ public class CombatManager
 
 	private void SwitchSides()
 	{
+		if (_state == null)
+		{
+			return;
+		}
 		bool flag;
 		using (_playerReadyLock.EnterScope())
 		{
@@ -934,11 +1062,25 @@ public class CombatManager
 		}
 	}
 
+	public bool IsPartOfPlayerTurn(Player player)
+	{
+		CombatState? state = _state;
+		if (state == null || state.CurrentSide != CombatSide.Player)
+		{
+			return false;
+		}
+		if (_playersTakingExtraTurn.Count == 0)
+		{
+			return true;
+		}
+		return _playersTakingExtraTurn.Contains(player);
+	}
+
 	public async Task WaitForUnpause()
 	{
 		if (!NonInteractiveMode.IsActive)
 		{
-			while (IsPaused && IsInProgress)
+			while (IsPaused && IsInProgress && _state != null)
 			{
 				await NGame.Instance.ToSignal(NGame.Instance.GetTree(), SceneTree.SignalName.ProcessFrame);
 			}

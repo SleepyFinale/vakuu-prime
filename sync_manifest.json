@@ -1,0 +1,14 @@
+{
+  "sts2_dll_sha256": "81c8f3443c4504e38a17570df688489414fceb6ea7fcf5b044d8117318ea8e49",
+  "synced_at": "2026-06-04T19:10:13.085858+00:00",
+  "game_data_dir": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Slay the Spire 2\\data_sts2_windows_x86_64",
+  "surfaces": {
+    "cards": 578,
+    "powers": 265,
+    "relics": 295,
+    "potions": 64,
+    "monsters": 122,
+    "events": 68,
+    "encounters": 89
+  }
+}

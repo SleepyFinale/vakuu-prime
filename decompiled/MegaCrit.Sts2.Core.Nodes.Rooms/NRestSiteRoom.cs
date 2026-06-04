@@ -327,6 +327,15 @@ public class NRestSiteRoom : Control, IScreenContext, IRoomWithProceedButton
 			nRestSiteButton.Connect(NClickableControl.SignalName.Focused, Callable.From<NRestSiteButton>(RestSiteButtonHovered));
 			nRestSiteButton.Connect(NClickableControl.SignalName.Unfocused, Callable.From<NRestSiteButton>(RestSiteButtonUnhovered));
 		}
+		NRestSiteButton[] array = _choicesContainer.GetChildren().OfType<NRestSiteButton>().ToArray();
+		for (int i = 0; i < array.Length; i++)
+		{
+			NRestSiteButton nRestSiteButton2 = array[i];
+			nRestSiteButton2.FocusNeighborLeft = ((i > 0) ? array[i - 1].GetPath() : array[^1].GetPath());
+			nRestSiteButton2.FocusNeighborRight = ((i < array.Length - 1) ? array[i + 1].GetPath() : array[0].GetPath());
+			nRestSiteButton2.FocusNeighborTop = nRestSiteButton2.GetPath();
+			nRestSiteButton2.FocusNeighborBottom = nRestSiteButton2.GetPath();
+		}
 	}
 
 	private void RestSiteButtonHovered(NRestSiteButton button)
@@ -408,9 +417,9 @@ public class NRestSiteRoom : Control, IScreenContext, IRoomWithProceedButton
 		Task task2 = option.DoLocalPostSelectVfx(_cts.Token);
 		ExtinguishFireIfAble();
 		global::_003C_003Ey__InlineArray2<Task> buffer = default(global::_003C_003Ey__InlineArray2<Task>);
-		global::_003CPrivateImplementationDetails_003E.InlineArrayElementRef<global::_003C_003Ey__InlineArray2<Task>, Task>(ref buffer, 0) = task;
-		global::_003CPrivateImplementationDetails_003E.InlineArrayElementRef<global::_003C_003Ey__InlineArray2<Task>, Task>(ref buffer, 1) = task2;
-		await Task.WhenAll(global::_003CPrivateImplementationDetails_003E.InlineArrayAsReadOnlySpan<global::_003C_003Ey__InlineArray2<Task>, Task>(in buffer, 2));
+		buffer[0] = task;
+		buffer[1] = task2;
+		await Task.WhenAll(buffer);
 		UpdateRestSiteOptions();
 		ShowProceedButton();
 		if (Options.Count > 0)
@@ -474,7 +483,10 @@ public class NRestSiteRoom : Control, IScreenContext, IRoomWithProceedButton
 			characterContainer.Modulate = Colors.DarkGray;
 		}
 		_restSiteLighting.Visible = false;
-		NRunMusicController.Instance?.TriggerCampfireGoingOut();
+		if (!_runState.IsGameOver)
+		{
+			NRunMusicController.Instance?.TriggerCampfireGoingOut();
+		}
 	}
 
 	private async Task ShowChoices(CancellationToken ct)

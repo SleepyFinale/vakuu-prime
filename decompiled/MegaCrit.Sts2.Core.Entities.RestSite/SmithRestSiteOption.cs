@@ -56,10 +56,11 @@ public sealed class SmithRestSiteOption : RestSiteOption
 
 	public override async Task<bool> OnSelect()
 	{
-		CardSelectorPrefs cardSelectorPrefs = new CardSelectorPrefs(CardSelectorPrefs.UpgradeSelectionPrompt, SmithCount);
-		cardSelectorPrefs.Cancelable = true;
-		cardSelectorPrefs.RequireManualConfirmation = true;
-		CardSelectorPrefs prefs = cardSelectorPrefs;
+		CardSelectorPrefs prefs = new CardSelectorPrefs(CardSelectorPrefs.UpgradeSelectionPrompt, SmithCount)
+		{
+			Cancelable = true,
+			RequireManualConfirmation = true
+		};
 		_selection = await CardSelectCmd.FromDeckForUpgrade(base.Owner, prefs);
 		if (!_selection.Any())
 		{

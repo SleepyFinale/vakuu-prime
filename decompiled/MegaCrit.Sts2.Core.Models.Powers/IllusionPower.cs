@@ -53,7 +53,11 @@ public sealed class IllusionPower : PowerModel
 
 	public override bool ShouldPowerBeRemovedOnDeath(PowerModel power)
 	{
-		return power.Type == PowerType.Debuff;
+		if (power.Type == PowerType.Debuff)
+		{
+			return !(power is ITemporaryPower);
+		}
+		return false;
 	}
 
 	public override Task AfterApplied(Creature? applier, CardModel? cardSource)

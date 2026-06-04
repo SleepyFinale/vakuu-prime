@@ -138,7 +138,7 @@ public class NSettingsScreen : NSubmenu
 		_settingsTabManager.Connect(NSettingsTabManager.SignalName.TabChanged, Callable.From(OnSettingsTabChanged));
 		_moddingScreenButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OpenModdingScreen));
 		_feedbackScreenButton.Connect(NClickableControl.SignalName.Released, Callable.From((Action<NButton>)OpenFeedbackScreen));
-		if (SaveManager.Instance.SettingsSave.ModSettings != null && ModManager.AllMods.Count > 0)
+		if (SaveManager.Instance.SettingsSave.ModSettings != null && ModManager.Mods.Count > 0)
 		{
 			GetNode<Control>("%Modding").Visible = true;
 			GetNode<Control>("%ModdingDivider").Visible = true;
@@ -172,10 +172,12 @@ public class NSettingsScreen : NSubmenu
 		Node content = GetNode<NSettingsPanel>("%GeneralSettings").Content;
 		LocHelper(content.GetNode<Node>("LanguageLine"), new LocString("settings_ui", _isInRun ? "LANGUAGE_IN_RUN" : "LANGUAGE"));
 		LocHelper(content.GetNode<Node>("FastMode"), new LocString("settings_ui", "FASTMODE"));
+		LocHelper(content.GetNode<Node>("PhobiaMode"), new LocString("settings_ui", "PHOBIA_MODE"));
 		LocHelper(content.GetNode<Node>("Screenshake"), new LocString("settings_ui", "SCREENSHAKE"));
 		LocHelper(content.GetNode<Node>("CommonTooltips"), new LocString("settings_ui", "COMMON_TOOLTIPS"));
 		LocHelper(content.GetNode<Node>("ShowRunTimer"), new LocString("settings_ui", "SHOW_RUN_TIMER_HEADER"));
 		LocHelper(content.GetNode<Node>("ShowHandCardCount"), new LocString("settings_ui", "SHOW_HAND_CARD_COUNT_HEADER"));
+		LocHelper(content.GetNode<Node>("ShowMpDrawings"), new LocString("settings_ui", "SHOW_MP_DRAWINGS_HEADER"));
 		LocHelper(content.GetNode<Node>("LongPressConfirmations"), new LocString("settings_ui", "LONG_PRESS_CONFIRMATION_HEADER"));
 		LocHelper(content.GetNode<Node>("SkipIntroLogo"), new LocString("settings_ui", "SKIP_INTRO_LOGO_HEADER"));
 		LocHelper(content.GetNode<Node>("LimitFpsInBackground"), new LocString("settings_ui", "LIMIT_FPS_IN_BACKGROUND_HEADER"));

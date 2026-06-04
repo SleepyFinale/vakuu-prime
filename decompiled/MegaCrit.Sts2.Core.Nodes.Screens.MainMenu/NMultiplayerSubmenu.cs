@@ -155,7 +155,8 @@ public class NMultiplayerSubmenu : NSubmenu
 		{
 			return;
 		}
-		ReadSaveResult<SerializableRun> readSaveResult = SaveManager.Instance.LoadAndCanonicalizeMultiplayerRunSave(PlatformUtil.GetLocalPlayerId(PlatformUtil.PrimaryPlatform));
+		ulong localPlayerId = PlatformUtil.GetLocalPlayerId(PlatformUtil.PrimaryPlatform);
+		ReadSaveResult<SerializableRun> readSaveResult = SaveManager.Instance.LoadAndCanonicalizeMultiplayerRunSave(localPlayerId);
 		if (readSaveResult.Success && readSaveResult.SaveData != null)
 		{
 			try
@@ -165,8 +166,7 @@ public class NMultiplayerSubmenu : NSubmenu
 				RunHistoryUtilities.CreateRunHistoryEntry(saveData, victory: false, isAbandoned: true, saveData.PlatformType);
 				if (saveData.DailyTime.HasValue)
 				{
-					PlatformUtil.GetLocalPlayerId(saveData.PlatformType);
-					int score = ScoreUtility.CalculateScore(saveData, won: false);
+					int score = ScoreUtility.CalculateDailyScore(saveData, localPlayerId, isVictory: false);
 					TaskHelper.RunSafely(DailyRunUtility.UploadScore(saveData.DailyTime.Value, score, saveData.Players));
 				}
 			}
@@ -242,26 +242,29 @@ public class NMultiplayerSubmenu : NSubmenu
 			}
 			if (!netErrorInfo.HasValue)
 			{
-				if (run.Modifiers.Count > 0)
+				switch (run.GameMode)
 				{
-					if (run.DailyTime.HasValue)
-					{
-						NDailyRunLoadScreen submenuType = _stack.GetSubmenuType<NDailyRunLoadScreen>();
-						submenuType.InitializeAsHost(netService, run);
-						_stack.Push(submenuType);
-					}
-					else
-					{
-						NCustomRunLoadScreen submenuType2 = _stack.GetSubmenuType<NCustomRunLoadScreen>();
-						submenuType2.InitializeAsHost(netService, run);
-						_stack.Push(submenuType2);
-					}
-				}
-				else
+				case GameMode.Daily:
 				{
-					NMultiplayerLoadGameScreen submenuType3 = _stack.GetSubmenuType<NMultiplayerLoadGameScreen>();
+					NDailyRunLoadScreen submenuType3 = _stack.GetSubmenuType<NDailyRunLoadScreen>();
 					submenuType3.InitializeAsHost(netService, run);
 					_stack.Push(submenuType3);
+					break;
+				}
+				case GameMode.Custom:
+				{
+					NCustomRunLoadScreen submenuType2 = _stack.GetSubmenuType<NCustomRunLoadScreen>();
+					submenuType2.InitializeAsHost(netService, run);
+					_stack.Push(submenuType2);
+					break;
+				}
+				default:
+				{
+					NMultiplayerLoadGameScreen submenuType = _stack.GetSubmenuType<NMultiplayerLoadGameScreen>();
+					submenuType.InitializeAsHost(netService, run);
+					_stack.Push(submenuType);
+					break;
+				}
 				}
 			}
 			else

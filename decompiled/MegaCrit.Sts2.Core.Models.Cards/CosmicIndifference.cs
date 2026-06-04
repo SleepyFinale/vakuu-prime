@@ -27,7 +27,24 @@ public sealed class CosmicIndifference : CardModel
 		CardSelectorPrefs prefs = new CardSelectorPrefs(base.SelectionScreenPrompt, 1);
 		CardPile pile = PileType.Discard.GetPile(base.Owner);
 		CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, pile.Cards, base.Owner, prefs)).FirstOrDefault();
-		if (cardModel != null)
+		bool flag = cardModel != null;
+		bool flag2 = flag;
+		if (flag2)
+		{
+			bool flag3;
+			switch (cardModel.Pile?.Type)
+			{
+			case PileType.Draw:
+			case PileType.Discard:
+				flag3 = true;
+				break;
+			default:
+				flag3 = false;
+				break;
+			}
+			flag2 = flag3;
+		}
+		if (flag2)
 		{
 			await CardPileCmd.Add(cardModel, PileType.Draw, CardPilePosition.Top);
 		}

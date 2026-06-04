@@ -87,15 +87,21 @@ public class NControllerCardPlay : NCardPlay
 
 	public override void _Input(InputEvent inputEvent)
 	{
-		if (inputEvent is InputEventAction inputEventAction)
+		if (!(inputEvent is InputEventAction inputEventAction))
 		{
-			if (inputEventAction.IsActionPressed(MegaInput.select))
+			return;
+		}
+		if (inputEventAction.IsActionPressed(MegaInput.select))
+		{
+			EmitSignal(SignalName.Confirmed);
+			GetViewport()?.SetInputAsHandled();
+		}
+		if (inputEventAction.IsActionPressed(MegaInput.cancel) || inputEventAction.IsActionPressed(MegaInput.topPanel))
+		{
+			EmitSignal(SignalName.Canceled);
+			if (inputEvent.IsActionPressed(MegaInput.cancel))
 			{
-				EmitSignal(SignalName.Confirmed);
-			}
-			if (inputEventAction.IsActionPressed(MegaInput.cancel))
-			{
-				EmitSignal(SignalName.Canceled);
+				GetViewport().SetInputAsHandled();
 			}
 		}
 	}
@@ -165,8 +171,14 @@ public class NControllerCardPlay : NCardPlay
 			CancelPlayCard();
 			return;
 		}
-		NCombatRoom.Instance.RestrictControllerNavigation(list.Select((Creature c) => NCombatRoom.Instance.GetCreatureNode(c).Hitbox));
-		NCombatRoom.Instance.GetCreatureNode(list.First()).Hitbox.TryGrabFocus();
+		List<NCreature> list2 = list.Select((Creature c) => NCombatRoom.Instance.GetCreatureNode(c)).OfType<NCreature>().ToList();
+		if (list2.Count == 0)
+		{
+			CancelPlayCard();
+			return;
+		}
+		NCombatRoom.Instance.RestrictControllerNavigation(list2.Select((NCreature n) => n.Hitbox));
+		list2.First().Hitbox.TryGrabFocus();
 		NCreature nCreature = (NCreature)(await targetManager.SelectionFinished());
 		if (GodotObject.IsInstanceValid(this))
 		{
@@ -199,9 +211,9 @@ public class NControllerCardPlay : NCardPlay
 		base.Holder.TryGrabFocus();
 	}
 
-	protected override void Cleanup()
+	protected override void Cleanup(bool isFinished)
 	{
-		base.Cleanup();
+		base.Cleanup(isFinished);
 		NCombatRoom.Instance.EnableControllerNavigation();
 		NCombatRoom.Instance.Ui.Hand.DefaultFocusedControl.TryGrabFocus();
 	}
@@ -221,7 +233,10 @@ public class NControllerCardPlay : NCardPlay
 		list.Add(new MethodInfo(MethodName.Start, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.MultiCreatureTargeting, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnCancelPlayCard, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.Cleanup, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.Cleanup, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
+		{
+			new PropertyInfo(Variant.Type.Bool, "isFinished", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+		}, null));
 		return list;
 	}
 
@@ -257,9 +272,9 @@ public class NControllerCardPlay : NCardPlay
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.Cleanup && args.Count == 0)
+		if (method == MethodName.Cleanup && args.Count == 1)
 		{
-			Cleanup();
+			Cleanup(VariantUtils.ConvertTo<bool>(in args[0]));
 			ret = default(godot_variant);
 			return true;
 		}

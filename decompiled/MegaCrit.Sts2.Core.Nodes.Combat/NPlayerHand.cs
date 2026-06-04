@@ -411,6 +411,11 @@ public class NPlayerHand : Control
 		AddCardHolder(nHandCardHolder, index);
 		nHandCardHolder.GlobalPosition = globalPosition;
 		RefreshLayout();
+		Mode currentMode = CurrentMode;
+		if ((uint)(currentMode - 2) <= 1u)
+		{
+			UpdateSelectModeCardVisibility();
+		}
 		return nHandCardHolder;
 	}
 
@@ -457,8 +462,8 @@ public class NPlayerHand : Control
 			_currentCardPlay.CancelPlayCard();
 		}
 		bool flag = holder.HasFocus();
-		holder.Clear();
 		holder.GetParent().RemoveChildSafely(holder);
+		holder.Clear();
 		holder.QueueFreeSafely();
 		RefreshLayout();
 		if (flag)
@@ -659,11 +664,13 @@ public class NPlayerHand : Control
 		if (button.IsPeeking)
 		{
 			NCombatRoom.Instance.EnableControllerNavigation();
+			_selectModeConfirmButton.Disable();
 		}
 		else
 		{
 			NCombatRoom.Instance.RestrictControllerNavigation(Array.Empty<Control>());
 			EnableControllerNavigation();
+			RefreshSelectModeConfirmButton();
 		}
 		UpdateSelectModeCardVisibility();
 		ActiveScreenContext.Instance.Update();

@@ -34,6 +34,10 @@ public class NMerchantHand : Node
 
 		public static readonly StringName _targetPos = "_targetPos";
 
+		public static readonly StringName _targetNode = "_targetNode";
+
+		public static readonly StringName _targetOffset = "_targetOffset";
+
 		public static readonly StringName _noise = "_noise";
 
 		public static readonly StringName _time = "_time";
@@ -51,7 +55,11 @@ public class NMerchantHand : Node
 
 	private Vector2 _targetPos;
 
-	private MegaBone _bone;
+	private Control? _targetNode;
+
+	private Vector2 _targetOffset;
+
+	private MegaBone? _bone;
 
 	private FastNoiseLite _noise;
 
@@ -75,7 +83,7 @@ public class NMerchantHand : Node
 		_noise = new FastNoiseLite();
 		_noise.NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin;
 		_noise.Frequency = 1f;
-		_bone = _animController.GetSkeleton().FindBone("rotate_me");
+		_bone = _animController.GetSkeleton()?.FindBone("rotate_me");
 		_animController.GetAnimationState().SetAnimation("default");
 	}
 
@@ -87,21 +95,27 @@ public class NMerchantHand : Node
 
 	public override void _Process(double delta)
 	{
+		if (_targetNode != null && GodotObject.IsInstanceValid(_targetNode))
+		{
+			_targetPos = _targetNode.GlobalPosition + _targetOffset;
+		}
 		_time += (float)delta;
 		float x = _noise.GetNoise1D(_time * 0.1f) + 0.4f;
 		float y = _noise.GetNoise1D((_time + 0.25f) * 0.1f) - 0.5f;
 		_parent.GlobalPosition = _parent.GlobalPosition.Lerp(_targetPos + new Vector2(x, y) * 100f, (float)delta * 4f);
-		_bone.SetRotation(Mathf.Lerp(-10f, 10f, (_parent.Position.X - _rug.Size.X * 0.5f - 50f) * 0.01f));
+		_bone?.SetRotation(Mathf.Lerp(-10f, 10f, (_parent.Position.X - _rug.Size.X * 0.5f - 50f) * 0.01f));
 	}
 
-	public void PointAtTarget(Vector2 pos)
+	public void PointAtTarget(Control target, Vector2 offset)
 	{
 		_stopPointingToken?.Cancel();
-		_targetPos = pos - Vector2.One * 50f;
+		_targetNode = target;
+		_targetOffset = offset;
 	}
 
 	public void StopPointing(float lingerTime)
 	{
+		_targetNode = null;
 		_stopPointingToken?.Cancel();
 		_stopPointingToken = new CancellationTokenSource();
 		TaskHelper.RunSafely(WaitAndReturn(_stopPointingToken, lingerTime));
@@ -132,7 +146,8 @@ public class NMerchantHand : Node
 		}, null));
 		list.Add(new MethodInfo(MethodName.PointAtTarget, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
-			new PropertyInfo(Variant.Type.Vector2, "pos", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+			new PropertyInfo(Variant.Type.Object, "target", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false),
+			new PropertyInfo(Variant.Type.Vector2, "offset", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.StopPointing, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -162,9 +177,9 @@ public class NMerchantHand : Node
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.PointAtTarget && args.Count == 1)
+		if (method == MethodName.PointAtTarget && args.Count == 2)
 		{
-			PointAtTarget(VariantUtils.ConvertTo<Vector2>(in args[0]));
+			PointAtTarget(VariantUtils.ConvertTo<Control>(in args[0]), VariantUtils.ConvertTo<Vector2>(in args[1]));
 			ret = default(godot_variant);
 			return true;
 		}
@@ -216,6 +231,16 @@ public class NMerchantHand : Node
 			_targetPos = VariantUtils.ConvertTo<Vector2>(in value);
 			return true;
 		}
+		if (name == PropertyName._targetNode)
+		{
+			_targetNode = VariantUtils.ConvertTo<Control>(in value);
+			return true;
+		}
+		if (name == PropertyName._targetOffset)
+		{
+			_targetOffset = VariantUtils.ConvertTo<Vector2>(in value);
+			return true;
+		}
 		if (name == PropertyName._noise)
 		{
 			_noise = VariantUtils.ConvertTo<FastNoiseLite>(in value);
@@ -252,6 +277,16 @@ public class NMerchantHand : Node
 			value = VariantUtils.CreateFrom(in _targetPos);
 			return true;
 		}
+		if (name == PropertyName._targetNode)
+		{
+			value = VariantUtils.CreateFrom(in _targetNode);
+			return true;
+		}
+		if (name == PropertyName._targetOffset)
+		{
+			value = VariantUtils.CreateFrom(in _targetOffset);
+			return true;
+		}
 		if (name == PropertyName._noise)
 		{
 			value = VariantUtils.CreateFrom(in _noise);
@@ -281,6 +316,8 @@ public class NMerchantHand : Node
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._startPos, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._targetPos, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._targetNode, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._targetOffset, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._noise, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Float, PropertyName._time, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._rug, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -294,6 +331,8 @@ public class NMerchantHand : Node
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName._startPos, Variant.From(in _startPos));
 		info.AddProperty(PropertyName._targetPos, Variant.From(in _targetPos));
+		info.AddProperty(PropertyName._targetNode, Variant.From(in _targetNode));
+		info.AddProperty(PropertyName._targetOffset, Variant.From(in _targetOffset));
 		info.AddProperty(PropertyName._noise, Variant.From(in _noise));
 		info.AddProperty(PropertyName._time, Variant.From(in _time));
 		info.AddProperty(PropertyName._rug, Variant.From(in _rug));
@@ -312,21 +351,29 @@ public class NMerchantHand : Node
 		{
 			_targetPos = value2.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._noise, out var value3))
+		if (info.TryGetProperty(PropertyName._targetNode, out var value3))
 		{
-			_noise = value3.As<FastNoiseLite>();
+			_targetNode = value3.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._time, out var value4))
+		if (info.TryGetProperty(PropertyName._targetOffset, out var value4))
 		{
-			_time = value4.As<float>();
+			_targetOffset = value4.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._rug, out var value5))
+		if (info.TryGetProperty(PropertyName._noise, out var value5))
 		{
-			_rug = value5.As<Control>();
+			_noise = value5.As<FastNoiseLite>();
 		}
-		if (info.TryGetProperty(PropertyName._parent, out var value6))
+		if (info.TryGetProperty(PropertyName._time, out var value6))
 		{
-			_parent = value6.As<Node2D>();
+			_time = value6.As<float>();
+		}
+		if (info.TryGetProperty(PropertyName._rug, out var value7))
+		{
+			_rug = value7.As<Control>();
+		}
+		if (info.TryGetProperty(PropertyName._parent, out var value8))
+		{
+			_parent = value8.As<Node2D>();
 		}
 	}
 }

@@ -29,7 +29,7 @@ public sealed class DrowningBeacon : EventModel
 		return new global::_003C_003Ez__ReadOnlyArray<EventOption>(new EventOption[2]
 		{
 			new EventOption(this, BottleOption, "DROWNING_BEACON.pages.INITIAL.options.BOTTLE", HoverTipFactory.FromPotion(ModelDb.Potion<GlowwaterPotion>())),
-			new EventOption(this, ClimbOption, "DROWNING_BEACON.pages.INITIAL.options.CLIMB", HoverTipFactory.FromRelic<FresnelLens>())
+			new EventOption(this, ClimbOption, "DROWNING_BEACON.pages.INITIAL.options.CLIMB", HoverTipFactory.FromRelic<FresnelLens>()).ThatDecreasesMaxHp(base.DynamicVars.HpLoss.BaseValue)
 		});
 	}
 

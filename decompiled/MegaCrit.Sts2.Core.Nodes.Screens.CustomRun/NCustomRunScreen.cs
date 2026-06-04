@@ -95,6 +95,8 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 
 		public new static readonly StringName InitialFocusedControl = "InitialFocusedControl";
 
+		public static readonly StringName _disclaimer = "_disclaimer";
+
 		public static readonly StringName _selectedButton = "_selectedButton";
 
 		public static readonly StringName _charButtonContainer = "_charButtonContainer";
@@ -127,6 +129,8 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	private static readonly string _scenePath = SceneHelper.GetScenePath("screens/custom_run/custom_run_screen");
 
 	private const string _sceneCharSelectButtonPath = "res://scenes/screens/char_select/char_select_button.tscn";
+
+	private MegaLabel _disclaimer;
 
 	private NCharacterSelectButton? _selectedButton;
 
@@ -174,6 +178,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	public override void _Ready()
 	{
 		ConnectSignals();
+		_disclaimer = GetNode<MegaLabel>("%Disclaimer");
 		_charButtonContainer = GetNode<Control>("LeftContainer/CharSelectButtons/ButtonContainer");
 		_ascensionPanel = GetNode<NAscensionPanel>("%AscensionPanel");
 		_remotePlayerContainer = GetNode<NRemoteLobbyPlayerContainer>("%RemotePlayerContainer");
@@ -189,6 +194,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 		_ascensionPanel.Connect(NAscensionPanel.SignalName.AscensionLevelChanged, Callable.From(OnAscensionPanelLevelChanged));
 		_modifiersList.Connect(NCustomRunModifiersList.SignalName.ModifiersChanged, Callable.From(OnModifiersListChanged));
 		base.ProcessMode = ProcessModeEnum.Disabled;
+		_disclaimer.SetTextAutoSize(new LocString("main_menu_ui", "CUSTOM_RUN_SCREEN.disclaimer").GetFormattedText());
 		GetNode<MegaLabel>("%CustomModeTitle").SetTextAutoSize(new LocString("main_menu_ui", "CUSTOM_RUN_SCREEN.CUSTOM_MODE_TITLE").GetFormattedText());
 		GetNode<MegaLabel>("%ModifiersTitle").SetTextAutoSize(new LocString("main_menu_ui", "CUSTOM_RUN_SCREEN.MODIFIERS_TITLE").GetFormattedText());
 		GetNode<MegaLabel>("%SeedLabel").SetTextAutoSize(new LocString("main_menu_ui", "CUSTOM_RUN_SCREEN.SEED_LABEL").GetFormattedText());
@@ -213,6 +219,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 		_uiMode = MultiplayerUiMode.Host;
 		_remotePlayerContainer.Visible = true;
 		UpdateControllerButton();
+		OnAscensionPanelLevelChanged();
 		AfterInitialized();
 	}
 
@@ -396,7 +403,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 		Log.Info($"Embarking on a CUSTOM {_lobby.LocalPlayer.character.Id.Entry} run. Ascension: {_lobby.Ascension} Seed: {_lobby.Seed} Modifiers: {GetModifiersString()}");
 		SfxCmd.Play(_lobby.LocalPlayer.character.CharacterTransitionSfx);
 		await NGame.Instance.Transition.FadeOut(0.8f, _lobby.LocalPlayer.character.CharacterSelectTransitionPath);
-		await NGame.Instance.StartNewSingleplayerRun(_lobby.LocalPlayer.character, shouldSave: true, acts, modifiers, seed, _lobby.Ascension);
+		await NGame.Instance.StartNewSingleplayerRun(_lobby.LocalPlayer.character, shouldSave: true, acts, modifiers, seed, GameMode.Custom, _lobby.Ascension);
 		CleanUpLobby(disconnectSession: false);
 	}
 
@@ -460,8 +467,12 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 		UpdateRichPresence();
 	}
 
-	public void PlayerChanged(LobbyPlayer player)
+	public void PlayerChanged(LobbyPlayer player, bool isRandomCharacterResolution)
 	{
+		if (isRandomCharacterResolution)
+		{
+			throw new InvalidOperationException("Random character is not currently allowed in custom!");
+		}
 		_remotePlayerContainer.OnPlayerChanged(player);
 		RefreshButtonSelectionForPlayer(player);
 	}
@@ -528,6 +539,8 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	public void BeginRun(string seed, List<ActModel> acts, IReadOnlyList<ModifierModel> modifiers)
 	{
 		NAudioManager.Instance?.StopMusic();
+		_confirmButton.Disable();
+		_unreadyButton.Disable();
 		if (_lobby.NetService.Type == NetGameType.Singleplayer)
 		{
 			TaskHelper.RunSafely(StartNewSingleplayerRun(seed, acts, modifiers));
@@ -544,7 +557,10 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 		{
 			return;
 		}
-		_stack.Pop();
+		if (_stack != null && _stack.Peek() == this)
+		{
+			_stack.Pop();
+		}
 		if (TestMode.IsOff)
 		{
 			NErrorPopup nErrorPopup = NErrorPopup.Create(info);
@@ -912,6 +928,11 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool SetGodotClassPropertyValue(in godot_string_name name, in godot_variant value)
 	{
+		if (name == PropertyName._disclaimer)
+		{
+			_disclaimer = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
 		if (name == PropertyName._selectedButton)
 		{
 			_selectedButton = VariantUtils.ConvertTo<NCharacterSelectButton>(in value);
@@ -988,6 +1009,11 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 			value = VariantUtils.CreateFrom<Control>(InitialFocusedControl);
 			return true;
 		}
+		if (name == PropertyName._disclaimer)
+		{
+			value = VariantUtils.CreateFrom(in _disclaimer);
+			return true;
+		}
 		if (name == PropertyName._selectedButton)
 		{
 			value = VariantUtils.CreateFrom(in _selectedButton);
@@ -1056,6 +1082,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.String, PropertyName.ModifiersHotkey, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._disclaimer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._selectedButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._charButtonContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._confirmButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -1076,6 +1103,7 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	protected override void SaveGodotObjectData(GodotSerializationInfo info)
 	{
 		base.SaveGodotObjectData(info);
+		info.AddProperty(PropertyName._disclaimer, Variant.From(in _disclaimer));
 		info.AddProperty(PropertyName._selectedButton, Variant.From(in _selectedButton));
 		info.AddProperty(PropertyName._charButtonContainer, Variant.From(in _charButtonContainer));
 		info.AddProperty(PropertyName._confirmButton, Variant.From(in _confirmButton));
@@ -1094,53 +1122,57 @@ public class NCustomRunScreen : NSubmenu, IStartRunLobbyListener, ICharacterSele
 	protected override void RestoreGodotObjectData(GodotSerializationInfo info)
 	{
 		base.RestoreGodotObjectData(info);
-		if (info.TryGetProperty(PropertyName._selectedButton, out var value))
+		if (info.TryGetProperty(PropertyName._disclaimer, out var value))
 		{
-			_selectedButton = value.As<NCharacterSelectButton>();
+			_disclaimer = value.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._charButtonContainer, out var value2))
+		if (info.TryGetProperty(PropertyName._selectedButton, out var value2))
 		{
-			_charButtonContainer = value2.As<Control>();
+			_selectedButton = value2.As<NCharacterSelectButton>();
 		}
-		if (info.TryGetProperty(PropertyName._confirmButton, out var value3))
+		if (info.TryGetProperty(PropertyName._charButtonContainer, out var value3))
 		{
-			_confirmButton = value3.As<NConfirmButton>();
+			_charButtonContainer = value3.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._backButton, out var value4))
+		if (info.TryGetProperty(PropertyName._confirmButton, out var value4))
 		{
-			_backButton = value4.As<NBackButton>();
+			_confirmButton = value4.As<NConfirmButton>();
 		}
-		if (info.TryGetProperty(PropertyName._unreadyButton, out var value5))
+		if (info.TryGetProperty(PropertyName._backButton, out var value5))
 		{
-			_unreadyButton = value5.As<NBackButton>();
+			_backButton = value5.As<NBackButton>();
 		}
-		if (info.TryGetProperty(PropertyName._ascensionPanel, out var value6))
+		if (info.TryGetProperty(PropertyName._unreadyButton, out var value6))
 		{
-			_ascensionPanel = value6.As<NAscensionPanel>();
+			_unreadyButton = value6.As<NBackButton>();
 		}
-		if (info.TryGetProperty(PropertyName._readyAndWaitingContainer, out var value7))
+		if (info.TryGetProperty(PropertyName._ascensionPanel, out var value7))
 		{
-			_readyAndWaitingContainer = value7.As<Control>();
+			_ascensionPanel = value7.As<NAscensionPanel>();
 		}
-		if (info.TryGetProperty(PropertyName._seedInput, out var value8))
+		if (info.TryGetProperty(PropertyName._readyAndWaitingContainer, out var value8))
 		{
-			_seedInput = value8.As<LineEdit>();
+			_readyAndWaitingContainer = value8.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._remotePlayerContainer, out var value9))
+		if (info.TryGetProperty(PropertyName._seedInput, out var value9))
 		{
-			_remotePlayerContainer = value9.As<NRemoteLobbyPlayerContainer>();
+			_seedInput = value9.As<LineEdit>();
 		}
-		if (info.TryGetProperty(PropertyName._modifiersList, out var value10))
+		if (info.TryGetProperty(PropertyName._remotePlayerContainer, out var value10))
 		{
-			_modifiersList = value10.As<NCustomRunModifiersList>();
+			_remotePlayerContainer = value10.As<NRemoteLobbyPlayerContainer>();
 		}
-		if (info.TryGetProperty(PropertyName._modifiersHotkeyIcon, out var value11))
+		if (info.TryGetProperty(PropertyName._modifiersList, out var value11))
 		{
-			_modifiersHotkeyIcon = value11.As<TextureRect>();
+			_modifiersList = value11.As<NCustomRunModifiersList>();
 		}
-		if (info.TryGetProperty(PropertyName._uiMode, out var value12))
+		if (info.TryGetProperty(PropertyName._modifiersHotkeyIcon, out var value12))
 		{
-			_uiMode = value12.As<MultiplayerUiMode>();
+			_modifiersHotkeyIcon = value12.As<TextureRect>();
+		}
+		if (info.TryGetProperty(PropertyName._uiMode, out var value13))
+		{
+			_uiMode = value13.As<MultiplayerUiMode>();
 		}
 	}
 }

@@ -227,7 +227,7 @@ public class MegaRichTextLabel : RichTextLabel
 
 	public override void _Ready()
 	{
-		MegaLabelHelper.AssertThemeFontOverride(this, ThemeConstants.RichTextLabel.normalFont);
+		MegaLabelHelper.AssertThemeFontOverride(this, ThemeConstants.RichTextLabel.NormalFont);
 		RefreshFont();
 		InstallEffectsIfNeeded();
 		AdjustFontSize();
@@ -236,9 +236,9 @@ public class MegaRichTextLabel : RichTextLabel
 
 	public void RefreshFont()
 	{
-		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.RichTextLabel.normalFont);
-		this.ApplyLocaleFontSubstitution(FontType.Bold, ThemeConstants.RichTextLabel.boldFont);
-		this.ApplyLocaleFontSubstitution(FontType.Italic, ThemeConstants.RichTextLabel.italicsFont);
+		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.RichTextLabel.NormalFont);
+		this.ApplyLocaleFontSubstitution(FontType.Bold, ThemeConstants.RichTextLabel.BoldFont);
+		this.ApplyLocaleFontSubstitution(FontType.Italic, ThemeConstants.RichTextLabel.ItalicsFont);
 	}
 
 	public override void _Notification(int what)
@@ -306,8 +306,8 @@ public class MegaRichTextLabel : RichTextLabel
 		{
 			_needsResize = true;
 			_lastAdjustedSize = base.Size;
-			Font themeFont = GetThemeFont(ThemeConstants.RichTextLabel.normalFont, "RichTextLabel");
-			float lineSpacing = GetThemeConstant(ThemeConstants.RichTextLabel.lineSpacing, "RichTextLabel");
+			Font themeFont = GetThemeFont(ThemeConstants.RichTextLabel.NormalFont, "RichTextLabel");
+			float lineSpacing = GetThemeConstant(ThemeConstants.RichTextLabel.LineSpacing, "RichTextLabel");
 			Vector2 size = GetRect().Size;
 			List<BbcodeObject> objs = MegaLabelHelper.ParseBbcode(Text);
 			if (!MegaLabelHelper.IsTooBig(_cachedParagraph, objs, themeFont, MaxFontSize, lineSpacing, size, _isHorizontallyBound, _isVerticallyBound))
@@ -347,13 +347,13 @@ public class MegaRichTextLabel : RichTextLabel
 		if (_lastSetSize != size)
 		{
 			_lastSetSize = size;
-			AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.normalFontSize, size);
+			AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.NormalFontSize, size);
 			if (base.BbcodeEnabled)
 			{
-				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.boldFontSize, size);
-				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.boldItalicsFontSize, size);
-				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.italicsFontSize, size);
-				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.monoFontSize, size);
+				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.BoldFontSize, size);
+				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.BoldItalicsFontSize, size);
+				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.ItalicsFontSize, size);
+				AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.MonoFontSize, size);
 				ParseBbcode(Text);
 			}
 		}

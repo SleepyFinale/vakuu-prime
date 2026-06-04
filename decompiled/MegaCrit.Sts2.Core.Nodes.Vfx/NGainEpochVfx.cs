@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -8,6 +9,7 @@ using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Timeline;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -48,6 +50,8 @@ public class NGainEpochVfx : Node
 
 	private MegaLabel _label;
 
+	private CancellationTokenSource? _cts;
+
 	private Tween? _tween;
 
 	public static IEnumerable<string> AssetPaths => new global::_003C_003Ez__ReadOnlySingleElementList<string>(ScenePath);
@@ -66,11 +70,12 @@ public class NGainEpochVfx : Node
 
 	private async Task AnimateVfx()
 	{
+		_cts = new CancellationTokenSource();
 		if (_vfxCount > 1)
 		{
 			int num = 3000 * (_vfxCount - 1);
 			Log.Info($"Delaying Gain Epoch Vfx by: {num}ms");
-			await Task.Delay(num);
+			await Task.Delay(num, _cts.Token);
 		}
 		_epoch.RotationDegrees = -30f;
 		_tween = CreateTween().SetParallel();
@@ -80,7 +85,7 @@ public class NGainEpochVfx : Node
 		_tween.TweenInterval(1.5);
 		_tween.Chain();
 		_tween.TweenProperty(this, "modulate:a", 0f, 1.0);
-		await ToSignal(_tween, Tween.SignalName.Finished);
+		await _tween.AwaitFinished(this);
 		this.QueueFreeSafely();
 	}
 
@@ -94,6 +99,8 @@ public class NGainEpochVfx : Node
 
 	public override void _ExitTree()
 	{
+		_cts?.Cancel();
+		_cts?.Dispose();
 		_tween?.Kill();
 		_vfxCount--;
 	}

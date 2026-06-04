@@ -13,7 +13,7 @@ namespace MegaCrit.Sts2.Core.Saves;
 
 public class ProgressState
 {
-	private static readonly Dictionary<string, Achievement> AchievementsByName = BuildAchievementLookup();
+	private static readonly Dictionary<string, Achievement> _achievementsByName = BuildAchievementLookup();
 
 	private readonly Dictionary<ModelId, CharacterStats> _characterStats = new Dictionary<ModelId, CharacterStats>();
 
@@ -630,7 +630,7 @@ public class ProgressState
 			}
 			else if (!Enum.IsDefined(serializableEpoch.State))
 			{
-				ctx.Warn($"Invalid epoch state {serializableEpoch.State} for {serializableEpoch.Id}, skipping");
+				ctx.Warn($"Invalid epoch state {(int)serializableEpoch.State} for {serializableEpoch.Id}, skipping");
 				ctx.PopPath();
 			}
 			else if (serializableEpoch.State < EpochState.NotObtained)
@@ -712,7 +712,7 @@ public class ProgressState
 		for (int i = 0; i < source.Count; i++)
 		{
 			SerializableUnlockedAchievement serializableUnlockedAchievement = source[i];
-			if (!AchievementsByName.TryGetValue(serializableUnlockedAchievement.Achievement, out var value))
+			if (!_achievementsByName.TryGetValue(serializableUnlockedAchievement.Achievement, out var value))
 			{
 				ctx.Warn($"Unknown achievement \"{serializableUnlockedAchievement.Achievement}\" at index {i}, skipping");
 			}

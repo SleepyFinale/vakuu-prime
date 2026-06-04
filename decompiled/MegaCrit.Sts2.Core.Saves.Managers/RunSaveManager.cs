@@ -29,9 +29,29 @@ public class RunSaveManager
 
 	private string CurrentMultiplayerRunSavePath => GetRunSavePath(_profileIdProvider.CurrentProfileId, "current_run_mp.save");
 
-	public bool HasRunSave => _saveStore.FileExists(CurrentRunSavePath);
+	public bool HasRunSave
+	{
+		get
+		{
+			if (!_saveStore.FileExists(CurrentRunSavePath))
+			{
+				return _saveStore.FileExists(CurrentRunSavePath + ".backup");
+			}
+			return true;
+		}
+	}
 
-	public bool HasMultiplayerRunSave => _saveStore.FileExists(CurrentMultiplayerRunSavePath);
+	public bool HasMultiplayerRunSave
+	{
+		get
+		{
+			if (!_saveStore.FileExists(CurrentMultiplayerRunSavePath))
+			{
+				return _saveStore.FileExists(CurrentMultiplayerRunSavePath + ".backup");
+			}
+			return true;
+		}
+	}
 
 	public int SchemaVersion => _migrationManager.GetLatestVersion<SerializableRun>();
 
@@ -141,11 +161,13 @@ public class RunSaveManager
 	public void DeleteCurrentRun()
 	{
 		_saveStore.DeleteFile(CurrentRunSavePath);
+		_saveStore.DeleteFile(CurrentRunSavePath + ".backup");
 	}
 
 	public void DeleteCurrentMultiplayerRun()
 	{
 		_saveStore.DeleteFile(CurrentMultiplayerRunSavePath);
+		_saveStore.DeleteFile(CurrentMultiplayerRunSavePath + ".backup");
 	}
 
 	public void RenameBrokenMultiplayerRunSave(ReadSaveStatus status)
@@ -154,9 +176,19 @@ public class RunSaveManager
 		{
 			if (HasMultiplayerRunSave)
 			{
-				string text = CorruptFileHandler.GenerateCorruptFilePath(CurrentMultiplayerRunSavePath, status);
-				_saveStore.RenameFile(CurrentMultiplayerRunSavePath, text);
-				Log.Error($"Corrupt multiplayer run save detected: Renamed '{CurrentMultiplayerRunSavePath}' to '{text}'");
+				if (_saveStore.FileExists(CurrentMultiplayerRunSavePath))
+				{
+					string text = CorruptFileHandler.GenerateCorruptFilePath(CurrentMultiplayerRunSavePath, status);
+					_saveStore.RenameFile(CurrentMultiplayerRunSavePath, text);
+					Log.Error($"Corrupt multiplayer run save detected: Renamed '{CurrentMultiplayerRunSavePath}' to '{text}'");
+				}
+				string text2 = CurrentMultiplayerRunSavePath + ".backup";
+				if (_saveStore.FileExists(text2))
+				{
+					string text3 = CorruptFileHandler.GenerateCorruptFilePath(text2, status);
+					_saveStore.RenameFile(text2, text3);
+					Log.Error($"Corrupt multiplayer run backup detected: Renamed '{text2}' to '{text3}'");
+				}
 			}
 		}
 		catch (Exception ex)

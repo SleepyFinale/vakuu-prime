@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MegaCrit.Sts2.Core.Platform.Steam;
+using Steamworks;
 
 namespace MegaCrit.Sts2.Core.Saves.Test;
 
@@ -60,6 +62,10 @@ public class MockGodotFileIo : ISaveStore
 
 	public bool ShouldFailWrites;
 
+	public bool ShouldFailTimestampSync;
+
+	public bool DoSteamSpecificError;
+
 	public List<(string Method, object[] Args)> Calls { get; } = new List<(string, object[])>();
 
 	public Action<string, string>? RenameFileAction { get; set; }
@@ -98,6 +104,10 @@ public class MockGodotFileIo : ISaveStore
 	public void SetLastModifiedTime(string path, DateTimeOffset time)
 	{
 		CanonicalizePath(ref path);
+		if (ShouldFailTimestampSync)
+		{
+			throw new IOException("Simulated timestamp sync failure for " + path);
+		}
 		if (!_files.TryGetValue(path, out File value))
 		{
 			throw new InvalidOperationException("No file at " + path + "!");
@@ -125,6 +135,10 @@ public class MockGodotFileIo : ISaveStore
 
 	public Task<string?> ReadFileAsync(string path)
 	{
+		if (DoSteamSpecificError)
+		{
+			throw new SteamRemoteSaveStoreException("Simulating Steam Error", EResult.k_EResultFileNotFound);
+		}
 		CanonicalizePath(ref path);
 		Calls.Add(("ReadFileAsync", new object[1] { path }));
 		File value;
@@ -140,17 +154,16 @@ public class MockGodotFileIo : ISaveStore
 			throw new InvalidOperationException("Simulated write failure");
 		}
 		string key = path + ".backup";
-		_files.Remove(key, out var _);
-		if (_files.Remove(path, out var value2))
+		if (_files.TryGetValue(path, out File value))
 		{
-			_files[key] = value2;
+			_files[key] = value;
 		}
-		File value3 = new File
+		File value2 = new File
 		{
 			content = content,
 			lastModifiedTime = getCurrentTime?.Invoke()
 		};
-		_files[path] = value3;
+		_files[path] = value2;
 	}
 
 	public void WriteFile(string path, byte[] bytes)

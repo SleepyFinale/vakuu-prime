@@ -51,10 +51,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		public static readonly StringName OpenInventory = "OpenInventory";
 
 		public static readonly StringName OnActiveScreenUpdated = "OnActiveScreenUpdated";
-
-		public static readonly StringName BlockInput = "BlockInput";
-
-		public static readonly StringName UnblockInput = "UnblockInput";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -70,8 +66,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		public static readonly StringName _proceedButton = "_proceedButton";
 
 		public static readonly StringName _characterContainer = "_characterContainer";
-
-		public static readonly StringName _inputBlocker = "_inputBlocker";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -90,8 +84,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 
 	private Control _characterContainer;
 
-	private Control _inputBlocker;
-
 	private readonly List<NMerchantCharacter> _playerVisuals = new List<NMerchantCharacter>();
 
 	public static IEnumerable<string> AssetPaths => new global::_003C_003Ez__ReadOnlySingleElementList<string>(_scenePath);
@@ -108,7 +100,7 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 
 	public IReadOnlyList<NMerchantCharacter> PlayerVisuals => _playerVisuals;
 
-	public Control? DefaultFocusedControl => null;
+	public Control? DefaultFocusedControl => this;
 
 	public static NMerchantRoom? Create(MerchantRoom room, IReadOnlyList<Player> players)
 	{
@@ -138,7 +130,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		Inventory.MouseFilter = MouseFilterEnum.Ignore;
 		Inventory.Initialize(Room.Inventory, _dialogue);
 		_characterContainer = GetNode<Control>("%CharacterContainer");
-		_inputBlocker = GetNode<Control>("%InputBlocker");
 		NMapScreen.Instance.SetTravelEnabled(enabled: true);
 		NGame.Instance.SetScreenShakeTarget(this);
 		AfterRoomIsLoaded();
@@ -263,22 +254,10 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		}
 	}
 
-	public void BlockInput()
-	{
-		_inputBlocker.MouseFilter = MouseFilterEnum.Stop;
-		NHotkeyManager.Instance.AddBlockingScreen(_inputBlocker);
-	}
-
-	public void UnblockInput()
-	{
-		_inputBlocker.MouseFilter = MouseFilterEnum.Ignore;
-		NHotkeyManager.Instance.RemoveBlockingScreen(_inputBlocker);
-	}
-
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(12);
+		List<MethodInfo> list = new List<MethodInfo>(10);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -295,8 +274,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		}, null));
 		list.Add(new MethodInfo(MethodName.OpenInventory, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnActiveScreenUpdated, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.BlockInput, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.UnblockInput, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -362,18 +339,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.BlockInput && args.Count == 0)
-		{
-			BlockInput();
-			ret = default(godot_variant);
-			return true;
-		}
-		if (method == MethodName.UnblockInput && args.Count == 0)
-		{
-			UnblockInput();
-			ret = default(godot_variant);
-			return true;
-		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -420,14 +385,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		{
 			return true;
 		}
-		if (method == MethodName.BlockInput)
-		{
-			return true;
-		}
-		if (method == MethodName.UnblockInput)
-		{
-			return true;
-		}
 		return base.HasGodotClassMethod(in method);
 	}
 
@@ -452,11 +409,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		if (name == PropertyName._characterContainer)
 		{
 			_characterContainer = VariantUtils.ConvertTo<Control>(in value);
-			return true;
-		}
-		if (name == PropertyName._inputBlocker)
-		{
-			_inputBlocker = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
 		return base.SetGodotClassPropertyValue(in name, in value);
@@ -495,11 +447,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 			value = VariantUtils.CreateFrom(in _characterContainer);
 			return true;
 		}
-		if (name == PropertyName._inputBlocker)
-		{
-			value = VariantUtils.CreateFrom(in _inputBlocker);
-			return true;
-		}
 		return base.GetGodotClassPropertyValue(in name, out value);
 	}
 
@@ -510,7 +457,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._proceedButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.ProceedButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._characterContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._inputBlocker, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.Inventory, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.MerchantButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.DefaultFocusedControl, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -525,7 +471,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		info.AddProperty(PropertyName.MerchantButton, Variant.From<NMerchantButton>(MerchantButton));
 		info.AddProperty(PropertyName._proceedButton, Variant.From(in _proceedButton));
 		info.AddProperty(PropertyName._characterContainer, Variant.From(in _characterContainer));
-		info.AddProperty(PropertyName._inputBlocker, Variant.From(in _inputBlocker));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -547,10 +492,6 @@ public class NMerchantRoom : Control, IScreenContext, IRoomWithProceedButton
 		if (info.TryGetProperty(PropertyName._characterContainer, out var value4))
 		{
 			_characterContainer = value4.As<Control>();
-		}
-		if (info.TryGetProperty(PropertyName._inputBlocker, out var value5))
-		{
-			_inputBlocker = value5.As<Control>();
 		}
 	}
 }

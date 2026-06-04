@@ -126,14 +126,14 @@ public class MegaLabel : Label
 
 	public override void _Ready()
 	{
-		MegaLabelHelper.AssertThemeFontOverride(this, ThemeConstants.Label.font);
+		MegaLabelHelper.AssertThemeFontOverride(this, ThemeConstants.Label.Font);
 		RefreshFont();
 		AdjustFontSize();
 	}
 
 	public void RefreshFont()
 	{
-		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.font);
+		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.Font);
 	}
 
 	public override void _Notification(int what)
@@ -158,9 +158,9 @@ public class MegaLabel : Label
 		if (_lastSetSize != size)
 		{
 			_lastSetSize = size;
-			if (HasThemeFont(ThemeConstants.Label.font))
+			if (HasThemeFont(ThemeConstants.Label.Font))
 			{
-				AddThemeFontSizeOverride(ThemeConstants.Label.fontSize, size);
+				AddThemeFontSizeOverride(ThemeConstants.Label.FontSize, size);
 			}
 		}
 	}
@@ -172,8 +172,8 @@ public class MegaLabel : Label
 			return;
 		}
 		_lastAdjustedSize = base.Size;
-		Font themeFont = GetThemeFont(ThemeConstants.Label.font, "Label");
-		float lineSpacing = GetThemeConstant(ThemeConstants.Label.lineSpacing, "Label");
+		Font themeFont = GetThemeFont(ThemeConstants.Label.Font, "Label");
+		float lineSpacing = GetThemeConstant(ThemeConstants.Label.LineSpacing, "Label");
 		Vector2 size = GetRect().Size;
 		bool wrap = base.AutowrapMode != TextServer.AutowrapMode.Off;
 		if (!MegaLabelHelper.IsTooBig(_cachedParagraph, base.Text, themeFont, MaxFontSize, lineSpacing, wrap, size))

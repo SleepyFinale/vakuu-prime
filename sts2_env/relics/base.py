@@ -193,6 +193,7 @@ class RelicId(Enum):
     UNDYING_SIGIL = auto()
     VITRUVIAN_MINION = auto()
     WING_CHARM = auto()
+    WINGED_BOOTS = auto()
 
     # Event / Ancient
     ALCHEMICAL_COFFER = auto()
@@ -248,6 +249,7 @@ class RelicId(Enum):
     GOLDEN_COMPASS = auto()
     GOLDEN_PEARL = auto()
     HAND_DRILL = auto()
+    HEFTY_TABLET = auto()
     HISTORY_COURSE = auto()
     IRON_CLUB = auto()
     JEWELED_MASK = auto()
@@ -265,6 +267,8 @@ class RelicId(Enum):
     MEAT_CLEAVER = auto()
     MR_STRUGGLES = auto()
     MUSIC_BOX = auto()
+    NEOWS_BONES = auto()
+    NEOWS_TALISMAN = auto()
     NEOWS_TORMENT = auto()
     NEW_LEAF = auto()
     NUTRITIOUS_OYSTER = auto()
@@ -280,6 +284,7 @@ class RelicId(Enum):
     PAELS_TOOTH = auto()
     PAELS_WING = auto()
     PANDORAS_BOX = auto()
+    PHIAL_HOLSTER = auto()
     PHILOSOPHERS_STONE = auto()
     POLLINOUS_CORE = auto()
     POMANDER = auto()
@@ -818,6 +823,10 @@ class RelicInstance:
 
     def after_room_entered(self, owner: Creature, room_type: object) -> None:
         pass
+
+    def should_allow_free_travel(self, owner: Creature, run_state: RunState) -> bool | None:
+        """Return True to allow backtracking on the map while charges remain."""
+        return None
 
     def after_obtained(self, owner: Creature) -> None:
         pass

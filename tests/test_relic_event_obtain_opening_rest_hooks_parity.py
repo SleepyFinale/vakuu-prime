@@ -13,7 +13,7 @@ from sts2_env.core.rng import Rng
 from sts2_env.monsters.act1_weak import create_shrinker_beetle
 from sts2_env.run.reward_objects import AddCardsReward, RelicReward, RemoveCardReward, UpgradeCardsReward
 from sts2_env.run.rest_site import generate_rest_site_options
-from sts2_env.run.run_state import RunState
+from sts2_env.run.run_state import PlayerState, RunState
 
 
 def _make_combat(relics: list[str] | None = None, *, seed: int = 881) -> CombatState:
@@ -52,6 +52,79 @@ class TestRelicEventObtainOpeningRestHooksParity:
         assert run_state.player.obtain_relic("NUTRITIOUS_OYSTER")
         assert run_state.player.max_hp == max_hp_before + 42
         assert run_state.player.current_hp == hp_before + 42
+
+    def test_hefty_tablet_queues_rare_card_reward_and_adds_injury(self):
+        run_state = RunState(seed=910, character_id="Ironclad")
+        run_state.defer_followup_rewards = True
+
+        assert run_state.player.obtain_relic("HEFTY_TABLET")
+
+        from sts2_env.run.reward_objects import AddCardsReward, CardReward
+
+        reward_types = [type(reward) for reward in run_state.pending_rewards]
+        assert CardReward in reward_types
+        assert AddCardsReward in reward_types
+        assert any(card.card_id == CardId.INJURY for reward in run_state.pending_rewards if isinstance(reward, AddCardsReward) for card in reward.cards)
+
+    def test_neows_talisman_upgrades_last_strike_and_defend(self):
+        run_state = RunState(seed=911, character_id="Ironclad")
+        run_state.player.deck = create_ironclad_starter_deck()
+
+        assert run_state.player.obtain_relic("NEOWS_TALISMAN")
+
+        basics = [card for card in run_state.player.deck if card.rarity.name == "BASIC"]
+        last_strike = next(card for card in reversed(basics) if "STRIKE" in card.card_id.name)
+        last_defend = next(card for card in reversed(basics) if "DEFEND" in card.card_id.name)
+        assert last_strike.upgraded
+        assert last_defend.upgraded
+
+    def test_phial_holster_grants_potion_slot_and_two_potions(self):
+        run_state = RunState(seed=912, character_id="Ironclad")
+
+        assert run_state.player.obtain_relic("PHIAL_HOLSTER")
+
+        assert run_state.player.max_potion_slots == 4
+        assert len(run_state.player.held_potions()) == 2
+
+    def test_neows_bones_offers_two_relic_rewards_and_adds_curse(self):
+        run_state = RunState(seed=913, character_id="Ironclad")
+        run_state.defer_followup_rewards = True
+
+        assert run_state.player.obtain_relic("NEOWS_BONES")
+
+        from sts2_env.run.reward_objects import RelicReward
+
+        relic_rewards = [reward for reward in run_state.pending_rewards if isinstance(reward, RelicReward)]
+        assert len(relic_rewards) == 2
+        assert any(card.card_type.name == "CURSE" for card in run_state.player.deck)
+
+    def test_winged_boots_single_player_only_and_tracks_times_used(self):
+        run_state = RunState(seed=914, character_id="Ironclad")
+        from sts2_env.relics.shop_event import WingedBoots
+        from sts2_env.run.rooms import RoomVisitContext
+        from sts2_env.core.enums import RoomType
+
+        assert run_state.player.obtain_relic("WINGED_BOOTS")
+        relic = next(item for item in run_state.player.get_relic_objects() if isinstance(item, WingedBoots))
+        assert relic.is_allowed(run_state)
+
+        multiplayer = RunState(seed=915, character_id="Ironclad")
+        multiplayer.players.append(PlayerState(player_id=2, character_id="Silent", max_hp=70, current_hp=70))
+        assert not relic.is_allowed(multiplayer)
+
+        run_state.generate_map()
+        assert run_state.map is not None
+        start_coord = run_state.map.start_point.coord
+        child_coord = run_state.map.start_point.children[0].coord
+        run_state.visited_map_coords = [start_coord, child_coord, start_coord]
+        run_state.map_point_history.clear()
+        for room in (RoomType.MONSTER, RoomType.MONSTER, RoomType.EVENT):
+            run_state.append_to_map_point_history(
+                run_state._map_point_type_for_room(room),
+                room,
+            )
+        relic.after_room_entered(run_state.player, RoomVisitContext(RoomType.EVENT))
+        assert relic._times_used == 1  # noqa: SLF001
 
     def test_ancient_relics_add_their_cards_to_deck_on_obtain(self):
         run_state = RunState(seed=897, character_id="Ironclad")

@@ -71,15 +71,18 @@ public class NCeremonialBeastBgVfx : Node
 		CombatManager.Instance.StateTracker.CombatStateChanged -= UpdateState;
 	}
 
-	private void UpdateState(CombatState combatState)
+	private void UpdateState(CombatState? combatState)
 	{
-		UpdateRingingSfx(combatState);
-		UpdateVfxAndMusic(combatState);
+		if (combatState != null)
+		{
+			UpdateRingingSfx(combatState);
+			UpdateVfxAndMusic(combatState);
+		}
 	}
 
 	private void UpdateRingingSfx(CombatState combatState)
 	{
-		bool flag = LocalContext.GetMe(combatState).Creature.HasPower<RingingPower>();
+		bool flag = LocalContext.GetMe(combatState)?.Creature.HasPower<RingingPower>() ?? false;
 		NRunMusicController.Instance?.UpdateMusicParameter("ringing", flag ? 1 : 0);
 	}
 
@@ -92,7 +95,7 @@ public class NCeremonialBeastBgVfx : Node
 			PlayFlowers();
 			return;
 		}
-		if ((float)creature.CurrentHp > (float)creature.MaxHp * 0.66f)
+		if (creature.Monster is CeremonialBeast { IsInSecondPhase: false })
 		{
 			_parent.Visible = false;
 			return;

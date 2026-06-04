@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Saves;
@@ -166,9 +167,16 @@ public class CombatReplayWriter : IDisposable
 		}
 		_writer.Reset();
 		_writer.Write(_replay.Anonymized());
-		DirAccess.MakeDirRecursiveAbsolute(filePath.Substring(0, filePath.LastIndexOf('/')));
-		using FileAccessStream fileAccessStream = new FileAccessStream(filePath, FileAccess.ModeFlags.Write);
-		fileAccessStream.Write(_writer.Buffer.AsSpan().Slice(0, _writer.BytePosition));
+		try
+		{
+			DirAccess.MakeDirRecursiveAbsolute(filePath.Substring(0, filePath.LastIndexOf('/')));
+			using FileAccessStream fileAccessStream = new FileAccessStream(filePath, FileAccess.ModeFlags.Write);
+			fileAccessStream.Write(_writer.Buffer.AsSpan().Slice(0, _writer.BytePosition));
+		}
+		catch (Exception value)
+		{
+			Log.Warn($"Exception while writing replay: {value}");
+		}
 		if (stopRecording)
 		{
 			StopRecording();

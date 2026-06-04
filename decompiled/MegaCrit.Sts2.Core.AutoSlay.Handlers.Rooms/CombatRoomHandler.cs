@@ -62,9 +62,7 @@ public class CombatRoomHandler : IRoomHandler, IHandler
 					AutoSlayer.CurrentWatchdog?.Reset($"Combat turn {turnCount}, played {cardsPlayed} cards");
 				}
 				CardPile pile = PileType.Hand.GetPile(player);
-				UnplayableReason reason;
-				AbstractModel preventer;
-				List<CardModel> list = pile.Cards.Where((CardModel c) => c.CanPlay(out reason, out preventer) && !attemptedCards.Contains(c)).ToList();
+				List<CardModel> list = pile.Cards.Where((CardModel c) => c.CanPlay(out UnplayableReason _, out AbstractModel _) && !attemptedCards.Contains(c)).ToList();
 				if (list.Count == 0)
 				{
 					AutoSlayLog.Action("No more playable cards, ending turn");

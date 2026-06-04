@@ -45,6 +45,10 @@ public class NMerchantInventory : Control, IScreenContext
 
 		public static readonly StringName UpdateVerticalNavigation = "UpdateVerticalNavigation";
 
+		public static readonly StringName BlockInput = "BlockInput";
+
+		public static readonly StringName UnblockInput = "UnblockInput";
+
 		public static readonly StringName OnActiveScreenUpdated = "OnActiveScreenUpdated";
 	}
 
@@ -75,6 +79,10 @@ public class NMerchantInventory : Control, IScreenContext
 		public static readonly StringName _slotsContainer = "_slotsContainer";
 
 		public static readonly StringName _backstop = "_backstop";
+
+		public static readonly StringName _inputBlocker = "_inputBlocker";
+
+		public static readonly StringName _isInputBlocked = "_isInputBlocked";
 
 		public static readonly StringName _lastSlot = "_lastSlot";
 	}
@@ -108,6 +116,10 @@ public class NMerchantInventory : Control, IScreenContext
 
 	private ColorRect _backstop;
 
+	private Control _inputBlocker;
+
+	private bool _isInputBlocked;
+
 	private NMerchantSlot? _lastSlot;
 
 	private InventoryClosedEventHandler backing_InventoryClosed;
@@ -122,6 +134,10 @@ public class NMerchantInventory : Control, IScreenContext
 	{
 		get
 		{
+			if (_isInputBlocked)
+			{
+				return _inputBlocker;
+			}
 			NMerchantSlot lastSlot = _lastSlot;
 			if (lastSlot != null)
 			{
@@ -166,6 +182,7 @@ public class NMerchantInventory : Control, IScreenContext
 			Close();
 		}));
 		_backButton.Disable();
+		_inputBlocker = GetNode<Control>("%InputBlocker");
 		NGame.Instance.SetScreenShakeTarget(this);
 	}
 
@@ -245,7 +262,10 @@ public class NMerchantInventory : Control, IScreenContext
 		}
 		TaskHelper.RunSafely(DoOpenAnimation());
 		base.MouseFilter = MouseFilterEnum.Stop;
-		_backButton.Enable();
+		if (!_isInputBlocked)
+		{
+			_backButton.Enable();
+		}
 		foreach (NMerchantCard cardSlot in GetCardSlots())
 		{
 			cardSlot.OnInventoryOpened();
@@ -301,7 +321,7 @@ public class NMerchantInventory : Control, IScreenContext
 	{
 		UpdateNavigation();
 		NMerchantSlot lastSlot = GetAllSlots().FirstOrDefault((NMerchantSlot s) => s.Entry == entry);
-		if (lastSlot != null)
+		if (lastSlot != null && !_isInputBlocked)
 		{
 			(from s in GetAllSlots()
 				where s.Visible && s != lastSlot
@@ -457,17 +477,17 @@ public class NMerchantInventory : Control, IScreenContext
 			list[i].FocusNeighborTop = list[i].GetPath();
 			if (list2.Count > 0)
 			{
-				Control closestVisible = GetClosestVisible(i, list2);
-				if (closestVisible != null)
+				Control closestStockedSlot = GetClosestStockedSlot(i, list2);
+				if (closestStockedSlot != null)
 				{
-					list[i].FocusNeighborBottom = closestVisible.GetPath();
+					list[i].FocusNeighborBottom = closestStockedSlot.GetPath();
 					continue;
 				}
 			}
-			Control closestVisible2 = GetClosestVisible(i, list3);
-			if (closestVisible2 != null)
+			Control closestStockedSlot2 = GetClosestStockedSlot(i, list3);
+			if (closestStockedSlot2 != null)
 			{
-				list[i].FocusNeighborBottom = closestVisible2.GetPath();
+				list[i].FocusNeighborBottom = closestStockedSlot2.GetPath();
 			}
 			else
 			{
@@ -478,17 +498,17 @@ public class NMerchantInventory : Control, IScreenContext
 		{
 			if (list2.Count > 0)
 			{
-				Control closestVisible3 = GetClosestVisible(j, list2);
-				if (closestVisible3 != null)
+				Control closestStockedSlot3 = GetClosestStockedSlot(j, list2);
+				if (closestStockedSlot3 != null)
 				{
-					list3[j].FocusNeighborTop = closestVisible3.GetPath();
+					list3[j].FocusNeighborTop = closestStockedSlot3.GetPath();
 					continue;
 				}
 			}
-			Control closestVisible4 = GetClosestVisible(j, list);
-			if (closestVisible4 != null)
+			Control closestStockedSlot4 = GetClosestStockedSlot(j, list);
+			if (closestStockedSlot4 != null)
 			{
-				list3[j].FocusNeighborTop = closestVisible4.GetPath();
+				list3[j].FocusNeighborTop = closestStockedSlot4.GetPath();
 			}
 			else
 			{
@@ -499,10 +519,10 @@ public class NMerchantInventory : Control, IScreenContext
 		{
 			if (list.Count > 0)
 			{
-				Control closestVisible5 = GetClosestVisible(k, list);
-				if (closestVisible5 != null)
+				Control closestStockedSlot5 = GetClosestStockedSlot(k, list);
+				if (closestStockedSlot5 != null)
 				{
-					list2[k].FocusNeighborTop = closestVisible5.GetPath();
+					list2[k].FocusNeighborTop = closestStockedSlot5.GetPath();
 					goto IL_02bb;
 				}
 			}
@@ -511,10 +531,10 @@ public class NMerchantInventory : Control, IScreenContext
 			IL_02bb:
 			if (list3.Count > 0)
 			{
-				Control closestVisible6 = GetClosestVisible(k, list3);
-				if (closestVisible6 != null)
+				Control closestStockedSlot6 = GetClosestStockedSlot(k, list3);
+				if (closestStockedSlot6 != null)
 				{
-					list2[k].FocusNeighborBottom = closestVisible6.GetPath();
+					list2[k].FocusNeighborBottom = closestStockedSlot6.GetPath();
 					continue;
 				}
 			}
@@ -522,10 +542,32 @@ public class NMerchantInventory : Control, IScreenContext
 		}
 	}
 
-	private Control? GetClosestVisible(int idx, List<NMerchantSlot> row)
+	public void BlockInput()
+	{
+		_isInputBlocked = true;
+		_inputBlocker.MouseFilter = MouseFilterEnum.Stop;
+		NHotkeyManager.Instance.AddBlockingScreen(_inputBlocker);
+		if (_backButton.IsEnabled)
+		{
+			_backButton.Disable();
+		}
+	}
+
+	public void UnblockInput()
+	{
+		_isInputBlocked = false;
+		_inputBlocker.MouseFilter = MouseFilterEnum.Ignore;
+		NHotkeyManager.Instance.RemoveBlockingScreen(_inputBlocker);
+		if (!_backButton.IsEnabled)
+		{
+			_backButton.Enable();
+		}
+	}
+
+	private Control? GetClosestStockedSlot(int idx, List<NMerchantSlot> row)
 	{
 		NMerchantSlot nMerchantSlot = row[Math.Min(idx, row.Count - 1)];
-		if (nMerchantSlot.Visible)
+		if (nMerchantSlot.Entry.IsStocked)
 		{
 			return nMerchantSlot;
 		}
@@ -536,7 +578,7 @@ public class NMerchantInventory : Control, IScreenContext
 		{
 			if (num3 < row.Count)
 			{
-				if (row[num3].Visible)
+				if (row[num3].Entry.IsStocked)
 				{
 					return row[num3];
 				}
@@ -544,7 +586,7 @@ public class NMerchantInventory : Control, IScreenContext
 			}
 			if (num2 >= 0)
 			{
-				if (row[num2].Visible)
+				if (row[num2].Entry.IsStocked)
 				{
 					return row[num2];
 				}
@@ -562,9 +604,12 @@ public class NMerchantInventory : Control, IScreenContext
 			if (_characterCardContainer != null && NControllerManager.Instance.IsUsingController && _inventoryTween != null && _inventoryTween.IsRunning())
 			{
 				float num = 80f - _slotsContainer.Position.Y;
-				MerchantHand.PointAtTarget(_characterCardContainer.GetChild<NMerchantCard>(0).GlobalPosition + Vector2.Down * num);
+				MerchantHand.PointAtTarget(_characterCardContainer.GetChild<NMerchantCard>(0), Vector2.Down * num);
 			}
-			_backButton.Enable();
+			if (!_isInputBlocked)
+			{
+				_backButton.Enable();
+			}
 		}
 		else
 		{
@@ -575,7 +620,7 @@ public class NMerchantInventory : Control, IScreenContext
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(11);
+		List<MethodInfo> list = new List<MethodInfo>(13);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -586,6 +631,8 @@ public class NMerchantInventory : Control, IScreenContext
 		list.Add(new MethodInfo(MethodName.UpdateNavigation, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.UpdateHorizontalNavigation, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.UpdateVerticalNavigation, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.BlockInput, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.UnblockInput, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnActiveScreenUpdated, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
@@ -653,6 +700,18 @@ public class NMerchantInventory : Control, IScreenContext
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.BlockInput && args.Count == 0)
+		{
+			BlockInput();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.UnblockInput && args.Count == 0)
+		{
+			UnblockInput();
+			ret = default(godot_variant);
+			return true;
+		}
 		if (method == MethodName.OnActiveScreenUpdated && args.Count == 0)
 		{
 			OnActiveScreenUpdated();
@@ -702,6 +761,14 @@ public class NMerchantInventory : Control, IScreenContext
 			return true;
 		}
 		if (method == MethodName.UpdateVerticalNavigation)
+		{
+			return true;
+		}
+		if (method == MethodName.BlockInput)
+		{
+			return true;
+		}
+		if (method == MethodName.UnblockInput)
 		{
 			return true;
 		}
@@ -773,6 +840,16 @@ public class NMerchantInventory : Control, IScreenContext
 		if (name == PropertyName._backstop)
 		{
 			_backstop = VariantUtils.ConvertTo<ColorRect>(in value);
+			return true;
+		}
+		if (name == PropertyName._inputBlocker)
+		{
+			_inputBlocker = VariantUtils.ConvertTo<Control>(in value);
+			return true;
+		}
+		if (name == PropertyName._isInputBlocked)
+		{
+			_isInputBlocked = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
 		if (name == PropertyName._lastSlot)
@@ -851,6 +928,16 @@ public class NMerchantInventory : Control, IScreenContext
 			value = VariantUtils.CreateFrom(in _backstop);
 			return true;
 		}
+		if (name == PropertyName._inputBlocker)
+		{
+			value = VariantUtils.CreateFrom(in _inputBlocker);
+			return true;
+		}
+		if (name == PropertyName._isInputBlocked)
+		{
+			value = VariantUtils.CreateFrom(in _isInputBlocked);
+			return true;
+		}
 		if (name == PropertyName._lastSlot)
 		{
 			value = VariantUtils.CreateFrom(in _lastSlot);
@@ -873,6 +960,8 @@ public class NMerchantInventory : Control, IScreenContext
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._inventoryTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._slotsContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._backstop, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._inputBlocker, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._isInputBlocked, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._lastSlot, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsOpen, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.MerchantHand, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -896,6 +985,8 @@ public class NMerchantInventory : Control, IScreenContext
 		info.AddProperty(PropertyName._inventoryTween, Variant.From(in _inventoryTween));
 		info.AddProperty(PropertyName._slotsContainer, Variant.From(in _slotsContainer));
 		info.AddProperty(PropertyName._backstop, Variant.From(in _backstop));
+		info.AddProperty(PropertyName._inputBlocker, Variant.From(in _inputBlocker));
+		info.AddProperty(PropertyName._isInputBlocked, Variant.From(in _isInputBlocked));
 		info.AddProperty(PropertyName._lastSlot, Variant.From(in _lastSlot));
 		info.AddSignalEventDelegate(SignalName.InventoryClosed, backing_InventoryClosed);
 	}
@@ -952,13 +1043,21 @@ public class NMerchantInventory : Control, IScreenContext
 		{
 			_backstop = value12.As<ColorRect>();
 		}
-		if (info.TryGetProperty(PropertyName._lastSlot, out var value13))
+		if (info.TryGetProperty(PropertyName._inputBlocker, out var value13))
 		{
-			_lastSlot = value13.As<NMerchantSlot>();
+			_inputBlocker = value13.As<Control>();
 		}
-		if (info.TryGetSignalEventDelegate<InventoryClosedEventHandler>(SignalName.InventoryClosed, out var value14))
+		if (info.TryGetProperty(PropertyName._isInputBlocked, out var value14))
 		{
-			backing_InventoryClosed = value14;
+			_isInputBlocked = value14.As<bool>();
+		}
+		if (info.TryGetProperty(PropertyName._lastSlot, out var value15))
+		{
+			_lastSlot = value15.As<NMerchantSlot>();
+		}
+		if (info.TryGetSignalEventDelegate<InventoryClosedEventHandler>(SignalName.InventoryClosed, out var value16))
+		{
+			backing_InventoryClosed = value16;
 		}
 	}
 

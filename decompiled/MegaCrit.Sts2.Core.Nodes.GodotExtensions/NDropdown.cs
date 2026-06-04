@@ -23,6 +23,8 @@ public class NDropdown : NClickableControl
 
 		public new static readonly StringName ConnectSignals = "ConnectSignals";
 
+		public static readonly StringName OnVisibilityChange = "OnVisibilityChange";
+
 		public static readonly StringName ClearDropdownItems = "ClearDropdownItems";
 
 		public new static readonly StringName _Input = "_Input";
@@ -89,6 +91,15 @@ public class NDropdown : NClickableControl
 		_dropdownItems = _dropdownContainer.GetNode<Control>("VBoxContainer");
 		_dismisser = GetNode<NButton>("%Dismisser");
 		_dismisser.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OnDismisserClicked));
+		Connect(CanvasItem.SignalName.VisibilityChanged, Callable.From(OnVisibilityChange));
+	}
+
+	private void OnVisibilityChange()
+	{
+		if (!IsVisibleInTree() && _isOpen)
+		{
+			CloseDropdown();
+		}
 	}
 
 	protected void ClearDropdownItems()
@@ -102,13 +113,19 @@ public class NDropdown : NClickableControl
 
 	public override void _Input(InputEvent inputEvent)
 	{
-		if (IsVisibleInTree() && _isEnabled && !NDevConsole.Instance.Visible)
+		if (!IsVisibleInTree() || !_isEnabled || NDevConsole.Instance.Visible)
 		{
-			Control control = GetViewport().GuiGetFocusOwner();
+			return;
+		}
+		Viewport viewport = GetViewport();
+		if (viewport != null)
+		{
+			Control control = viewport.GuiGetFocusOwner();
 			bool flag = ((control is TextEdit || control is LineEdit) ? true : false);
-			if (!flag && inputEvent.IsActionPressed(MegaInput.cancel))
+			if (!flag && inputEvent.IsActionPressed(MegaInput.cancel) && _isOpen)
 			{
 				CloseDropdown();
+				viewport.SetInputAsHandled();
 			}
 		}
 	}
@@ -162,9 +179,10 @@ public class NDropdown : NClickableControl
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal new static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(8);
+		List<MethodInfo> list = new List<MethodInfo>(9);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ConnectSignals, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnVisibilityChange, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ClearDropdownItems, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._Input, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -192,6 +210,12 @@ public class NDropdown : NClickableControl
 		if (method == MethodName.ConnectSignals && args.Count == 0)
 		{
 			ConnectSignals();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.OnVisibilityChange && args.Count == 0)
+		{
+			OnVisibilityChange();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -242,6 +266,10 @@ public class NDropdown : NClickableControl
 			return true;
 		}
 		if (method == MethodName.ConnectSignals)
+		{
+			return true;
+		}
+		if (method == MethodName.OnVisibilityChange)
 		{
 			return true;
 		}

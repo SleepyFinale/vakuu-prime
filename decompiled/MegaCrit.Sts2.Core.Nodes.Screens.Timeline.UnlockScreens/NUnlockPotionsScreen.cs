@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Potions;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using MegaCrit.Sts2.addons.mega_text;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.Timeline.UnlockScreens;
@@ -30,6 +31,8 @@ public class NUnlockPotionsScreen : NUnlockScreen
 
 	public new class PropertyName : NUnlockScreen.PropertyName
 	{
+		public new static readonly StringName DefaultFocusedControl = "DefaultFocusedControl";
+
 		public static readonly StringName _potionRow = "_potionRow";
 
 		public static readonly StringName _banner = "_banner";
@@ -56,6 +59,18 @@ public class NUnlockPotionsScreen : NUnlockScreen
 	private static readonly Vector2 _potionScale = Vector2.One * 3f;
 
 	public static IEnumerable<string> AssetPaths => new global::_003C_003Ez__ReadOnlySingleElementList<string>(_scenePath);
+
+	public override Control? DefaultFocusedControl
+	{
+		get
+		{
+			if (_potionRow.GetChildCount() != 0)
+			{
+				return _potionRow.GetChild<Control>(_potionRow.GetChildCount() / 2);
+			}
+			return null;
+		}
+	}
 
 	public static NUnlockPotionsScreen Create()
 	{
@@ -93,6 +108,7 @@ public class NUnlockPotionsScreen : NUnlockScreen
 			_potionTween.TweenProperty(nPotionHolder, "modulate", Colors.White, 1.0).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
 			num++;
 		}
+		ActiveScreenContext.Instance.FocusOnDefaultControl();
 	}
 
 	public void SetPotions(IReadOnlyList<PotionModel> potions)
@@ -203,6 +219,11 @@ public class NUnlockPotionsScreen : NUnlockScreen
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
+		if (name == PropertyName.DefaultFocusedControl)
+		{
+			value = VariantUtils.CreateFrom<Control>(DefaultFocusedControl);
+			return true;
+		}
 		if (name == PropertyName._potionRow)
 		{
 			value = VariantUtils.CreateFrom(in _potionRow);
@@ -228,6 +249,7 @@ public class NUnlockPotionsScreen : NUnlockScreen
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._potionRow, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._banner, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._potionTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.DefaultFocusedControl, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 

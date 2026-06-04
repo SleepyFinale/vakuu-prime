@@ -289,6 +289,7 @@ IRONCLAD_CARD_POOL: tuple[CardId, ...] = (
     CardId.JUGGLING_CARD,
     CardId.MANGLE,
     CardId.MOLTEN_FIST,
+    CardId.NOT_YET,
     CardId.OFFERING,
     CardId.ONE_TWO_PUNCH_CARD,
     CardId.PACTS_END,

@@ -37,6 +37,8 @@ public class NAncientDialogueLine : NButton
 		public static readonly StringName SetSpeakerIconVisible = "SetSpeakerIconVisible";
 
 		public static readonly StringName SetTransparency = "SetTransparency";
+
+		public static readonly StringName OnAnimInSetVisible = "OnAnimInSetVisible";
 	}
 
 	public new class PropertyName : NButton.PropertyName
@@ -93,9 +95,6 @@ public class NAncientDialogueLine : NButton
 			throw new ArgumentOutOfRangeException();
 		}
 		base.Modulate = StsColors.transparentWhite;
-		_tween?.Kill();
-		_tween = CreateTween();
-		_tween.TweenProperty(this, "modulate:a", 1f, 0.1);
 	}
 
 	protected override void OnUnfocus()
@@ -130,7 +129,7 @@ public class NAncientDialogueLine : NButton
 		Control node2 = GetNode<Control>("%DialogueTailLeft");
 		node2.Visible = true;
 		MarginContainer node3 = GetNode<MarginContainer>("%TextContainer");
-		node3.AddThemeConstantOverride(ThemeConstants.MarginContainer.marginLeft, 48);
+		node3.AddThemeConstantOverride(ThemeConstants.MarginContainer.MarginLeft, 48);
 		GetNode<Control>("%Bubble").SelfModulate = _ancient.DialogueColor;
 		node2.SelfModulate = _ancient.DialogueColor;
 	}
@@ -144,7 +143,7 @@ public class NAncientDialogueLine : NButton
 		Control node2 = GetNode<Control>("%DialogueTailRight");
 		node2.Visible = true;
 		MarginContainer node3 = GetNode<MarginContainer>("%TextContainer");
-		node3.AddThemeConstantOverride(ThemeConstants.MarginContainer.marginRight, 46);
+		node3.AddThemeConstantOverride(ThemeConstants.MarginContainer.MarginRight, 46);
 		GetNode<Control>("%Bubble").SelfModulate = _character.DialogueColor;
 		node2.SelfModulate = _character.DialogueColor;
 	}
@@ -160,10 +159,17 @@ public class NAncientDialogueLine : NButton
 		base.Modulate = new Color(1f, 1f, 1f, alpha);
 	}
 
+	public void OnAnimInSetVisible()
+	{
+		_tween?.Kill();
+		_tween = CreateTween();
+		_tween.TweenProperty(this, "modulate:a", 1f, 0.1);
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal new static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(9);
+		List<MethodInfo> list = new List<MethodInfo>(10);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnUnfocus, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnFocus, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -176,6 +182,7 @@ public class NAncientDialogueLine : NButton
 		{
 			new PropertyInfo(Variant.Type.Float, "alpha", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName.OnAnimInSetVisible, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -236,6 +243,12 @@ public class NAncientDialogueLine : NButton
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.OnAnimInSetVisible && args.Count == 0)
+		{
+			OnAnimInSetVisible();
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -275,6 +288,10 @@ public class NAncientDialogueLine : NButton
 			return true;
 		}
 		if (method == MethodName.SetTransparency)
+		{
+			return true;
+		}
+		if (method == MethodName.OnAnimInSetVisible)
 		{
 			return true;
 		}

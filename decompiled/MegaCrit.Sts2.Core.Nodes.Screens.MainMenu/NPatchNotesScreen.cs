@@ -8,6 +8,7 @@ using Godot.Bridge;
 using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
@@ -99,7 +100,7 @@ public class NPatchNotesScreen : Control, IScreenContext
 
 	private PackedScene _cachedScene;
 
-	private const string _patchNotesPath = "res://localization/eng/patch_notes";
+	private const string _engPatchNotesPath = "res://localization/eng/patch_notes";
 
 	private List<string>? _patchNotePaths;
 
@@ -242,10 +243,23 @@ public class NPatchNotesScreen : Control, IScreenContext
 		UpdateDateLabel(patchNotePath);
 	}
 
-	private static string ReadPatchNoteFile(string patchNotePath)
+	private static string ReadPatchNoteFile(string engPatchNotePath)
 	{
-		using FileAccess fileAccess = FileAccess.Open(patchNotePath, FileAccess.ModeFlags.Read);
-		return fileAccess.GetAsText();
+		string language = LocManager.Instance.Language;
+		if (language != "eng")
+		{
+			string fileNameFromPath = GetFileNameFromPath(engPatchNotePath);
+			string path = "res://localization/" + language + "/patch_notes/" + fileNameFromPath;
+			if (FileAccess.FileExists(path))
+			{
+				using (FileAccess fileAccess = FileAccess.Open(path, FileAccess.ModeFlags.Read))
+				{
+					return fileAccess.GetAsText();
+				}
+			}
+		}
+		using FileAccess fileAccess2 = FileAccess.Open(engPatchNotePath, FileAccess.ModeFlags.Read);
+		return fileAccess2.GetAsText();
 	}
 
 	private void UpdateDateLabel(string patchNotePath)
@@ -300,7 +314,7 @@ public class NPatchNotesScreen : Control, IScreenContext
 		}, null));
 		list.Add(new MethodInfo(MethodName.ReadPatchNoteFile, new PropertyInfo(Variant.Type.String, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal | MethodFlags.Static, new List<PropertyInfo>
 		{
-			new PropertyInfo(Variant.Type.String, "patchNotePath", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+			new PropertyInfo(Variant.Type.String, "engPatchNotePath", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.UpdateDateLabel, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{

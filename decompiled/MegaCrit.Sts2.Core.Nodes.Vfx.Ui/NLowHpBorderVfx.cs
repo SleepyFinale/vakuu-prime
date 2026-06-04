@@ -6,6 +6,7 @@ using Godot.Bridge;
 using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.TestSupport;
 
 namespace MegaCrit.Sts2.Core.Nodes.Vfx.Ui;
 
@@ -76,8 +77,12 @@ public class NLowHpBorderVfx : ColorRect
 
 	private static readonly StringName _mainColorString = new StringName("main_color");
 
-	public static NLowHpBorderVfx Create()
+	public static NLowHpBorderVfx? Create()
 	{
+		if (TestMode.IsOn)
+		{
+			return null;
+		}
 		return PreloadManager.Cache.GetScene(scenePath).Instantiate<NLowHpBorderVfx>(PackedScene.GenEditState.Disabled);
 	}
 

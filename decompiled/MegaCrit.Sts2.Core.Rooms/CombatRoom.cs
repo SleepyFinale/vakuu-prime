@@ -96,7 +96,7 @@ public class CombatRoom : AbstractRoom, ICombatRoomVisuals
 		return combatRoom;
 	}
 
-	public override async Task Enter(IRunState? runState, bool isRestoringRoomStackBase)
+	public override async Task EnterInternal(IRunState? runState, bool isRestoringRoomStackBase)
 	{
 		if (isRestoringRoomStackBase)
 		{
@@ -121,7 +121,7 @@ public class CombatRoom : AbstractRoom, ICombatRoomVisuals
 
 	public override Task Exit(IRunState? runState)
 	{
-		CombatManager.Instance.Reset();
+		CombatManager.Instance.Reset(graceful: true);
 		if (IsPreFinished)
 		{
 			foreach (Creature item in CombatState.PlayerCreatures.ToList())
@@ -189,7 +189,7 @@ public class CombatRoom : AbstractRoom, ICombatRoomVisuals
 				Creature creature = CombatState.CreateCreature(monsterModel, CombatSide.Enemy, slot);
 				CombatState.AddCreature(creature);
 			}
-			CombatState.RunState.CurrentMapPointHistoryEntry.Rooms.Last().MonsterIds.Add(monsterModel.Id);
+			CombatState.RunState.CurrentMapPointHistoryEntry?.Rooms.Last().MonsterIds.Add(monsterModel.Id);
 		}
 		if (ShouldCreateCombat)
 		{

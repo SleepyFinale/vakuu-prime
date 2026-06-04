@@ -34,10 +34,6 @@ public class NMultiplayerVoteContainer : Control
 			node = original.node;
 			tween = original.tween;
 		}
-
-		public VoteIcon()
-		{
-		}
 	}
 
 	public new class MethodName : Control.MethodName

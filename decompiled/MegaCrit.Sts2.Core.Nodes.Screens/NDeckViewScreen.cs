@@ -13,6 +13,7 @@ using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
@@ -29,6 +30,8 @@ public class NDeckViewScreen : NCardsViewScreen
 	public new class MethodName : NCardsViewScreen.MethodName
 	{
 		public new static readonly StringName _Ready = "_Ready";
+
+		public new static readonly StringName ConnectSignals = "ConnectSignals";
 
 		public new static readonly StringName _EnterTree = "_EnterTree";
 
@@ -139,6 +142,19 @@ public class NDeckViewScreen : NCardsViewScreen
 		}
 	}
 
+	protected override void ConnectSignals()
+	{
+		base.ConnectSignals();
+		_grid.Connect(NCardGrid.SignalName.HolderPressed, Callable.From(delegate(NCardHolder h)
+		{
+			ShowCardDetail(h.CardModel);
+		}));
+		_grid.Connect(NCardGrid.SignalName.HolderAltPressed, Callable.From(delegate(NCardHolder h)
+		{
+			ShowCardDetail(h.CardModel);
+		}));
+	}
+
 	public override void _EnterTree()
 	{
 		base._EnterTree();
@@ -242,8 +258,9 @@ public class NDeckViewScreen : NCardsViewScreen
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal new static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(10);
+		List<MethodInfo> list = new List<MethodInfo>(11);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.ConnectSignals, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AfterCapstoneClosed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -274,6 +291,12 @@ public class NDeckViewScreen : NCardsViewScreen
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.ConnectSignals && args.Count == 0)
+		{
+			ConnectSignals();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -338,6 +361,10 @@ public class NDeckViewScreen : NCardsViewScreen
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName.ConnectSignals)
 		{
 			return true;
 		}

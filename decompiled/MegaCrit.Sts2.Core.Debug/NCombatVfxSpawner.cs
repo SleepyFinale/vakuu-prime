@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
+using Godot.Collections;
 using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Helpers;
@@ -41,9 +42,13 @@ public class NCombatVfxSpawner : Control
 
 		public static readonly StringName _env = "_env";
 
+		public static readonly StringName _playerTopPosition = "_playerTopPosition";
+
 		public static readonly StringName _playerPosition = "_playerPosition";
 
 		public static readonly StringName _playerGroundPosition = "_playerGroundPosition";
+
+		public static readonly StringName _enemyTopPosition = "_enemyTopPosition";
 
 		public static readonly StringName _enemyPosition = "_enemyPosition";
 
@@ -71,10 +76,16 @@ public class NCombatVfxSpawner : Control
 	private WorldEnvironment _env;
 
 	[Export(PropertyHint.None, "")]
+	private Node2D _playerTopPosition;
+
+	[Export(PropertyHint.None, "")]
 	private Node2D _playerPosition;
 
 	[Export(PropertyHint.None, "")]
 	private Node2D _playerGroundPosition;
+
+	[Export(PropertyHint.None, "")]
+	private Node2D _enemyTopPosition;
 
 	[Export(PropertyHint.None, "")]
 	private Node2D _enemyPosition;
@@ -128,7 +139,8 @@ public class NCombatVfxSpawner : Control
 
 	private void TestFunctionA(bool shiftPressed)
 	{
-		_lowHpBorderVfx.Play();
+		NSweepingBeamVfx child = NSweepingBeamVfx.Create(_defectEyePosition.GlobalPosition, new Array<Vector2> { _enemyPosition.GlobalPosition });
+		_combatVfxContainer.AddChildSafely(child);
 	}
 
 	private void TestFunctionB(bool shiftPressed)
@@ -317,6 +329,11 @@ public class NCombatVfxSpawner : Control
 			_env = VariantUtils.ConvertTo<WorldEnvironment>(in value);
 			return true;
 		}
+		if (name == PropertyName._playerTopPosition)
+		{
+			_playerTopPosition = VariantUtils.ConvertTo<Node2D>(in value);
+			return true;
+		}
 		if (name == PropertyName._playerPosition)
 		{
 			_playerPosition = VariantUtils.ConvertTo<Node2D>(in value);
@@ -325,6 +342,11 @@ public class NCombatVfxSpawner : Control
 		if (name == PropertyName._playerGroundPosition)
 		{
 			_playerGroundPosition = VariantUtils.ConvertTo<Node2D>(in value);
+			return true;
+		}
+		if (name == PropertyName._enemyTopPosition)
+		{
+			_enemyTopPosition = VariantUtils.ConvertTo<Node2D>(in value);
 			return true;
 		}
 		if (name == PropertyName._enemyPosition)
@@ -378,6 +400,11 @@ public class NCombatVfxSpawner : Control
 			value = VariantUtils.CreateFrom(in _env);
 			return true;
 		}
+		if (name == PropertyName._playerTopPosition)
+		{
+			value = VariantUtils.CreateFrom(in _playerTopPosition);
+			return true;
+		}
 		if (name == PropertyName._playerPosition)
 		{
 			value = VariantUtils.CreateFrom(in _playerPosition);
@@ -386,6 +413,11 @@ public class NCombatVfxSpawner : Control
 		if (name == PropertyName._playerGroundPosition)
 		{
 			value = VariantUtils.CreateFrom(in _playerGroundPosition);
+			return true;
+		}
+		if (name == PropertyName._enemyTopPosition)
+		{
+			value = VariantUtils.CreateFrom(in _enemyTopPosition);
 			return true;
 		}
 		if (name == PropertyName._enemyPosition)
@@ -428,8 +460,10 @@ public class NCombatVfxSpawner : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._backCombatVfxContainer, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._combatVfxContainer, PropertyHint.NodeType, "Control", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._env, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._playerTopPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._playerPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._playerGroundPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._enemyTopPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._enemyPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._enemyGroundPosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._defectEyePosition, PropertyHint.NodeType, "Node2D", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
@@ -446,8 +480,10 @@ public class NCombatVfxSpawner : Control
 		info.AddProperty(PropertyName._backCombatVfxContainer, Variant.From(in _backCombatVfxContainer));
 		info.AddProperty(PropertyName._combatVfxContainer, Variant.From(in _combatVfxContainer));
 		info.AddProperty(PropertyName._env, Variant.From(in _env));
+		info.AddProperty(PropertyName._playerTopPosition, Variant.From(in _playerTopPosition));
 		info.AddProperty(PropertyName._playerPosition, Variant.From(in _playerPosition));
 		info.AddProperty(PropertyName._playerGroundPosition, Variant.From(in _playerGroundPosition));
+		info.AddProperty(PropertyName._enemyTopPosition, Variant.From(in _enemyTopPosition));
 		info.AddProperty(PropertyName._enemyPosition, Variant.From(in _enemyPosition));
 		info.AddProperty(PropertyName._enemyGroundPosition, Variant.From(in _enemyGroundPosition));
 		info.AddProperty(PropertyName._defectEyePosition, Variant.From(in _defectEyePosition));
@@ -472,37 +508,45 @@ public class NCombatVfxSpawner : Control
 		{
 			_env = value3.As<WorldEnvironment>();
 		}
-		if (info.TryGetProperty(PropertyName._playerPosition, out var value4))
+		if (info.TryGetProperty(PropertyName._playerTopPosition, out var value4))
 		{
-			_playerPosition = value4.As<Node2D>();
+			_playerTopPosition = value4.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._playerGroundPosition, out var value5))
+		if (info.TryGetProperty(PropertyName._playerPosition, out var value5))
 		{
-			_playerGroundPosition = value5.As<Node2D>();
+			_playerPosition = value5.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._enemyPosition, out var value6))
+		if (info.TryGetProperty(PropertyName._playerGroundPosition, out var value6))
 		{
-			_enemyPosition = value6.As<Node2D>();
+			_playerGroundPosition = value6.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._enemyGroundPosition, out var value7))
+		if (info.TryGetProperty(PropertyName._enemyTopPosition, out var value7))
 		{
-			_enemyGroundPosition = value7.As<Node2D>();
+			_enemyTopPosition = value7.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._defectEyePosition, out var value8))
+		if (info.TryGetProperty(PropertyName._enemyPosition, out var value8))
 		{
-			_defectEyePosition = value8.As<Node2D>();
+			_enemyPosition = value8.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._lowHpBorderVfx, out var value9))
+		if (info.TryGetProperty(PropertyName._enemyGroundPosition, out var value9))
 		{
-			_lowHpBorderVfx = value9.As<NLowHpBorderVfx>();
+			_enemyGroundPosition = value9.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._gaseousScreenVfx, out var value10))
+		if (info.TryGetProperty(PropertyName._defectEyePosition, out var value10))
 		{
-			_gaseousScreenVfx = value10.As<NGaseousScreenVfx>();
+			_defectEyePosition = value10.As<Node2D>();
 		}
-		if (info.TryGetProperty(PropertyName._shiftPressed, out var value11))
+		if (info.TryGetProperty(PropertyName._lowHpBorderVfx, out var value11))
 		{
-			_shiftPressed = value11.As<bool>();
+			_lowHpBorderVfx = value11.As<NLowHpBorderVfx>();
+		}
+		if (info.TryGetProperty(PropertyName._gaseousScreenVfx, out var value12))
+		{
+			_gaseousScreenVfx = value12.As<NGaseousScreenVfx>();
+		}
+		if (info.TryGetProperty(PropertyName._shiftPressed, out var value13))
+		{
+			_shiftPressed = value13.As<bool>();
 		}
 	}
 }

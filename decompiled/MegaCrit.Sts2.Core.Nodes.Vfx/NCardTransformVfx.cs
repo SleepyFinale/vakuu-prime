@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.TestSupport;
 
@@ -115,13 +116,13 @@ public class NCardTransformVfx : Node2D
 		_tween = CreateTween().SetParallel();
 		_tween.TweenProperty(textureMat, "shader_parameter/brightness", 0f, 0.20000000298023224);
 		_tween.TweenProperty(textureMat, "shader_parameter/boing:x", -0.75f, 0.15000000596046448).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Quad);
-		await ToSignal(_tween, Tween.SignalName.Finished);
+		await _tween.AwaitFinished(this);
 		_tween = CreateTween().SetParallel();
 		_tween.TweenProperty(textureMat, "shader_parameter/boing:x", 0.3f, 0.20000000298023224).SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Quad);
-		await ToSignal(_tween, Tween.SignalName.Finished);
+		await _tween.AwaitFinished(this);
 		_tween = CreateTween().SetParallel();
 		_tween.TweenProperty(textureMat, "shader_parameter/boing:x", -0.2f, 0.25).SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Quad);
-		await ToSignal(_tween, Tween.SignalName.Finished);
+		await _tween.AwaitFinished(this);
 		_tween = CreateTween().SetParallel();
 		_tween.TweenProperty(textureMat, "shader_parameter/boing:x", 0, 0.30000001192092896).SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Back);
 		if (!(await WaitAndInterruptIfNecessary(0.3f, cardNode)))
@@ -138,6 +139,11 @@ public class NCardTransformVfx : Node2D
 			}
 		}
 		if (!(await WaitAndInterruptIfNecessary(0.5f, cardNode)))
+		{
+			this.QueueFreeSafely();
+			return;
+		}
+		if (_endCard.Pile == null)
 		{
 			this.QueueFreeSafely();
 			return;
@@ -163,7 +169,7 @@ public class NCardTransformVfx : Node2D
 			Tween tween = cardNode.CreateTween();
 			tween.TweenProperty(cardNode, "scale", Vector2.One * 1.5f, 0.25).From(Vector2.One).SetEase(Tween.EaseType.Out)
 				.SetTrans(Tween.TransitionType.Cubic);
-			await cardNode.ToSignal(tween, Tween.SignalName.Finished);
+			await tween.AwaitFinished(cardNode);
 			NPlayerHand.Instance?.TryCancelCardPlay(cardNode.Model);
 			cardNode.Model = endCard;
 			cardNode.UpdateVisuals(endCard.Pile.Type, CardPreviewMode.Normal);
@@ -174,7 +180,7 @@ public class NCardTransformVfx : Node2D
 			{
 				nHandCardHolder.UpdateCard();
 			}
-			await cardNode.ToSignal(tween2, Tween.SignalName.Finished);
+			await tween2.AwaitFinished(cardNode);
 		}
 	}
 

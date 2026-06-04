@@ -17,7 +17,12 @@ public class AssetCache
 	{
 		if (_cache.TryGetValue(path, out Resource value))
 		{
-			return value;
+			if (GodotObject.IsInstanceValid(value))
+			{
+				return value;
+			}
+			_cache[path] = ResourceLoader.Load<Resource>(path, null, ResourceLoader.CacheMode.Reuse);
+			return _cache[path];
 		}
 		return LoadAsset(path);
 	}
@@ -55,7 +60,11 @@ public class AssetCache
 		{
 			if (!_missedCacheAssets.Contains(item))
 			{
-				RemoveAndGetResource(item)?.Dispose();
+				Resource resource = RemoveAndGetResource(item);
+				if (resource != null && GodotObject.IsInstanceValid(resource))
+				{
+					Callable.From(resource.Dispose).CallDeferred();
+				}
 			}
 		}
 	}
@@ -69,14 +78,30 @@ public class AssetCache
 		Log.Info($"Unloading {_missedCacheAssets.Count} missed cache assets");
 		foreach (string missedCacheAsset in _missedCacheAssets)
 		{
-			RemoveAndGetResource(missedCacheAsset)?.Dispose();
+			Resource resource = RemoveAndGetResource(missedCacheAsset);
+			if (resource != null && GodotObject.IsInstanceValid(resource))
+			{
+				Callable.From(resource.Dispose).CallDeferred();
+			}
 		}
 		_missedCacheAssets.Clear();
 	}
 
 	public IReadOnlySet<string> GetLoadedCacheAssets()
 	{
-		return new HashSet<string>(_cache.Keys);
+		HashSet<string> hashSet = new HashSet<string>();
+		foreach (KeyValuePair<string, Resource> item in _cache)
+		{
+			if (GodotObject.IsInstanceValid(item.Value))
+			{
+				hashSet.Add(item.Key);
+			}
+			else
+			{
+				_cache.TryRemove(item.Key, out Resource _);
+			}
+		}
+		return hashSet;
 	}
 
 	public IEnumerable<string> GetCacheKeys()

@@ -181,7 +181,7 @@ public class NMultiplayerPlayerExpandedState : Control, ICapstoneScreen, IScreen
 		_potionContainer = GetNode<Control>("%PotionContainer");
 		_backButton = GetNode<NBackButton>("%BackButton");
 		LocString locString = new LocString("gameplay_ui", "MULTIPLAYER_EXPANDED_STATE.title");
-		locString.Add("PlayerName", PlatformUtil.GetPlayerName(RunManager.Instance.NetService.Platform, _player.NetId));
+		locString.Add("PlayerName", PlatformUtil.GetPlayerName(RunManager.Instance.NetService.Platform, _player.NetId).EscapeBbcodeTags());
 		locString.Add("Character", _player.Character.Title);
 		_playerNameLabel.Text = locString.GetFormattedText();
 		LocString locString2 = new LocString("gameplay_ui", "MULTIPLAYER_EXPANDED_STATE.relicHeader");

@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Bindings.MegaSpine;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
@@ -40,6 +41,8 @@ public sealed class LagavulinMatriarch : MonsterModel
 
 	private bool _isAwake;
 
+	private bool _isShellAwake;
+
 	private NSleepingVfx? _sleepingVfx;
 
 	public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, 233, 222);
@@ -71,6 +74,19 @@ public sealed class LagavulinMatriarch : MonsterModel
 		}
 	}
 
+	public bool IsShellAwake
+	{
+		get
+		{
+			return _isShellAwake;
+		}
+		set
+		{
+			AssertMutable();
+			_isShellAwake = value;
+		}
+	}
+
 	private NSleepingVfx? SleepingVfx
 	{
 		get
@@ -84,9 +100,9 @@ public sealed class LagavulinMatriarch : MonsterModel
 		}
 	}
 
-	public override void SetupSkins(NCreatureVisuals visuals)
+	public override void SetupSkins(MegaSprite spine, MegaSkeleton skeleton)
 	{
-		visuals.SpineBody.GetAnimationState().SetAnimation("_tracks/eyes_closed_loop", loop: true, 1);
+		spine.GetAnimationState().SetAnimation("_tracks/eyes_closed_loop", loop: true, 1);
 	}
 
 	public override async Task AfterAddedToRoom()
@@ -95,9 +111,6 @@ public sealed class LagavulinMatriarch : MonsterModel
 		await CreatureCmd.TriggerAnim(base.Creature, "Sleep", 0f);
 		await PowerCmd.Apply<PlatingPower>(base.Creature, 12m, base.Creature, null);
 		await PowerCmd.Apply<AsleepPower>(base.Creature, 3m, base.Creature, null);
-		base.Creature.Died += AfterDeath;
-		base.Creature.CurrentHpChanged += AfterHpChanged;
-		base.Creature.CurrentHpChanged += AfterWokenUp;
 		Marker2D marker2D = NCombatRoom.Instance.GetCreatureNode(base.Creature)?.GetSpecialNode<Marker2D>("%SleepVfxPos");
 		if (marker2D != null)
 		{
@@ -107,30 +120,34 @@ public sealed class LagavulinMatriarch : MonsterModel
 		}
 	}
 
-	private void AfterWokenUp(int _, int __)
+	public override Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
 	{
-		base.Creature.CurrentHpChanged -= AfterWokenUp;
-		SleepingVfx?.Stop();
-		SleepingVfx = null;
-	}
-
-	private void AfterHpChanged(int _, int __)
-	{
-		if (base.Creature.CurrentHp <= base.Creature.MaxHp / 2)
+		if (target != base.Creature)
 		{
-			base.Creature.CurrentHpChanged -= AfterHpChanged;
-			NCreature creatureNode = NCombatRoom.Instance.GetCreatureNode(base.Creature);
-			creatureNode?.SpineController.GetAnimationState().SetAnimation("_tracks/eyes_open", loop: false, 1);
-			creatureNode?.SpineController.GetAnimationState().AddAnimation("_tracks/eyes_open_loop", 0f, loop: true, 1);
+			return Task.CompletedTask;
 		}
-	}
-
-	private void AfterDeath(Creature _)
-	{
-		base.Creature.Died -= AfterDeath;
-		NCombatRoom.Instance.GetCreatureNode(base.Creature)?.SpineController.GetAnimationState().SetAnimation("_tracks/eyes_dead", loop: false, 1);
 		SleepingVfx?.Stop();
 		SleepingVfx = null;
+		if (base.Creature.CurrentHp <= base.Creature.MaxHp / 2 && !IsShellAwake)
+		{
+			NCreature creatureNode = NCombatRoom.Instance.GetCreatureNode(base.Creature);
+			creatureNode?.SpineAnimation.SetAnimation("_tracks/eyes_open", loop: false, 1);
+			creatureNode?.SpineAnimation.AddAnimation("_tracks/eyes_open_loop", 0f, loop: true, 1);
+			IsShellAwake = true;
+		}
+		return Task.CompletedTask;
+	}
+
+	public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+	{
+		if (creature != base.Creature)
+		{
+			return Task.CompletedTask;
+		}
+		NCombatRoom.Instance.GetCreatureNode(base.Creature)?.SpineAnimation.SetAnimation("_tracks/eyes_dead", loop: false, 1);
+		SleepingVfx?.Stop();
+		SleepingVfx = null;
+		return Task.CompletedTask;
 	}
 
 	protected override MonsterMoveStateMachine GenerateMoveStateMachine()
@@ -176,6 +193,8 @@ public sealed class LagavulinMatriarch : MonsterModel
 
 	private async Task SlashMove(IReadOnlyList<Creature> targets)
 	{
+		SleepingVfx?.Stop();
+		SleepingVfx = null;
 		await DamageCmd.Attack(SlashDamage).FromMonster(this).WithAttackerAnim("AttackHeavy", 0.3f)
 			.WithAttackerFx(null, "event:/sfx/enemy/enemy_attacks/lagavulin_matriarch/lagavulin_matriarch_slam")
 			.WithHitFx("vfx/vfx_attack_slash")
@@ -184,6 +203,8 @@ public sealed class LagavulinMatriarch : MonsterModel
 
 	private async Task Slash2Move(IReadOnlyList<Creature> targets)
 	{
+		SleepingVfx?.Stop();
+		SleepingVfx = null;
 		await DamageCmd.Attack(Slash2Damage).FromMonster(this).WithAttackerAnim("AttackHeavy", 0.2f)
 			.WithAttackerFx(null, "event:/sfx/enemy/enemy_attacks/lagavulin_matriarch/lagavulin_matriarch_slam")
 			.WithHitFx("vfx/vfx_attack_slash")
@@ -193,6 +214,8 @@ public sealed class LagavulinMatriarch : MonsterModel
 
 	private async Task DisembowelMove(IReadOnlyList<Creature> targets)
 	{
+		SleepingVfx?.Stop();
+		SleepingVfx = null;
 		await DamageCmd.Attack(DisembowelDamage).WithHitCount(DisembowelRepeat).FromMonster(this)
 			.WithAttackerAnim("AttackDouble", 0.15f)
 			.OnlyPlayAnimOnce()
@@ -203,6 +226,8 @@ public sealed class LagavulinMatriarch : MonsterModel
 
 	private async Task SoulSiphonMove(IReadOnlyList<Creature> targets)
 	{
+		SleepingVfx?.Stop();
+		SleepingVfx = null;
 		SfxCmd.Play("event:/sfx/enemy/enemy_attacks/lagavulin_matriarch/lagavulin_matriarch_cast");
 		await CreatureCmd.TriggerAnim(base.Creature, "Cast", 0.6f);
 		await PowerCmd.Apply<StrengthPower>(targets, -2m, base.Creature, null);

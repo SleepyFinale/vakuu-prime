@@ -20,6 +20,8 @@ public class NSnappingJaxfruitVfx : Node
 
 		public static readonly StringName OnAnimationEvent = "OnAnimationEvent";
 
+		public static readonly StringName OnAnimationStart = "OnAnimationStart";
+
 		public static readonly StringName StartCast = "StartCast";
 
 		public static readonly StringName ResetCast = "ResetCast";
@@ -67,6 +69,7 @@ public class NSnappingJaxfruitVfx : Node
 		_parent = GetParent<Node2D>();
 		_animController = new MegaSprite(_parent);
 		_animController.ConnectAnimationEvent(Callable.From<GodotObject, GodotObject, GodotObject, GodotObject>(OnAnimationEvent));
+		_animController.ConnectAnimationStarted(Callable.From<GodotObject, GodotObject, GodotObject>(OnAnimationStart));
 		_projectileBone = _parent.GetNode<Node2D>("ProjectileAttachBone");
 		_targetBone = _parent.GetNode<Node2D>("TargetBone");
 		_glowParticles = _parent.GetNode<GpuParticles2D>("ProjectileAttachBone/GlowParticles");
@@ -97,6 +100,14 @@ public class NSnappingJaxfruitVfx : Node
 		}
 	}
 
+	private void OnAnimationStart(GodotObject spineSprite, GodotObject animationState, GodotObject trackEntry)
+	{
+		if (new MegaAnimationState(animationState).GetCurrent(0)?.GetAnimation().GetName() != "attack")
+		{
+			ResetCast();
+		}
+	}
+
 	private void StartCast()
 	{
 		NCreature nCreature = NCombatRoom.Instance?.GetCreatureNode(_target);
@@ -120,7 +131,7 @@ public class NSnappingJaxfruitVfx : Node
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(4);
+		List<MethodInfo> list = new List<MethodInfo>(5);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnAnimationEvent, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -128,6 +139,12 @@ public class NSnappingJaxfruitVfx : Node
 			new PropertyInfo(Variant.Type.Object, "__", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false),
 			new PropertyInfo(Variant.Type.Object, "___", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false),
 			new PropertyInfo(Variant.Type.Object, "spineEvent", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false)
+		}, null));
+		list.Add(new MethodInfo(MethodName.OnAnimationStart, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
+		{
+			new PropertyInfo(Variant.Type.Object, "spineSprite", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false),
+			new PropertyInfo(Variant.Type.Object, "animationState", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false),
+			new PropertyInfo(Variant.Type.Object, "trackEntry", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Object"), exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.StartCast, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ResetCast, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -146,6 +163,12 @@ public class NSnappingJaxfruitVfx : Node
 		if (method == MethodName.OnAnimationEvent && args.Count == 4)
 		{
 			OnAnimationEvent(VariantUtils.ConvertTo<GodotObject>(in args[0]), VariantUtils.ConvertTo<GodotObject>(in args[1]), VariantUtils.ConvertTo<GodotObject>(in args[2]), VariantUtils.ConvertTo<GodotObject>(in args[3]));
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.OnAnimationStart && args.Count == 3)
+		{
+			OnAnimationStart(VariantUtils.ConvertTo<GodotObject>(in args[0]), VariantUtils.ConvertTo<GodotObject>(in args[1]), VariantUtils.ConvertTo<GodotObject>(in args[2]));
 			ret = default(godot_variant);
 			return true;
 		}
@@ -172,6 +195,10 @@ public class NSnappingJaxfruitVfx : Node
 			return true;
 		}
 		if (method == MethodName.OnAnimationEvent)
+		{
+			return true;
+		}
+		if (method == MethodName.OnAnimationStart)
 		{
 			return true;
 		}

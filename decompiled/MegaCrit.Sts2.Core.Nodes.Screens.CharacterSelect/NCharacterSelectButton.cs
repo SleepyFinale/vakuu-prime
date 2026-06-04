@@ -86,6 +86,8 @@ public class NCharacterSelectButton : NButton
 
 		public static readonly StringName IsLocked = "IsLocked";
 
+		public static readonly StringName IsSelected = "IsSelected";
+
 		public static readonly StringName _icon = "_icon";
 
 		public static readonly StringName _iconAdd = "_iconAdd";
@@ -196,6 +198,8 @@ public class NCharacterSelectButton : NButton
 	public CharacterModel Character => _character;
 
 	public bool IsLocked => _isLocked;
+
+	public bool IsSelected => _isSelected;
 
 	public override void _Ready()
 	{
@@ -893,6 +897,12 @@ public class NCharacterSelectButton : NButton
 			value = VariantUtils.CreateFrom(in from);
 			return true;
 		}
+		if (name == PropertyName.IsSelected)
+		{
+			from = IsSelected;
+			value = VariantUtils.CreateFrom(in from);
+			return true;
+		}
 		if (name == PropertyName._icon)
 		{
 			value = VariantUtils.CreateFrom(in _icon);
@@ -992,6 +1002,7 @@ public class NCharacterSelectButton : NButton
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._hoverTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._hsvTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsLocked, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsSelected, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 

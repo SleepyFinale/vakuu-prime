@@ -1,0 +1,174 @@
+"""Diff decompiled sources vs manifest and parity audit."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from scripts.sync.common import (
+    DECOMPILED_PREV_DIR,
+    MODEL_SURFACES,
+    REPO_ROOT,
+    SYNC_REPORT_PATH,
+)
+from scripts.sync.manifest import SyncManifest, current_surface_counts, dll_sha256
+
+
+@dataclass(frozen=True)
+class SurfaceDiff:
+    surface: str
+    added: tuple[str, ...]
+    removed: tuple[str, ...]
+    changed: tuple[str, ...]
+
+
+def _file_hashes(directory: Path) -> dict[str, str]:
+    import hashlib
+
+    result: dict[str, str] = {}
+    if not directory.is_dir():
+        return result
+    for path in sorted(directory.glob("*.cs")):
+        result[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return result
+
+
+def diff_surfaces(prev_root: Path | None = None) -> list[SurfaceDiff]:
+    prev_root = prev_root or DECOMPILED_PREV_DIR
+    diffs: list[SurfaceDiff] = []
+    for surface, relative in MODEL_SURFACES.items():
+        current_dir = REPO_ROOT / relative
+        prev_dir = prev_root / Path(relative).name
+        if not prev_dir.is_dir():
+            prev_hashes: dict[str, str] = {}
+        else:
+            prev_hashes = _file_hashes(prev_dir)
+        current_hashes = _file_hashes(current_dir)
+        added = tuple(sorted(set(current_hashes) - set(prev_hashes)))
+        removed = tuple(sorted(set(prev_hashes) - set(current_hashes)))
+        changed = tuple(
+            sorted(
+                name
+                for name in set(current_hashes) & set(prev_hashes)
+                if current_hashes[name] != prev_hashes[name]
+            )
+        )
+        diffs.append(SurfaceDiff(surface, added, removed, changed))
+    return diffs
+
+
+def run_parity_audit_json() -> dict | None:
+    script = REPO_ROOT / "scripts" / "parity_reference_audit.py"
+    if not script.is_file():
+        return None
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script), "--json"],
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        return json.loads(result.stdout)
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        return None
+
+
+def write_sync_report(
+    *,
+    dll_path: Path | None = None,
+    scaffold_summary: list[str] | None = None,
+    static_summary: list[str] | None = None,
+    output: Path = SYNC_REPORT_PATH,
+) -> Path:
+    lines: list[str] = ["# STS2 Sync Report", ""]
+    manifest = SyncManifest.load()
+    if manifest:
+        lines.append(f"Last manifest sync: {manifest.synced_at}")
+        lines.append(f"Previous DLL SHA256: `{manifest.sts2_dll_sha256[:16]}...`")
+        lines.append("")
+    if dll_path and dll_path.is_file():
+        current_hash = dll_sha256(dll_path)
+        lines.append(f"Current DLL SHA256: `{current_hash}`")
+        if manifest and manifest.sts2_dll_sha256 != current_hash:
+            lines.append("**DLL changed since last manifest.**")
+        lines.append("")
+
+    counts = current_surface_counts()
+    if manifest:
+        lines.append("## Surface file counts")
+        lines.append("")
+        lines.append("| Surface | Previous | Current | Delta |")
+        lines.append("| ------- | -------- | ------- | ----- |")
+        for surface, count in sorted(counts.items()):
+            prev = manifest.surfaces.get(surface, 0)
+            lines.append(f"| {surface} | {prev} | {count} | {count - prev:+d} |")
+        lines.append("")
+
+    lines.append("## Decompiled diff (vs decompiled_prev/)")
+    lines.append("")
+    for diff in diff_surfaces():
+        if not (diff.added or diff.removed or diff.changed):
+            lines.append(f"### {diff.surface}: no changes")
+            continue
+        lines.append(f"### {diff.surface}")
+        if diff.added:
+            lines.append(f"- Added ({len(diff.added)}): " + ", ".join(diff.added[:20]))
+            if len(diff.added) > 20:
+                lines.append(f"  - ... and {len(diff.added) - 20} more")
+        if diff.removed:
+            lines.append(f"- Removed ({len(diff.removed)}): " + ", ".join(diff.removed[:20]))
+        if diff.changed:
+            lines.append(f"- Changed ({len(diff.changed)}): " + ", ".join(diff.changed[:20]))
+        lines.append("")
+
+    audit = run_parity_audit_json()
+    if audit:
+        lines.append("## Parity audit")
+        lines.append("")
+        rows = audit if isinstance(audit, list) else audit.get("summary", [])
+        for row in rows:
+            if isinstance(row, dict):
+                missing_impl = row.get("missing_implementation", [])
+                missing_tests = row.get("missing_tests", [])
+                impl_count = (
+                    len(missing_impl)
+                    if isinstance(missing_impl, (list, tuple))
+                    else missing_impl
+                )
+                test_count = (
+                    len(missing_tests)
+                    if isinstance(missing_tests, (list, tuple))
+                    else missing_tests
+                )
+                lines.append(
+                    f"- **{row.get('surface', '?')}**: "
+                    f"{impl_count} missing impl, "
+                    f"{test_count} missing tests"
+                )
+            else:
+                lines.append(f"- {row}")
+        lines.append("")
+
+    if scaffold_summary:
+        lines.append("## Scaffold")
+        lines.append("")
+        lines.extend(f"- {line}" for line in scaffold_summary)
+        lines.append("")
+
+    if static_summary:
+        lines.append("## Static apply")
+        lines.append("")
+        lines.extend(f"- {line}" for line in static_summary)
+        lines.append("")
+
+    lines.append("## Manual work queue")
+    lines.append("")
+    lines.append("Implement `@register_effect`, power hooks, and monster AI for new/changed classes above.")
+    lines.append("")
+
+    output.write_text("\n".join(lines), encoding="utf-8")
+    return output

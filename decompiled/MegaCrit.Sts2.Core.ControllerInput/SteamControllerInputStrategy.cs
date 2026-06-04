@@ -433,11 +433,11 @@ public class SteamControllerInputStrategy : IControllerInputStrategy
 		},
 		{
 			EInputActionOrigin.k_EInputActionOrigin_Switch_X,
-			Controller.faceButtonWest
+			Controller.faceButtonNorth
 		},
 		{
 			EInputActionOrigin.k_EInputActionOrigin_Switch_Y,
-			Controller.faceButtonNorth
+			Controller.faceButtonWest
 		},
 		{
 			EInputActionOrigin.k_EInputActionOrigin_Switch_LeftBumper,
@@ -621,7 +621,6 @@ public class SteamControllerInputStrategy : IControllerInputStrategy
 				_left = new StringName("Left");
 				_right = new StringName("Right");
 				_joystickActionHandle = SteamInput.GetAnalogActionHandle("Joystick");
-				NInputManager.Instance.ResetToDefaultControllerMapping();
 			}
 			catch (InvalidOperationException ex)
 			{

@@ -242,8 +242,11 @@ public class NMultiplayerLoadGameScreen : NSubmenu, ILoadRunLobbyListener
 	{
 		_confirmButton.Disable();
 		_backButton.Disable();
-		_unreadyButton.Enable();
 		_runLobby.SetReady(ready: true);
+		if (!_runLobby.IsAboutToBeginGame())
+		{
+			_unreadyButton.Enable();
+		}
 	}
 
 	private void OnUnreadyPressed(NButton _)
@@ -316,6 +319,8 @@ public class NMultiplayerLoadGameScreen : NSubmenu, ILoadRunLobbyListener
 		if (playerId == _runLobby.NetService.NetId && !_runLobby.IsPlayerReady(playerId))
 		{
 			_confirmButton.Enable();
+			_backButton.Enable();
+			_unreadyButton.Disable();
 		}
 	}
 
@@ -329,6 +334,8 @@ public class NMultiplayerLoadGameScreen : NSubmenu, ILoadRunLobbyListener
 	public void BeginRun()
 	{
 		NAudioManager.Instance?.StopMusic();
+		_confirmButton.Disable();
+		_unreadyButton.Disable();
 		TaskHelper.RunSafely(StartRun());
 	}
 
@@ -338,7 +345,10 @@ public class NMultiplayerLoadGameScreen : NSubmenu, ILoadRunLobbyListener
 		{
 			return;
 		}
-		_stack.Pop();
+		if (_stack != null && _stack.Peek() == this)
+		{
+			_stack.Pop();
+		}
 		if (TestMode.IsOff)
 		{
 			NErrorPopup nErrorPopup = NErrorPopup.Create(info);

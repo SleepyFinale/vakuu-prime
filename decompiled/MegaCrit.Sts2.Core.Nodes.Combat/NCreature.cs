@@ -125,6 +125,8 @@ public class NCreature : Control
 
 		public static readonly StringName VfxSpawnPosition = "VfxSpawnPosition";
 
+		public static readonly StringName PowerAppliedVfxSpawnPosition = "PowerAppliedVfxSpawnPosition";
+
 		public static readonly StringName Visuals = "Visuals";
 
 		public static readonly StringName Body = "Body";
@@ -182,6 +184,8 @@ public class NCreature : Control
 
 	public static IEnumerable<string> AssetPaths => new global::_003C_003Ez__ReadOnlySingleElementList<string>(_scenePath);
 
+	public static Vector2 PowerAppliedVfxPositionOffset => new Vector2(0f, -200f);
+
 	public Task? DeathAnimationTask { get; set; }
 
 	public CancellationTokenSource DeathAnimCancelToken { get; } = new CancellationTokenSource();
@@ -196,9 +200,11 @@ public class NCreature : Control
 
 	public Vector2 VfxSpawnPosition => Visuals.VfxSpawnPosition.GlobalPosition;
 
+	public Vector2 PowerAppliedVfxSpawnPosition => VfxSpawnPosition + PowerAppliedVfxPositionOffset;
+
 	public NCreatureVisuals Visuals { get; private set; }
 
-	public Node2D Body => Visuals.Body;
+	public Node2D Body => Visuals.GetCurrentBody();
 
 	public Control IntentContainer { get; private set; }
 
@@ -206,7 +212,7 @@ public class NCreature : Control
 
 	public bool HasSpineAnimation => Visuals.HasSpineAnimation;
 
-	public MegaSprite? SpineController => Visuals.SpineBody;
+	public SpineAnimationAccess SpineAnimation => Visuals.SpineAnimation;
 
 	public bool IsFocused { get; private set; }
 
@@ -214,7 +220,7 @@ public class NCreature : Control
 
 	public T? GetSpecialNode<T>(string name) where T : Node
 	{
-		return Visuals.GetNode<T>(name);
+		return Visuals.GetNodeOrNull<T>(name);
 	}
 
 	public static NCreature? Create(Creature entity)
@@ -278,19 +284,19 @@ public class NCreature : Control
 		{
 			if (Entity.Player != null)
 			{
-				_spineAnimator = Entity.Player.Character.GenerateAnimator(SpineController);
+				_spineAnimator = Entity.Player.Character.GenerateAnimator(Visuals.SpineBody);
 			}
 			else
 			{
-				_spineAnimator = Entity.Monster.GenerateAnimator(SpineController);
+				_spineAnimator = Entity.Monster.GenerateAnimator(Visuals.SpineBody);
 				Visuals.SetUpSkin(Entity.Monster);
 			}
 			ConnectSpineAnimatorSignals();
 			if (Entity.IsDead)
 			{
 				SetAnimationTrigger("Dead");
-				MegaTrackEntry current = Visuals.SpineBody.GetAnimationState().GetCurrent(0);
-				current.SetTrackTime(current.GetAnimationEnd());
+				MegaTrackEntry currentTrack = SpineAnimation.GetCurrentTrack();
+				currentTrack?.SetTrackTime(currentTrack.GetAnimationEnd());
 			}
 		}
 		SetOrbManagerPosition();
@@ -552,9 +558,26 @@ public class NCreature : Control
 		{
 			return;
 		}
-		NPowerAppliedVfx vfx = NPowerAppliedVfx.Create(power, amount);
+		bool flag = power.GetTypeForAmount(power.Amount) == PowerType.Buff;
+		NPowerAppliedVfx vfx = NPowerAppliedVfx.Create(power, amount, flag);
 		if (vfx != null)
 		{
+			if (flag)
+			{
+				NPowerAppliedBuffVfx buffVfx = NPowerAppliedBuffVfx.Create(PowerAppliedVfxSpawnPosition);
+				Callable.From(delegate
+				{
+					NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(buffVfx);
+				}).CallDeferred();
+			}
+			else
+			{
+				NPowerAppliedDebuffVfx debuffVfx = NPowerAppliedDebuffVfx.Create(PowerAppliedVfxSpawnPosition);
+				Callable.From(delegate
+				{
+					NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(debuffVfx);
+				}).CallDeferred();
+			}
 			Callable.From(delegate
 			{
 				NCombatRoom.Instance?.CombatVfxContainer.AddChildSafely(vfx);
@@ -562,9 +585,9 @@ public class NCreature : Control
 		}
 		if (power.ShouldPlayVfx)
 		{
-			SfxCmd.Play((power.GetTypeForAmount(amount) == PowerType.Buff) ? "event:/sfx/buff" : "event:/sfx/debuff");
+			SfxCmd.Play(flag ? "event:/sfx/buff" : "event:/sfx/debuff");
 		}
-		if (power.GetTypeForAmount(power.Amount) == PowerType.Debuff)
+		if (!flag)
 		{
 			AnimShake();
 		}
@@ -608,14 +631,17 @@ public class NCreature : Control
 
 	public float GetCurrentAnimationLength()
 	{
-		return SpineController.GetAnimationState().GetCurrent(0).GetAnimation()
-			.GetDuration();
+		return SpineAnimation.GetCurrentTrack()?.GetAnimation().GetDuration() ?? 0f;
 	}
 
 	public float GetCurrentAnimationTimeRemaining()
 	{
-		MegaTrackEntry current = SpineController.GetAnimationState().GetCurrent(0);
-		return current.GetTrackComplete() - current.GetTrackTime();
+		MegaTrackEntry currentTrack = SpineAnimation.GetCurrentTrack();
+		if (currentTrack == null)
+		{
+			return 0f;
+		}
+		return currentTrack.GetTrackComplete() - currentTrack.GetTrackTime();
 	}
 
 	public void ToggleIsInteractable(bool on)
@@ -716,9 +742,12 @@ public class NCreature : Control
 	private void ImmediatelySetIdle()
 	{
 		_spineAnimator?.SetTrigger("Idle");
-		MegaTrackEntry current = Visuals.SpineBody.GetAnimationState().GetCurrent(0);
-		current.SetMixDuration(0f);
-		current.SetTrackTime(current.GetAnimationEnd());
+		MegaTrackEntry currentTrack = SpineAnimation.GetCurrentTrack();
+		if (currentTrack != null)
+		{
+			currentTrack.SetMixDuration(0f);
+			currentTrack.SetTrackTime(currentTrack.GetAnimationEnd());
+		}
 	}
 
 	private async Task AnimDie(bool shouldRemove, CancellationToken cancelToken)
@@ -766,7 +795,7 @@ public class NCreature : Control
 			{
 				if (disableUiTween.IsValid() && disableUiTween.IsRunning())
 				{
-					await ToSignal(disableUiTween, Tween.SignalName.Finished);
+					await disableUiTween.AwaitFinished(this);
 				}
 				foreach (IDeathDelayer item in this.GetChildrenRecursive<IDeathDelayer>())
 				{
@@ -779,7 +808,7 @@ public class NCreature : Control
 			}
 			this.QueueFreeSafely();
 		}
-		if (Entity.Monster is Osty)
+		else if (Entity.Monster is Osty)
 		{
 			OstyScaleToSize(0f, 0.75f);
 		}
@@ -846,7 +875,7 @@ public class NCreature : Control
 
 	public void AnimShake()
 	{
-		if ((_shakeTween == null || !_shakeTween.IsRunning()) && !Visuals.IsPlayingHurtAnimation())
+		if (IsInsideTree() && (_shakeTween == null || !_shakeTween.IsRunning()) && !Visuals.IsPlayingHurtAnimation())
 		{
 			Visuals.Position = Vector2.Zero;
 			_shakeTween = CreateTween();
@@ -1453,9 +1482,17 @@ public class NCreature : Control
 			value = VariantUtils.CreateFrom(in from2);
 			return true;
 		}
+		Vector2 from3;
 		if (name == PropertyName.VfxSpawnPosition)
 		{
-			value = VariantUtils.CreateFrom<Vector2>(VfxSpawnPosition);
+			from3 = VfxSpawnPosition;
+			value = VariantUtils.CreateFrom(in from3);
+			return true;
+		}
+		if (name == PropertyName.PowerAppliedVfxSpawnPosition)
+		{
+			from3 = PowerAppliedVfxSpawnPosition;
+			value = VariantUtils.CreateFrom(in from3);
 			return true;
 		}
 		if (name == PropertyName.Visuals)
@@ -1556,6 +1593,7 @@ public class NCreature : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._selectionReticle, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsInteractable, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName.VfxSpawnPosition, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName.PowerAppliedVfxSpawnPosition, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.Visuals, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.Body, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.IntentContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));

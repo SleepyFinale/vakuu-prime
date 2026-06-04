@@ -285,16 +285,21 @@ public class NJoinFriendScreen : NSubmenu
 			}
 			else if (joinResult.sessionState == RunSessionState.Running)
 			{
-				throw new NotImplementedException("Rejoining a game is not yet implemented");
+				NErrorPopup nErrorPopup = NErrorPopup.Create(new NetErrorInfo(NetError.RunInProgress, selfInitiated: false));
+				if (nErrorPopup != null)
+				{
+					NModalContainer.Instance.Add(nErrorPopup);
+				}
+				_currentJoinFlow.NetService?.Disconnect(NetError.RunInProgress);
 			}
 		}
 		catch (ClientConnectionFailedException ex)
 		{
 			Log.Error($"Received connection failed exception while joining game: {ex}");
-			NErrorPopup nErrorPopup = NErrorPopup.Create(ex.info);
-			if (nErrorPopup != null)
+			NErrorPopup nErrorPopup2 = NErrorPopup.Create(ex.info);
+			if (nErrorPopup2 != null)
 			{
-				NModalContainer.Instance.Add(nErrorPopup);
+				NModalContainer.Instance.Add(nErrorPopup2);
 			}
 			_currentJoinFlow.NetService?.Disconnect(ex.info.GetReason());
 		}
@@ -302,20 +307,23 @@ public class NJoinFriendScreen : NSubmenu
 		{
 			Log.Warn("Joining was canceled by user");
 		}
-		catch
+		catch (Exception ex3)
 		{
-			Log.Error("Received unexpected exception while joining game! Disconnecting with InternalError");
-			NErrorPopup nErrorPopup2 = NErrorPopup.Create(new NetErrorInfo(NetError.InternalError, selfInitiated: false));
-			if (nErrorPopup2 != null)
+			Log.Error($"Received unexpected exception {ex3.GetType()} while joining game! Disconnecting with InternalError");
+			NErrorPopup nErrorPopup3 = NErrorPopup.Create(new NetErrorInfo(NetError.InternalError, selfInitiated: false));
+			if (nErrorPopup3 != null)
 			{
-				NModalContainer.Instance.Add(nErrorPopup2);
+				NModalContainer.Instance.Add(nErrorPopup3);
 			}
 			_currentJoinFlow.NetService?.Disconnect(NetError.InternalError);
 			throw;
 		}
 		finally
 		{
-			_loadingOverlay.Visible = false;
+			if (GodotObject.IsInstanceValid(this))
+			{
+				_loadingOverlay.Visible = false;
+			}
 		}
 	}
 

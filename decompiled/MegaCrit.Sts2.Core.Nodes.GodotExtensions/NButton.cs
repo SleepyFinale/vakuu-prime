@@ -135,7 +135,7 @@ public class NButton : NClickableControl
 
 	protected override void OnEnable()
 	{
-		Callable.From(RegisterHotkeys).CallDeferred();
+		RegisterHotkeys();
 		UpdateControllerButton();
 	}
 

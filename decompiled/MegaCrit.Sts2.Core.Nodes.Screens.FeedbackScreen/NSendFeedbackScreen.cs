@@ -18,6 +18,7 @@ using MegaCrit.Sts2.Core.DevConsole.ConsoleCommands;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
@@ -81,6 +82,8 @@ public class NSendFeedbackScreen : Control, IScreenContext
 
 		public static readonly StringName _sendLabel = "_sendLabel";
 
+		public static readonly StringName _categoryLabel = "_categoryLabel";
+
 		public static readonly StringName _categoryDropdown = "_categoryDropdown";
 
 		public static readonly StringName _successBackstop = "_successBackstop";
@@ -120,9 +123,12 @@ public class NSendFeedbackScreen : Control, IScreenContext
 
 	private static readonly string _url = System.Environment.GetEnvironmentVariable("STS2_FEEDBACK_URL") ?? "https://feedback.sts2.megacrit.com/feedback";
 
-	private static readonly System.Net.Http.HttpClient _httpClient = new System.Net.Http.HttpClient();
+	private static readonly System.Net.Http.HttpClient _httpClient = new System.Net.Http.HttpClient
+	{
+		Timeout = TimeSpan.FromSeconds(10L)
+	};
 
-	private const int _maxDescriptionChars = 500;
+	private const int _maxDescriptionChars = 8000;
 
 	private NBackButton _backButton;
 
@@ -135,6 +141,8 @@ public class NSendFeedbackScreen : Control, IScreenContext
 	private NButton _sendButton;
 
 	private MegaLabel _sendLabel;
+
+	private MegaLabel _categoryLabel;
 
 	private NFeedbackCategoryDropdown _categoryDropdown;
 
@@ -188,6 +196,7 @@ public class NSendFeedbackScreen : Control, IScreenContext
 		_emojiLabel = GetNode<MegaLabel>("%EmojiLabel");
 		_sendButton = GetNode<NButton>("%SendButton");
 		_sendLabel = _sendButton.GetNode<MegaLabel>("Label");
+		_categoryLabel = GetNode<MegaLabel>("%CategoryLabel");
 		_categoryDropdown = GetNode<NFeedbackCategoryDropdown>("%CategoryDropdown");
 		_successBackstop = GetNode<Control>("%SuccessBackstop");
 		_successPanel = GetNode<Control>("%SuccessPanel");
@@ -248,16 +257,18 @@ public class NSendFeedbackScreen : Control, IScreenContext
 	public void Relocalize()
 	{
 		_descriptionInput.PlaceholderText = new LocString("settings_ui", "FEEDBACK_DESCRIPTION_PLACEHOLDER").GetFormattedText();
+		_categoryLabel.SetTextAutoSize(new LocString("settings_ui", "FEEDBACK_CATEGORY_LABEL").GetFormattedText());
 		_emojiLabel.SetTextAutoSize(new LocString("settings_ui", "FEEDBACK_EMOJI_LABEL").GetFormattedText());
 		_sendLabel.SetTextAutoSize(new LocString("settings_ui", "FEEDBACK_SEND_BUTTON_LABEL").GetFormattedText());
 		_descriptionInput.RefreshFont();
+		_categoryLabel.RefreshFont();
 		_emojiLabel.RefreshFont();
 		_sendLabel.RefreshFont();
 	}
 
 	private void OnDescriptionChanged()
 	{
-		if (_descriptionInput.Text.Length > 500)
+		if (_descriptionInput.Text.Length > 8000)
 		{
 			_descriptionInput.Text = _descriptionText;
 			_descriptionInput.SetCaretLine(_descriptionCaretLine);
@@ -307,18 +318,21 @@ public class NSendFeedbackScreen : Control, IScreenContext
 
 	public void Open()
 	{
-		Log.Info("Feedback screen opened");
-		if (Time.GetTicksMsec() - _lastClosedMsec > 60000)
+		if (!base.Visible)
 		{
-			ClearInput();
+			Log.Info("Feedback screen opened");
+			if (Time.GetTicksMsec() - _lastClosedMsec > 60000)
+			{
+				ClearInput();
+			}
+			base.Visible = true;
+			_flower.SetState(NSendFeedbackFlower.State.None);
+			_successBackstop.Visible = false;
+			base.MouseFilter = MouseFilterEnum.Stop;
+			NHotkeyManager.Instance.AddBlockingScreen(this);
+			ActiveScreenContext.Instance.Update();
+			_backButton.Enable();
 		}
-		base.Visible = true;
-		_flower.SetState(NSendFeedbackFlower.State.None);
-		_successBackstop.Visible = false;
-		base.MouseFilter = MouseFilterEnum.Stop;
-		NHotkeyManager.Instance.AddBlockingScreen(this);
-		ActiveScreenContext.Instance.Update();
-		_backButton.Enable();
 	}
 
 	private void Close()
@@ -367,7 +381,10 @@ public class NSendFeedbackScreen : Control, IScreenContext
 			gameVersion = (releaseInfo?.Version ?? GitHelper.ShortCommitId ?? "unknown"),
 			uniqueId = SaveManager.Instance.Progress.UniqueId,
 			commit = (text ?? "unknown"),
-			platformBranch = PlatformUtil.GetPlatformBranch()
+			platformBranch = PlatformUtil.GetPlatformBranch(),
+			sessionId = SentryService.SessionId,
+			isModded = (ModManager.IsRunningModded() || ModManager.HasHarmonyPatches()),
+			isFullConsole = SaveManager.Instance.SettingsSave.FullConsole
 		};
 		byte[] screenshotBytes = _screenshotBytes;
 		int currentProfileId = SaveManager.Instance.CurrentProfileId;
@@ -418,12 +435,16 @@ public class NSendFeedbackScreen : Control, IScreenContext
 				sentryMessage = $"Response status code {response.StatusCode}";
 				Log.Warn($"Feedback attempt {attempt + 1}/{4} failed: {response.StatusCode}");
 			}
-			catch (HttpRequestException ex)
+			catch (Exception ex) when (((ex is HttpRequestException || ex is TaskCanceledException) ? 1 : 0) != 0)
 			{
-				string text = $"Feedback attempt {attempt + 1}/{4} network error: {ExceptionMessageWithInner(ex)} {ex.HttpRequestError}";
-				if (ex.HttpRequestError != HttpRequestError.NameResolutionError)
+				if (cancellationToken.IsCancellationRequested)
 				{
-					sentryMessage = "HttpRequestException: " + ExceptionMessageWithInner(ex);
+					throw;
+				}
+				string text = $"Feedback attempt {attempt + 1}/{4} network error: {ExceptionMessageWithInner(ex)}";
+				if (ex is HttpRequestException { HttpRequestError: not HttpRequestError.NameResolutionError })
+				{
+					sentryMessage = ex.GetType().Name + ": " + ExceptionMessageWithInner(ex);
 				}
 				Log.Warn(text);
 			}
@@ -780,6 +801,11 @@ public class NSendFeedbackScreen : Control, IScreenContext
 			_sendLabel = VariantUtils.ConvertTo<MegaLabel>(in value);
 			return true;
 		}
+		if (name == PropertyName._categoryLabel)
+		{
+			_categoryLabel = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
 		if (name == PropertyName._categoryDropdown)
 		{
 			_categoryDropdown = VariantUtils.ConvertTo<NFeedbackCategoryDropdown>(in value);
@@ -886,6 +912,11 @@ public class NSendFeedbackScreen : Control, IScreenContext
 			value = VariantUtils.CreateFrom(in _sendLabel);
 			return true;
 		}
+		if (name == PropertyName._categoryLabel)
+		{
+			value = VariantUtils.CreateFrom(in _categoryLabel);
+			return true;
+		}
 		if (name == PropertyName._categoryDropdown)
 		{
 			value = VariantUtils.CreateFrom(in _categoryDropdown);
@@ -964,6 +995,7 @@ public class NSendFeedbackScreen : Control, IScreenContext
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._emojiLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._sendButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._sendLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._categoryLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._categoryDropdown, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._successBackstop, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._successPanel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -991,6 +1023,7 @@ public class NSendFeedbackScreen : Control, IScreenContext
 		info.AddProperty(PropertyName._emojiLabel, Variant.From(in _emojiLabel));
 		info.AddProperty(PropertyName._sendButton, Variant.From(in _sendButton));
 		info.AddProperty(PropertyName._sendLabel, Variant.From(in _sendLabel));
+		info.AddProperty(PropertyName._categoryLabel, Variant.From(in _categoryLabel));
 		info.AddProperty(PropertyName._categoryDropdown, Variant.From(in _categoryDropdown));
 		info.AddProperty(PropertyName._successBackstop, Variant.From(in _successBackstop));
 		info.AddProperty(PropertyName._successPanel, Variant.From(in _successPanel));
@@ -1034,57 +1067,61 @@ public class NSendFeedbackScreen : Control, IScreenContext
 		{
 			_sendLabel = value6.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._categoryDropdown, out var value7))
+		if (info.TryGetProperty(PropertyName._categoryLabel, out var value7))
 		{
-			_categoryDropdown = value7.As<NFeedbackCategoryDropdown>();
+			_categoryLabel = value7.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._successBackstop, out var value8))
+		if (info.TryGetProperty(PropertyName._categoryDropdown, out var value8))
 		{
-			_successBackstop = value8.As<Control>();
+			_categoryDropdown = value8.As<NFeedbackCategoryDropdown>();
 		}
-		if (info.TryGetProperty(PropertyName._successPanel, out var value9))
+		if (info.TryGetProperty(PropertyName._successBackstop, out var value9))
 		{
-			_successPanel = value9.As<Control>();
+			_successBackstop = value9.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._successLabel, out var value10))
+		if (info.TryGetProperty(PropertyName._successPanel, out var value10))
 		{
-			_successLabel = value10.As<MegaLabel>();
+			_successPanel = value10.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._flower, out var value11))
+		if (info.TryGetProperty(PropertyName._successLabel, out var value11))
 		{
-			_flower = value11.As<NSendFeedbackFlower>();
+			_successLabel = value11.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._selectedEmoteButton, out var value12))
+		if (info.TryGetProperty(PropertyName._flower, out var value12))
 		{
-			_selectedEmoteButton = value12.As<NSendFeedbackEmojiButton>();
+			_flower = value12.As<NSendFeedbackFlower>();
 		}
-		if (info.TryGetProperty(PropertyName._screenshotBytes, out var value13))
+		if (info.TryGetProperty(PropertyName._selectedEmoteButton, out var value13))
 		{
-			_screenshotBytes = value13.As<byte[]>();
+			_selectedEmoteButton = value13.As<NSendFeedbackEmojiButton>();
 		}
-		if (info.TryGetProperty(PropertyName._originalSuccessPosition, out var value14))
+		if (info.TryGetProperty(PropertyName._screenshotBytes, out var value14))
 		{
-			_originalSuccessPosition = value14.As<Vector2>();
+			_screenshotBytes = value14.As<byte[]>();
 		}
-		if (info.TryGetProperty(PropertyName._lastClosedMsec, out var value15))
+		if (info.TryGetProperty(PropertyName._originalSuccessPosition, out var value15))
 		{
-			_lastClosedMsec = value15.As<ulong>();
+			_originalSuccessPosition = value15.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._descriptionText, out var value16))
+		if (info.TryGetProperty(PropertyName._lastClosedMsec, out var value16))
 		{
-			_descriptionText = value16.As<string>();
+			_lastClosedMsec = value16.As<ulong>();
 		}
-		if (info.TryGetProperty(PropertyName._descriptionCaretLine, out var value17))
+		if (info.TryGetProperty(PropertyName._descriptionText, out var value17))
 		{
-			_descriptionCaretLine = value17.As<int>();
+			_descriptionText = value17.As<string>();
 		}
-		if (info.TryGetProperty(PropertyName._descriptionCaretColumn, out var value18))
+		if (info.TryGetProperty(PropertyName._descriptionCaretLine, out var value18))
 		{
-			_descriptionCaretColumn = value18.As<int>();
+			_descriptionCaretLine = value18.As<int>();
 		}
-		if (info.TryGetProperty(PropertyName._wiggleTween, out var value19))
+		if (info.TryGetProperty(PropertyName._descriptionCaretColumn, out var value19))
 		{
-			_wiggleTween = value19.As<Tween>();
+			_descriptionCaretColumn = value19.As<int>();
+		}
+		if (info.TryGetProperty(PropertyName._wiggleTween, out var value20))
+		{
+			_wiggleTween = value20.As<Tween>();
 		}
 	}
 }

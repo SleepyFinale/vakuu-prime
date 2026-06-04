@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 
@@ -32,7 +33,7 @@ public sealed class HellraiserPower : PowerModel
 
 	public override async Task AfterCardDrawnEarly(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
 	{
-		if (card.Owner.Creature == base.Owner && card.Tags.Contains(CardTag.Strike))
+		if (card.Owner.Creature == base.Owner && card.Tags.Contains(CardTag.Strike) && !base.Owner.CombatState.HittableEnemies.All((Creature c) => c.ShowsInfiniteHp))
 		{
 			AutoplayingCards.Add(card);
 			await CardCmd.AutoPlay(choiceContext, card, null);

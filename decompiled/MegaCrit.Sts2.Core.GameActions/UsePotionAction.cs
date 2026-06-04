@@ -43,7 +43,7 @@ public class UsePotionAction : GameAction
 
 	public PlayerChoiceContext? PlayerChoiceContext { get; private set; }
 
-	public UsePotionAction(PotionModel potion, Creature? target, bool isCombatInIsProgress)
+	public UsePotionAction(PotionModel potion, Creature? target, bool isCombatInProgress)
 	{
 		if (potion.Owner == null)
 		{
@@ -56,7 +56,7 @@ public class UsePotionAction : GameAction
 		}
 		Player = potion.Owner;
 		PotionIndex = (uint)potionSlotIndex;
-		WasEnqueuedInCombat = isCombatInIsProgress;
+		WasEnqueuedInCombat = isCombatInProgress;
 		if (target == null)
 		{
 			return;
@@ -112,8 +112,7 @@ public class UsePotionAction : GameAction
 				creature = Player.RunState.GetPlayer(TargetPlayerId.Value).Creature;
 			}
 		}
-		string text = ((creature == null) ? null : (creature.IsPlayer ? $"Player {creature.Player.NetId}" : creature.Name));
-		string value = ((text != null) ? $"targeting {text} (index {Player.Creature.CombatState?.Creatures.IndexOf(creature)})" : "no target");
+		string value = ((creature != null) ? $"targeting {creature.LogName} (index {Player.Creature.CombatState?.Creatures.IndexOf(creature)})" : "no target");
 		Log.Info($"Player {potion.Owner.NetId} using potion {potion.Id.Entry} ({value})");
 		PlayerChoiceContext = new GameActionPlayerChoiceContext(this);
 		await potion.OnUseWrapper(PlayerChoiceContext, creature);
@@ -124,7 +123,7 @@ public class UsePotionAction : GameAction
 		PotionModel potionAtSlotIndex = Player.GetPotionAtSlotIndex((int)PotionIndex);
 		if (TestMode.IsOff && NRun.Instance != null && LocalContext.IsMe(Player) && potionAtSlotIndex != null)
 		{
-			NRun.Instance.GlobalUi.TopBar.PotionContainer.OnPotionUseCanceled(potionAtSlotIndex);
+			NRun.Instance.GlobalUi.TopBar.PotionContainer.OnPotionUseOrDiscardCanceled(potionAtSlotIndex);
 		}
 		potionAtSlotIndex?.AfterUsageCanceled();
 	}

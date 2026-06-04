@@ -703,13 +703,17 @@ class CombatState:
             )
         self.enemies.append(creature)
         self.enemy_ais[creature.combat_id] = ai
-        from sts2_env.monsters.act3 import ZAPBOT_HIGH_VOLTAGE_AMOUNT, ZAPBOT_MONSTER_ID
+        from sts2_env.monsters.act3 import DOORMAKER_MONSTER_ID, ZAPBOT_HIGH_VOLTAGE_AMOUNT, ZAPBOT_MONSTER_ID
         from sts2_env.monsters.act4 import GAS_BOMB_MINION_AMOUNT, GAS_BOMB_MONSTER_ID
 
         if creature.monster_id == GAS_BOMB_MONSTER_ID:
             self.apply_power_to(creature, PowerId.MINION, GAS_BOMB_MINION_AMOUNT, applier=creature)
         if creature.monster_id == ZAPBOT_MONSTER_ID:
             self.apply_power_to(creature, PowerId.HIGH_VOLTAGE, ZAPBOT_HIGH_VOLTAGE_AMOUNT, applier=creature)
+        if creature.monster_id == DOORMAKER_MONSTER_ID:
+            from sts2_env.monsters.act3 import on_doormaker_added_to_combat
+
+            on_doormaker_added_to_combat(creature, ai)
         if self._combat_started:
             fire_after_creature_added_to_combat(creature, self)
 
@@ -1366,6 +1370,10 @@ class CombatState:
         self._card_being_played_for_cost = card if spend_energy else None
         try:
             if spend_energy:
+                has_affliction = getattr(card, "has_affliction", None)
+                if callable(has_affliction) and has_affliction("weighted"):
+                    weighted_cost = int(card.combat_vars.get("_affliction_amount", 1))
+                    self.lose_energy(owner, weighted_cost)
                 energy_spent = owner_state.energy if card.has_energy_cost_x else self.modified_card_cost(owner, card)
             card.owner = owner
             card.energy_spent = energy_spent
@@ -2131,8 +2139,19 @@ class CombatState:
 
     def gain_energy(self, owner: Creature, amount: int) -> None:
         state = self.combat_player_state_for(owner)
-        if not self.is_over and state is not None and amount > 0:
-            state.energy += amount
+        if self.is_over or state is None or amount <= 0:
+            return
+        modified = amount
+        for power in owner.powers.values():
+            modify_gain = getattr(power, "modify_energy_gain", None)
+            if not callable(modify_gain):
+                continue
+            modified = modify_gain(owner, modified)
+            after_modify = getattr(power, "after_modifying_energy_gain", None)
+            if callable(after_modify) and modified == 0 and amount > 0:
+                after_modify(owner, self)
+        if modified > 0:
+            state.energy += modified
 
     def lose_energy(self, owner: Creature, amount: int) -> None:
         state = self.combat_player_state_for(owner)

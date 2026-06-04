@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -55,6 +56,9 @@ public class NGame : Control
 {
 	[Signal]
 	public delegate void WindowChangeEventHandler();
+
+	[Signal]
+	public delegate void PhobiaModeToggledEventHandler();
 
 	public new class MethodName : Control.MethodName
 	{
@@ -179,6 +183,8 @@ public class NGame : Control
 	public new class SignalName : Control.SignalName
 	{
 		public static readonly StringName WindowChange = "WindowChange";
+
+		public static readonly StringName PhobiaModeToggled = "PhobiaModeToggled";
 	}
 
 	public static readonly Vector2 devResolution = new Vector2(1920f, 1080f);
@@ -196,6 +202,8 @@ public class NGame : Control
 	private SteamJoinCallbackHandler? _joinCallbackHandler;
 
 	private WindowChangeEventHandler backing_WindowChange;
+
+	private PhobiaModeToggledEventHandler backing_PhobiaModeToggled;
 
 	public static NGame? Instance { get; private set; }
 
@@ -263,8 +271,22 @@ public class NGame : Control
 		}
 	}
 
+	public event PhobiaModeToggledEventHandler PhobiaModeToggled
+	{
+		add
+		{
+			backing_PhobiaModeToggled = (PhobiaModeToggledEventHandler)Delegate.Combine(backing_PhobiaModeToggled, value);
+		}
+		remove
+		{
+			backing_PhobiaModeToggled = (PhobiaModeToggledEventHandler)Delegate.Remove(backing_PhobiaModeToggled, value);
+		}
+	}
+
 	public override void _EnterTree()
 	{
+		CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+		CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 		if (Instance != null)
 		{
 			Log.Error("NGame already exists.");
@@ -351,13 +373,22 @@ public class NGame : Control
 		Log.Error("Encountered error on game startup! Attempting to show error dialog");
 		await TryErrorInit();
 		NGenericPopup nGenericPopup = NGenericPopup.Create();
-		NModalContainer.Instance.Add(nGenericPopup);
-		await nGenericPopup.WaitForConfirmation(new LocString("main_menu_ui", "STARTUP_ERROR.description"), new LocString("main_menu_ui", "STARTUP_ERROR.title"), null, new LocString("main_menu_ui", "QUIT"));
-		GetTree().Quit();
+		if (nGenericPopup == null || NModalContainer.Instance == null)
+		{
+			Log.Error("Cannot show error dialog: UI not initialized. Quitting immediately.");
+			GetTree().Quit();
+		}
+		else
+		{
+			NModalContainer.Instance.Add(nGenericPopup);
+			await nGenericPopup.WaitForConfirmation(new LocString("main_menu_ui", "STARTUP_ERROR.description"), new LocString("main_menu_ui", "STARTUP_ERROR.title"), null, new LocString("main_menu_ui", "QUIT"));
+			GetTree().Quit();
+		}
 	}
 
 	private async Task GameStartup()
 	{
+		OneTimeInitialization.ExecuteVeryEarly();
 		AccountScopeUserDataMigrator.MigrateToUserScopedDirectories();
 		AccountScopeUserDataMigrator.ArchiveLegacyData();
 		ProfileAccountScopeMigrator.MigrateToProfileScopedDirectories();
@@ -385,17 +416,20 @@ public class NGame : Control
 		SteamStatsManager.Initialize();
 		if (cloudSavesTask != null)
 		{
-			await cloudSavesTask;
+			while (!cloudSavesTask.IsCompleted)
+			{
+				if (!SteamInitializer.Initialized)
+				{
+					Log.Error("Steam became uninitialized while the cloud sync was in-progress! This might result in unpredictable behavior");
+					break;
+				}
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			}
 		}
 		SaveManager.Instance.InitProfileId();
 		ReadSaveResult<SerializableProgress> progressReadResult = SaveManager.Instance.InitProgressData();
 		ReadSaveResult<PrefsSave> prefsReadResult = SaveManager.Instance.InitPrefsData();
-		SentryService.SetUserContext(SaveManager.Instance.Progress.UniqueId);
-		string platformBranch = PlatformUtil.GetPlatformBranch();
-		if (platformBranch != null)
-		{
-			SentryService.SetTag("platform.branch", platformBranch);
-		}
+		SentryService.AfterGameInit(PlatformUtil.GetPlatformBranch(), SaveManager.Instance.Progress.UniqueId, GetTree().Root);
 		_screenShake.SetMultiplier(NScreenshakePaginator.GetShakeMultiplier(SaveManager.Instance.PrefsSave.ScreenShakeOptionIndex));
 		if (!OS.HasFeature("editor") && SaveManager.Instance.PrefsSave.FastMode == FastModeType.Instant)
 		{
@@ -508,7 +542,7 @@ public class NGame : Control
 		default:
 			throw new ArgumentOutOfRangeException($"Invalid Aspect Ratio: {settingsSave.AspectRatioSetting}");
 		}
-		int num = System.Environment.GetCommandLineArgs().IndexOf("-wpos");
+		int num = ListExtensions.IndexOf(System.Environment.GetCommandLineArgs(), "-wpos");
 		if (flag2 && num < 0)
 		{
 			if (_window.Unresizable)
@@ -763,10 +797,10 @@ public class NGame : Control
 		RootSceneContainer.SetCurrentScene(currentScene);
 	}
 
-	public async Task<RunState> StartNewSingleplayerRun(CharacterModel character, bool shouldSave, IReadOnlyList<ActModel> acts, IReadOnlyList<ModifierModel> modifiers, string seed, int ascensionLevel = 0, DateTimeOffset? dailyTime = null)
+	public async Task<RunState> StartNewSingleplayerRun(CharacterModel character, bool shouldSave, IReadOnlyList<ActModel> acts, IReadOnlyList<ModifierModel> modifiers, string seed, GameMode gameMode, int ascensionLevel = 0, DateTimeOffset? dailyTime = null)
 	{
 		UnlockState unlockState = SaveManager.Instance.GenerateUnlockStateFromProgress();
-		RunState runState = RunState.CreateForNewRun(new global::_003C_003Ez__ReadOnlySingleElementList<Player>(Player.CreateForNewRun(character, unlockState, 1uL)), acts.Select((ActModel a) => a.ToMutable()).ToList(), modifiers, ascensionLevel, seed);
+		RunState runState = RunState.CreateForNewRun(new global::_003C_003Ez__ReadOnlySingleElementList<Player>(Player.CreateForNewRun(character, unlockState, 1uL)), acts.Select((ActModel a) => a.ToMutable()).ToList(), modifiers, gameMode, ascensionLevel, seed);
 		RunManager.Instance.SetUpNewSinglePlayer(runState, shouldSave, dailyTime);
 		await StartRun(runState);
 		return runState;
@@ -774,7 +808,7 @@ public class NGame : Control
 
 	public async Task<RunState> StartNewMultiplayerRun(StartRunLobby lobby, bool shouldSave, IReadOnlyList<ActModel> acts, IReadOnlyList<ModifierModel> modifiers, string seed, int ascensionLevel, DateTimeOffset? dailyTime = null)
 	{
-		RunState runState = RunState.CreateForNewRun(lobby.Players.Select((LobbyPlayer p) => Player.CreateForNewRun(p.character, UnlockState.FromSerializable(p.unlockState), p.id)).ToList(), acts.Select((ActModel a) => a.ToMutable()).ToList(), modifiers, ascensionLevel, seed);
+		RunState runState = RunState.CreateForNewRun(lobby.Players.Select((LobbyPlayer p) => Player.CreateForNewRun(p.character, UnlockState.FromSerializable(p.unlockState), p.id)).ToList(), acts.Select((ActModel a) => a.ToMutable()).ToList(), modifiers, lobby.GameMode, ascensionLevel, seed);
 		RunManager.Instance.SetUpNewMultiPlayer(runState, lobby, shouldSave, dailyTime);
 		await StartRun(runState);
 		return runState;
@@ -989,6 +1023,12 @@ public class NGame : Control
 			Log.Error("Failed to initialize Steam! Attempting to show error popup");
 			await TryErrorInit();
 			NGenericPopup nGenericPopup = NGenericPopup.Create();
+			if (nGenericPopup == null || NModalContainer.Instance == null)
+			{
+				Log.Error("Cannot show Steam error dialog: UI not initialized. Quitting immediately.");
+				GetTree().Quit();
+				return false;
+			}
 			NModalContainer.Instance.Add(nGenericPopup);
 			LocString locString = new LocString("main_menu_ui", "STEAM_INIT_ERROR.description");
 			locString.Add("details", $"{SteamInitializer.InitResult}: {SteamInitializer.InitErrorMessage}");
@@ -1780,6 +1820,7 @@ public class NGame : Control
 		info.AddProperty(PropertyName._inspectionContainer, Variant.From(in _inspectionContainer));
 		info.AddProperty(PropertyName._screenShake, Variant.From(in _screenShake));
 		info.AddSignalEventDelegate(SignalName.WindowChange, backing_WindowChange);
+		info.AddSignalEventDelegate(SignalName.PhobiaModeToggled, backing_PhobiaModeToggled);
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -1874,13 +1915,18 @@ public class NGame : Control
 		{
 			backing_WindowChange = value22;
 		}
+		if (info.TryGetSignalEventDelegate<PhobiaModeToggledEventHandler>(SignalName.PhobiaModeToggled, out var value23))
+		{
+			backing_PhobiaModeToggled = value23;
+		}
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotSignalList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(1);
+		List<MethodInfo> list = new List<MethodInfo>(2);
 		list.Add(new MethodInfo(SignalName.WindowChange, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(SignalName.PhobiaModeToggled, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -1889,12 +1935,21 @@ public class NGame : Control
 		EmitSignal(SignalName.WindowChange);
 	}
 
+	protected void EmitSignalPhobiaModeToggled()
+	{
+		EmitSignal(SignalName.PhobiaModeToggled);
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override void RaiseGodotClassSignalCallbacks(in godot_string_name signal, NativeVariantPtrArgs args)
 	{
 		if (signal == SignalName.WindowChange && args.Count == 0)
 		{
 			backing_WindowChange?.Invoke();
+		}
+		else if (signal == SignalName.PhobiaModeToggled && args.Count == 0)
+		{
+			backing_PhobiaModeToggled?.Invoke();
 		}
 		else
 		{
@@ -1906,6 +1961,10 @@ public class NGame : Control
 	protected override bool HasGodotClassSignal(in godot_string_name signal)
 	{
 		if (signal == SignalName.WindowChange)
+		{
+			return true;
+		}
+		if (signal == SignalName.PhobiaModeToggled)
 		{
 			return true;
 		}

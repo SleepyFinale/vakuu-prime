@@ -96,7 +96,7 @@ public class RunHistorySaveManager
 			{
 				num++;
 			}
-			else
+			else if (!text.EndsWith(".backup"))
 			{
 				list.Add(text);
 			}

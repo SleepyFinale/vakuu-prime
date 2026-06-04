@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
@@ -168,27 +167,6 @@ public record CardCreationOptions
 			}
 		}
 		return null;
-	}
-
-	[CompilerGenerated]
-	protected virtual bool PrintMembers(StringBuilder builder)
-	{
-		RuntimeHelpers.EnsureSufficientExecutionStack();
-		builder.Append("CardPools = ");
-		builder.Append(CardPools);
-		builder.Append(", CardPoolFilter = ");
-		builder.Append(CardPoolFilter);
-		builder.Append(", CustomCardPool = ");
-		builder.Append(CustomCardPool);
-		builder.Append(", Source = ");
-		builder.Append(Source.ToString());
-		builder.Append(", RarityOdds = ");
-		builder.Append(RarityOdds.ToString());
-		builder.Append(", Flags = ");
-		builder.Append(Flags.ToString());
-		builder.Append(", RngOverride = ");
-		builder.Append(RngOverride);
-		return true;
 	}
 
 	[CompilerGenerated]

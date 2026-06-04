@@ -153,8 +153,7 @@ public abstract class NCardPlay : Node
 				Vector2 size = GetViewport().GetVisibleRect().Size;
 				Holder.SetTargetPosition(new Vector2(size.X / 2f, size.Y - Holder.Size.Y));
 			}
-			Cleanup();
-			EmitSignal(SignalName.Finished, true);
+			Cleanup(isFinished: true);
 			NCombatRoom.Instance?.Ui.Hand.TryGrabFocus();
 		}
 		else
@@ -168,8 +167,7 @@ public abstract class NCardPlay : Node
 		if (!_isTryingToPlayCard)
 		{
 			ClearTarget();
-			Cleanup();
-			EmitSignal(SignalName.Finished, false);
+			Cleanup(isFinished: false);
 			OnCancelPlayCard();
 		}
 	}
@@ -178,11 +176,15 @@ public abstract class NCardPlay : Node
 	{
 	}
 
-	protected virtual void Cleanup()
+	protected virtual void Cleanup(bool isFinished)
 	{
 		HideTargetingVisuals();
 		HideEvokingOrbs();
-		this.QueueFreeSafely();
+		if (GodotObject.IsInstanceValid(this))
+		{
+			EmitSignal(SignalName.Finished, isFinished);
+			this.QueueFreeSafely();
+		}
 	}
 
 	protected void OnCreatureHover(NCreature creature)
@@ -298,7 +300,10 @@ public abstract class NCardPlay : Node
 		list.Add(new MethodInfo(MethodName.Start, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.CancelPlayCard, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnCancelPlayCard, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.Cleanup, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.Cleanup, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
+		{
+			new PropertyInfo(Variant.Type.Bool, "isFinished", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+		}, null));
 		list.Add(new MethodInfo(MethodName.OnCreatureHover, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "creature", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -344,9 +349,9 @@ public abstract class NCardPlay : Node
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.Cleanup && args.Count == 0)
+		if (method == MethodName.Cleanup && args.Count == 1)
 		{
-			Cleanup();
+			Cleanup(VariantUtils.ConvertTo<bool>(in args[0]));
 			ret = default(godot_variant);
 			return true;
 		}

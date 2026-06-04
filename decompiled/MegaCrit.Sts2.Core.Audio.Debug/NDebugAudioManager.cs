@@ -31,6 +31,8 @@ public class NDebugAudioManager : Node
 
 		public static readonly StringName Play = "Play";
 
+		public static readonly StringName StopAll = "StopAll";
+
 		public static readonly StringName Stop = "Stop";
 
 		public static readonly StringName StopInternalById = "StopInternalById";
@@ -109,10 +111,18 @@ public class NDebugAudioManager : Node
 		return item.id;
 	}
 
+	public void StopAll()
+	{
+		List<PlayingSound> list = _playingSounds.ToList();
+		foreach (PlayingSound item in list)
+		{
+			Stop(item.id, 0f);
+		}
+	}
+
 	public void Stop(int id, float fadeTime = 0.5f)
 	{
-		int i;
-		for (i = 0; i < _playingSounds.Count; i++)
+		for (int i = 0; i < _playingSounds.Count; i++)
 		{
 			PlayingSound playingSound = _playingSounds[i];
 			if (playingSound.id != id)
@@ -125,7 +135,7 @@ public class NDebugAudioManager : Node
 				tween.TweenProperty(playingSound.player, "volume_linear", 0f, fadeTime);
 				tween.TweenCallback(Callable.From(delegate
 				{
-					StopInternalById(i);
+					StopInternalById(id);
 				}));
 			}
 			else
@@ -204,7 +214,7 @@ public class NDebugAudioManager : Node
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(9);
+		List<MethodInfo> list = new List<MethodInfo>(10);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Play, new PropertyInfo(Variant.Type.Int, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -212,6 +222,7 @@ public class NDebugAudioManager : Node
 			new PropertyInfo(Variant.Type.Float, "volume", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false),
 			new PropertyInfo(Variant.Type.Int, "variance", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName.StopAll, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Stop, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Int, "id", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false),
@@ -256,6 +267,12 @@ public class NDebugAudioManager : Node
 		if (method == MethodName.Play && args.Count == 3)
 		{
 			ret = VariantUtils.CreateFrom<int>(Play(VariantUtils.ConvertTo<string>(in args[0]), VariantUtils.ConvertTo<float>(in args[1]), VariantUtils.ConvertTo<PitchVariance>(in args[2])));
+			return true;
+		}
+		if (method == MethodName.StopAll && args.Count == 0)
+		{
+			StopAll();
+			ret = default(godot_variant);
 			return true;
 		}
 		if (method == MethodName.Stop && args.Count == 2)
@@ -310,6 +327,10 @@ public class NDebugAudioManager : Node
 			return true;
 		}
 		if (method == MethodName.Play)
+		{
+			return true;
+		}
+		if (method == MethodName.StopAll)
 		{
 			return true;
 		}

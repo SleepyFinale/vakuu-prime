@@ -7,8 +7,8 @@ using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Leaderboard;
-using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Platform;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -19,9 +19,9 @@ public class NDailyRunLeaderboardRow : Control
 {
 	public new class MethodName : Control.MethodName
 	{
-		public static readonly StringName CreateHeader = "CreateHeader";
-
 		public new static readonly StringName _Ready = "_Ready";
+
+		public static readonly StringName FormatHoursAndMinutes = "FormatHoursAndMinutes";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -30,9 +30,13 @@ public class NDailyRunLeaderboardRow : Control
 
 		public static readonly StringName _name = "_name";
 
-		public static readonly StringName _score = "_score";
+		public static readonly StringName _floor = "_floor";
 
-		public static readonly StringName _isHeader = "_isHeader";
+		public static readonly StringName _badges = "_badges";
+
+		public static readonly StringName _time = "_time";
+
+		public static readonly StringName _isYou = "_isYou";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -43,15 +47,19 @@ public class NDailyRunLeaderboardRow : Control
 
 	private MegaLabel _rank;
 
-	private MegaRichTextLabel _name;
+	private MegaLabel _name;
 
-	private MegaLabel _score;
+	private MegaLabel _floor;
 
-	private LeaderboardEntry? _entry;
+	private MegaLabel _badges;
 
-	private bool _isHeader;
+	private MegaLabel _time;
 
-	public static NDailyRunLeaderboardRow? Create(LeaderboardEntry entry)
+	private LeaderboardEntry _entry;
+
+	private bool _isYou;
+
+	public static NDailyRunLeaderboardRow? Create(LeaderboardEntry entry, bool isYou)
 	{
 		if (TestMode.IsOn)
 		{
@@ -59,61 +67,74 @@ public class NDailyRunLeaderboardRow : Control
 		}
 		NDailyRunLeaderboardRow nDailyRunLeaderboardRow = PreloadManager.Cache.GetScene(_scenePath).Instantiate<NDailyRunLeaderboardRow>(PackedScene.GenEditState.Disabled);
 		nDailyRunLeaderboardRow._entry = entry;
-		return nDailyRunLeaderboardRow;
-	}
-
-	public static NDailyRunLeaderboardRow? CreateHeader()
-	{
-		if (TestMode.IsOn)
-		{
-			return null;
-		}
-		NDailyRunLeaderboardRow nDailyRunLeaderboardRow = PreloadManager.Cache.GetScene(_scenePath).Instantiate<NDailyRunLeaderboardRow>(PackedScene.GenEditState.Disabled);
-		nDailyRunLeaderboardRow._isHeader = true;
+		nDailyRunLeaderboardRow._isYou = isYou;
 		return nDailyRunLeaderboardRow;
 	}
 
 	public override void _Ready()
 	{
-		_rank = GetNode<MegaLabel>("Rank");
-		_name = GetNode<MegaRichTextLabel>("Name");
-		_score = GetNode<MegaLabel>("Score");
-		if (_isHeader)
+		_rank = GetNode<MegaLabel>("%Rank");
+		_floor = GetNode<MegaLabel>("%Floor");
+		_name = GetNode<MegaLabel>("%Name");
+		_badges = GetNode<MegaLabel>("%Badges");
+		_time = GetNode<MegaLabel>("%Time");
+		IEnumerable<string> values = _entry.userIds.Select((ulong id) => PlatformUtil.GetPlayerName(LeaderboardManager.CurrentPlatform, id));
+		DecodedDailyScore decodedDailyScore = ScoreUtility.DecodeDailyScore(_entry.score);
+		if (!decodedDailyScore.isValid)
 		{
-			_rank.SetTextAutoSize(" " + new LocString("main_menu_ui", "LEADERBOARDS.rankHeader").GetRawText());
-			_name.SetTextAutoSize(new LocString("main_menu_ui", "LEADERBOARDS.nameHeader").GetRawText());
-			_score.SetTextAutoSize(new LocString("main_menu_ui", "LEADERBOARDS.scoreHeader").GetRawText() + " ");
+			this.QueueFreeSafely();
+			return;
 		}
-		else if (_entry != null)
+		_rank.SetTextAutoSize($"{_entry.rank + 1}");
+		_name.SetTextAutoSize(string.Join(",", values));
+		if (_isYou)
 		{
-			IEnumerable<string> values = _entry.userIds.Select((ulong id) => PlatformUtil.GetPlayerName(LeaderboardManager.CurrentPlatform, id));
-			_rank.SetTextAutoSize($" {_entry.rank + 1}");
-			_name.SetTextAutoSize(string.Join(",", values));
-			_score.SetTextAutoSize($"{_entry.score} ");
+			_name.Modulate = StsColors.blue;
 		}
+		_floor.SetTextAutoSize($"{decodedDailyScore.floors}");
+		if (decodedDailyScore.victory == 2)
+		{
+			GetNode<Control>("%Tick").Visible = true;
+		}
+		_badges.SetTextAutoSize($"{decodedDailyScore.badges}");
+		_time.SetTextAutoSize(FormatHoursAndMinutes(decodedDailyScore.runTime));
+	}
+
+	private static string FormatHoursAndMinutes(int value)
+	{
+		if (value >= 9999)
+		{
+			return "--:--";
+		}
+		int value2 = value / 60;
+		int value3 = value % 60;
+		return $"{value2}:{value3:D2}";
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
 		List<MethodInfo> list = new List<MethodInfo>(2);
-		list.Add(new MethodInfo(MethodName.CreateHeader, new PropertyInfo(Variant.Type.Object, "", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false), MethodFlags.Normal | MethodFlags.Static, null, null));
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.FormatHoursAndMinutes, new PropertyInfo(Variant.Type.String, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal | MethodFlags.Static, new List<PropertyInfo>
+		{
+			new PropertyInfo(Variant.Type.Int, "value", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+		}, null));
 		return list;
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool InvokeGodotClassMethod(in godot_string_name method, NativeVariantPtrArgs args, out godot_variant ret)
 	{
-		if (method == MethodName.CreateHeader && args.Count == 0)
-		{
-			ret = VariantUtils.CreateFrom<NDailyRunLeaderboardRow>(CreateHeader());
-			return true;
-		}
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
 			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.FormatHoursAndMinutes && args.Count == 1)
+		{
+			ret = VariantUtils.CreateFrom<string>(FormatHoursAndMinutes(VariantUtils.ConvertTo<int>(in args[0])));
 			return true;
 		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
@@ -122,9 +143,9 @@ public class NDailyRunLeaderboardRow : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static bool InvokeGodotClassStaticMethod(in godot_string_name method, NativeVariantPtrArgs args, out godot_variant ret)
 	{
-		if (method == MethodName.CreateHeader && args.Count == 0)
+		if (method == MethodName.FormatHoursAndMinutes && args.Count == 1)
 		{
-			ret = VariantUtils.CreateFrom<NDailyRunLeaderboardRow>(CreateHeader());
+			ret = VariantUtils.CreateFrom<string>(FormatHoursAndMinutes(VariantUtils.ConvertTo<int>(in args[0])));
 			return true;
 		}
 		ret = default(godot_variant);
@@ -134,11 +155,11 @@ public class NDailyRunLeaderboardRow : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
-		if (method == MethodName.CreateHeader)
+		if (method == MethodName._Ready)
 		{
 			return true;
 		}
-		if (method == MethodName._Ready)
+		if (method == MethodName.FormatHoursAndMinutes)
 		{
 			return true;
 		}
@@ -155,17 +176,27 @@ public class NDailyRunLeaderboardRow : Control
 		}
 		if (name == PropertyName._name)
 		{
-			_name = VariantUtils.ConvertTo<MegaRichTextLabel>(in value);
+			_name = VariantUtils.ConvertTo<MegaLabel>(in value);
 			return true;
 		}
-		if (name == PropertyName._score)
+		if (name == PropertyName._floor)
 		{
-			_score = VariantUtils.ConvertTo<MegaLabel>(in value);
+			_floor = VariantUtils.ConvertTo<MegaLabel>(in value);
 			return true;
 		}
-		if (name == PropertyName._isHeader)
+		if (name == PropertyName._badges)
 		{
-			_isHeader = VariantUtils.ConvertTo<bool>(in value);
+			_badges = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
+		if (name == PropertyName._time)
+		{
+			_time = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
+		if (name == PropertyName._isYou)
+		{
+			_isYou = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
 		return base.SetGodotClassPropertyValue(in name, in value);
@@ -184,14 +215,24 @@ public class NDailyRunLeaderboardRow : Control
 			value = VariantUtils.CreateFrom(in _name);
 			return true;
 		}
-		if (name == PropertyName._score)
+		if (name == PropertyName._floor)
 		{
-			value = VariantUtils.CreateFrom(in _score);
+			value = VariantUtils.CreateFrom(in _floor);
 			return true;
 		}
-		if (name == PropertyName._isHeader)
+		if (name == PropertyName._badges)
 		{
-			value = VariantUtils.CreateFrom(in _isHeader);
+			value = VariantUtils.CreateFrom(in _badges);
+			return true;
+		}
+		if (name == PropertyName._time)
+		{
+			value = VariantUtils.CreateFrom(in _time);
+			return true;
+		}
+		if (name == PropertyName._isYou)
+		{
+			value = VariantUtils.CreateFrom(in _isYou);
 			return true;
 		}
 		return base.GetGodotClassPropertyValue(in name, out value);
@@ -203,8 +244,10 @@ public class NDailyRunLeaderboardRow : Control
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._rank, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._name, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._score, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._isHeader, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._floor, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._badges, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._time, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._isYou, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 
@@ -214,8 +257,10 @@ public class NDailyRunLeaderboardRow : Control
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName._rank, Variant.From(in _rank));
 		info.AddProperty(PropertyName._name, Variant.From(in _name));
-		info.AddProperty(PropertyName._score, Variant.From(in _score));
-		info.AddProperty(PropertyName._isHeader, Variant.From(in _isHeader));
+		info.AddProperty(PropertyName._floor, Variant.From(in _floor));
+		info.AddProperty(PropertyName._badges, Variant.From(in _badges));
+		info.AddProperty(PropertyName._time, Variant.From(in _time));
+		info.AddProperty(PropertyName._isYou, Variant.From(in _isYou));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -228,15 +273,23 @@ public class NDailyRunLeaderboardRow : Control
 		}
 		if (info.TryGetProperty(PropertyName._name, out var value2))
 		{
-			_name = value2.As<MegaRichTextLabel>();
+			_name = value2.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._score, out var value3))
+		if (info.TryGetProperty(PropertyName._floor, out var value3))
 		{
-			_score = value3.As<MegaLabel>();
+			_floor = value3.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._isHeader, out var value4))
+		if (info.TryGetProperty(PropertyName._badges, out var value4))
 		{
-			_isHeader = value4.As<bool>();
+			_badges = value4.As<MegaLabel>();
+		}
+		if (info.TryGetProperty(PropertyName._time, out var value5))
+		{
+			_time = value5.As<MegaLabel>();
+		}
+		if (info.TryGetProperty(PropertyName._isYou, out var value6))
+		{
+			_isYou = value6.As<bool>();
 		}
 	}
 }

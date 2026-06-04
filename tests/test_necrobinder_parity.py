@@ -52,15 +52,18 @@ def _make_combat() -> CombatState:
 
 
 class TestNecrobinderParity:
-    def test_borrowed_time_applies_doom_and_gains_energy(self):
-        """Matches BorrowedTime.cs: apply Doom to the owner, then gain energy immediately."""
+    def test_borrowed_time_gains_energy_and_applies_borrowed_time_power(self):
+        """Matches BorrowedTime.cs: gain energy, then apply BorrowedTimePower."""
         combat = _make_combat()
-        combat.hand = [create_card(CardId.BORROWED_TIME)]
-        combat.energy = 0
+        card = create_card(CardId.BORROWED_TIME)
+        combat.hand = [card]
+        combat.energy = card.cost
 
         assert combat.play_card(0)
-        assert combat.player.get_power_amount(PowerId.DOOM) == 3
-        assert combat.energy == 1
+        assert combat.player.get_power_amount(PowerId.BORROWED_TIME) == card.effect_vars.get(
+            "extra_cost", card.effect_vars.get("calc_extra", 1)
+        )
+        assert combat.energy >= card.effect_vars.get("energy", 4)
 
     def test_countdown_card_applies_countdown_power(self):
         """Matches Countdown.cs: apply CountdownPower to the owner."""

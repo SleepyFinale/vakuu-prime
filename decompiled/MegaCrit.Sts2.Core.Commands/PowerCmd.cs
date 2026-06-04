@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
@@ -91,11 +92,11 @@ public static class PowerCmd
 		}
 		modifiedAmount = Hook.ModifyPowerAmountReceived(combatState, power, target, modifiedAmount, applier, out IEnumerable<AbstractModel> receivedModifiers);
 		await power.BeforeApplied(target, modifiedAmount, applier, cardSource);
+		power.ApplyInternal(target, modifiedAmount, silent);
 		if (modifiedAmount != 0m)
 		{
 			CombatManager.Instance.History.PowerReceived(combatState, power, modifiedAmount, applier);
 		}
-		power.ApplyInternal(target, modifiedAmount, silent);
 		if (power.IsVisible && CombatManager.Instance.IsInProgress)
 		{
 			await Cmd.CustomScaledWait(0.1f, 0.25f);
@@ -174,7 +175,14 @@ public static class PowerCmd
 			NCreature nCreature = NCombatRoom.Instance?.GetCreatureNode(owner);
 			if (nCreature != null)
 			{
-				await nCreature.UpdateIntent(combatState.Allies);
+				try
+				{
+					await nCreature.UpdateIntent(combatState.Allies);
+				}
+				catch (ObjectDisposedException ex)
+				{
+					Log.Error(ex.ToString());
+				}
 			}
 		}
 		if (power.IsVisible && CombatManager.Instance.IsInProgress)

@@ -28,21 +28,16 @@ public class PotionRewardOdds : AbstractOdds
 	{
 		float currentValue = base.CurrentValue;
 		bool flag = Hook.ShouldForcePotionReward(player.RunState, player, roomType);
-		float num = _rng.NextFloat();
-		if (num < currentValue || flag)
+		float num = ((roomType != RoomType.Elite) ? 0f : 0.25f);
+		float num2 = num;
+		float num3 = currentValue + num2 * 0.5f;
+		float num4 = _rng.NextFloat();
+		if (flag || num4 < num3)
 		{
 			base.CurrentValue -= 0.1f;
+			return true;
 		}
-		else
-		{
-			base.CurrentValue += 0.1f;
-		}
-		float num2 = ((roomType != RoomType.Elite) ? 0f : 0.25f);
-		float num3 = num2;
-		if (!flag)
-		{
-			return num < currentValue + num3 * 0.5f;
-		}
-		return true;
+		base.CurrentValue += 0.1f;
+		return false;
 	}
 }

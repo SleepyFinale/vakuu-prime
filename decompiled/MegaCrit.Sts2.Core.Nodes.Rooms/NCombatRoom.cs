@@ -168,7 +168,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 
 	public NProceedButton ProceedButton => _proceedButton;
 
-	public Node BackCombatVfxContainer { get; private set; }
+	public Control BackCombatVfxContainer { get; private set; }
 
 	public Control CombatVfxContainer { get; private set; }
 
@@ -182,7 +182,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 
 	public Control DefaultFocusedControl => Ui.Hand.CardHolderContainer;
 
-	public Control? FocusedControlFromTopBar => _creatureNodes.FirstOrDefault(delegate(NCreature c)
+	public Control FocusedControlFromTopBar => _creatureNodes.FirstOrDefault(delegate(NCreature c)
 	{
 		if (c != null && c.IsInteractable)
 		{
@@ -216,7 +216,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		SceneContainer = GetNode<Control>("%CombatSceneContainer");
 		_allyContainer = GetNode<Control>("%AllyContainer");
 		_enemyContainer = GetNode<Control>("%EnemyContainer");
-		BackCombatVfxContainer = GetNode<Node2D>("%BackCombatVfxContainer");
+		BackCombatVfxContainer = GetNode<Control>("%BackCombatVfxContainer");
 		CombatVfxContainer = GetNode<Control>("%CombatVfxContainer");
 		_radialBlur = GetNode<NRadialBlurVfx>("RadialBlur");
 		_waitingForOtherPlayersOverlay = GetNode<Control>("%WaitingForOtherPlayers");
@@ -565,7 +565,10 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		{
 			await node.DeathAnimationTask;
 		}
-		_removingCreatureNodes.Remove(node);
+		if (this.IsValid())
+		{
+			_removingCreatureNodes.Remove(node);
+		}
 	}
 
 	public void AddCreature(Creature creature)
@@ -995,7 +998,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		}
 		if (name == PropertyName.BackCombatVfxContainer)
 		{
-			BackCombatVfxContainer = VariantUtils.ConvertTo<Node>(in value);
+			BackCombatVfxContainer = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
 		if (name == PropertyName.CombatVfxContainer)
@@ -1084,7 +1087,8 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		}
 		if (name == PropertyName.BackCombatVfxContainer)
 		{
-			value = VariantUtils.CreateFrom<Node>(BackCombatVfxContainer);
+			from = BackCombatVfxContainer;
+			value = VariantUtils.CreateFrom(in from);
 			return true;
 		}
 		if (name == PropertyName.CombatVfxContainer)
@@ -1187,7 +1191,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		info.AddProperty(PropertyName.SceneContainer, Variant.From<Control>(SceneContainer));
 		info.AddProperty(PropertyName.BgContainer, Variant.From<Control>(BgContainer));
 		info.AddProperty(PropertyName.Background, Variant.From<NCombatBackground>(Background));
-		info.AddProperty(PropertyName.BackCombatVfxContainer, Variant.From<Node>(BackCombatVfxContainer));
+		info.AddProperty(PropertyName.BackCombatVfxContainer, Variant.From<Control>(BackCombatVfxContainer));
 		info.AddProperty(PropertyName.CombatVfxContainer, Variant.From<Control>(CombatVfxContainer));
 		info.AddProperty(PropertyName.CreatedMsec, Variant.From<ulong>(CreatedMsec));
 		info.AddProperty(PropertyName.Mode, Variant.From<CombatRoomMode>(Mode));
@@ -1222,7 +1226,7 @@ public class NCombatRoom : Control, IScreenContext, IRoomWithProceedButton
 		}
 		if (info.TryGetProperty(PropertyName.BackCombatVfxContainer, out var value5))
 		{
-			BackCombatVfxContainer = value5.As<Node>();
+			BackCombatVfxContainer = value5.As<Control>();
 		}
 		if (info.TryGetProperty(PropertyName.CombatVfxContainer, out var value6))
 		{

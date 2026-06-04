@@ -72,13 +72,18 @@ public class NCardUpgradeVfx : Node2D
 		MoveChild(cardNode, 0);
 		cardNode.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
 		GetNode<CpuParticles2D>("%Particle").Emitting = true;
+		PileType pileType = _card.Pile.Type;
 		Tween tween = CreateTween();
 		tween.TweenProperty(cardNode, "scale", Vector2.One * 1f, 0.25).From(Vector2.Zero).SetEase(Tween.EaseType.Out)
 			.SetTrans(Tween.TransitionType.Cubic);
 		await Cmd.Wait(1.75f, _cts.Token);
-		Vector2 targetPosition = _card.Pile.Type.GetTargetPosition(cardNode);
+		if (_card.Pile != null)
+		{
+			pileType = _card.Pile.Type;
+		}
+		Vector2 targetPosition = pileType.GetTargetPosition(cardNode);
 		NCardFlyVfx nCardFlyVfx = NCardFlyVfx.Create(cardNode, targetPosition, isAddingToPile: false, _card.Owner.Character.TrailPath);
-		((_card.Pile.Type != PileType.Deck) ? NCombatRoom.Instance?.CombatVfxContainer : NRun.Instance?.GlobalUi.TopBar.TrailContainer)?.AddChildSafely(nCardFlyVfx);
+		((pileType != PileType.Deck) ? NCombatRoom.Instance?.CombatVfxContainer : NRun.Instance?.GlobalUi.TopBar.TrailContainer)?.AddChildSafely(nCardFlyVfx);
 		if (nCardFlyVfx?.SwooshAwayCompletion != null)
 		{
 			await nCardFlyVfx.SwooshAwayCompletion.Task;

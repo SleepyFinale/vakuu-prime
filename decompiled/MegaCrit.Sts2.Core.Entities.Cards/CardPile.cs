@@ -7,16 +7,17 @@ using MegaCrit.Sts2.Core.Extensions;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Random;
+using MegaCrit.Sts2.Core.TestSupport;
 
 namespace MegaCrit.Sts2.Core.Entities.Cards;
 
-public class CardPile
+public class CardPile(PileType type)
 {
 	public const int maxCardsInHand = 10;
 
 	private readonly List<CardModel> _cards = new List<CardModel>();
 
-	public PileType Type { get; }
+	public PileType Type { get; } = type;
 
 	public IReadOnlyList<CardModel> Cards => _cards;
 
@@ -35,12 +36,6 @@ public class CardPile
 	public event Action? CardAddFinished;
 
 	public event Action? CardRemoveFinished;
-
-	public CardPile(PileType type)
-	{
-		Type = type;
-		base._002Ector();
-	}
 
 	public static CardPile? Get(PileType type, Player player)
 	{
@@ -65,6 +60,7 @@ public class CardPile
 	public void RandomizeOrderInternal(Player player, Rng rng, CombatState state)
 	{
 		_cards.UnstableShuffle(rng);
+		TestRngInjector.ConsumeInitialShuffleOverride()?.Invoke(_cards);
 		Hook.ModifyShuffleOrder(state, player, _cards, isInitialShuffle: true);
 	}
 

@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Audio.Debug;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -71,7 +72,7 @@ public class NEnemyTurnBanner : Control
 		tween.TweenProperty(_label, "modulate", Colors.Red, 1.0).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Expo)
 			.FromCurrent();
 		tween.TweenProperty(this, "modulate:a", 0f, 1.0).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-		await ToSignal(tween, Tween.SignalName.Finished);
+		await tween.AwaitFinished(this);
 		this.QueueFreeSafely();
 	}
 

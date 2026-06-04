@@ -57,6 +57,8 @@ public class NControllerManager : Node
 
 		public static readonly StringName _lastMousePosition = "_lastMousePosition";
 
+		public static readonly StringName _skipMouseCheckFrames = "_skipMouseCheckFrames";
+
 		public static readonly StringName _label = "_label";
 
 		public static readonly StringName _notifyTween = "_notifyTween";
@@ -76,6 +78,10 @@ public class NControllerManager : Node
 	private static readonly Vector2 _offscreenPos = Vector2.One * -1000f;
 
 	private Vector2 _lastMousePosition;
+
+	private int _skipMouseCheckFrames;
+
+	private const float WarpDisplacementThresholdSq = 250000f;
 
 	private MegaLabel _label;
 
@@ -179,6 +185,10 @@ public class NControllerManager : Node
 
 	public override void _Process(double delta)
 	{
+		if (_skipMouseCheckFrames > 0)
+		{
+			_skipMouseCheckFrames--;
+		}
 		_inputStrategy?.ProcessInput();
 	}
 
@@ -202,7 +212,7 @@ public class NControllerManager : Node
 	private void CheckForMouseInput(InputEvent inputEvent)
 	{
 		bool flag = inputEvent is InputEventMouseButton;
-		bool flag2 = inputEvent is InputEventMouseMotion { Velocity: var velocity } && velocity.LengthSquared() > 100f;
+		bool flag2 = inputEvent is InputEventMouseMotion { Velocity: var velocity } inputEventMouseMotion && velocity.LengthSquared() > 100f && _skipMouseCheckFrames <= 0 && inputEventMouseMotion.Relative.LengthSquared() <= 250000f;
 		Viewport viewport = GetViewport();
 		if (flag || flag2)
 		{
@@ -226,6 +236,7 @@ public class NControllerManager : Node
 				Vector2I vector2I2 = DisplayServer.WindowGetPosition();
 				_lastMousePosition = new Vector2(vector2I.X - vector2I2.X, vector2I.Y - vector2I2.Y);
 				viewport.WarpMouse(_offscreenPos);
+				_skipMouseCheckFrames = 2;
 			}
 			ActiveScreenContext.Instance.FocusOnDefaultControl();
 			EmitSignal(SignalName.ControllerDetected);
@@ -259,13 +270,13 @@ public class NControllerManager : Node
 			{
 				ActiveScreenContext.Instance.FocusOnDefaultControl();
 			}).CallDeferred();
+			return;
 		}
-		else
-		{
-			Vector2I vector2I = DisplayServer.MouseGetPosition();
-			Vector2I vector2I2 = DisplayServer.WindowGetPosition();
-			Input.WarpMouse(new Vector2(vector2I.X - vector2I2.X, vector2I.Y - vector2I2.Y));
-		}
+		Vector2 mousePosition = GetViewport().GetMousePosition();
+		using InputEventMouseMotion inputEventMouseMotion = new InputEventMouseMotion();
+		inputEventMouseMotion.Position = mousePosition;
+		inputEventMouseMotion.GlobalPosition = mousePosition;
+		Input.ParseInputEvent(inputEventMouseMotion);
 	}
 
 	public Texture2D? GetHotkeyIcon(string hotkey)
@@ -418,6 +429,11 @@ public class NControllerManager : Node
 			_lastMousePosition = VariantUtils.ConvertTo<Vector2>(in value);
 			return true;
 		}
+		if (name == PropertyName._skipMouseCheckFrames)
+		{
+			_skipMouseCheckFrames = VariantUtils.ConvertTo<int>(in value);
+			return true;
+		}
 		if (name == PropertyName._label)
 		{
 			_label = VariantUtils.ConvertTo<MegaLabel>(in value);
@@ -457,6 +473,11 @@ public class NControllerManager : Node
 			value = VariantUtils.CreateFrom(in _lastMousePosition);
 			return true;
 		}
+		if (name == PropertyName._skipMouseCheckFrames)
+		{
+			value = VariantUtils.CreateFrom(in _skipMouseCheckFrames);
+			return true;
+		}
 		if (name == PropertyName._label)
 		{
 			value = VariantUtils.CreateFrom(in _label);
@@ -476,6 +497,7 @@ public class NControllerManager : Node
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.ShouldAllowControllerRebinding, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._lastMousePosition, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Int, PropertyName._skipMouseCheckFrames, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._label, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._notifyTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsUsingController, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -489,6 +511,7 @@ public class NControllerManager : Node
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName.IsUsingController, Variant.From<bool>(IsUsingController));
 		info.AddProperty(PropertyName._lastMousePosition, Variant.From(in _lastMousePosition));
+		info.AddProperty(PropertyName._skipMouseCheckFrames, Variant.From(in _skipMouseCheckFrames));
 		info.AddProperty(PropertyName._label, Variant.From(in _label));
 		info.AddProperty(PropertyName._notifyTween, Variant.From(in _notifyTween));
 		info.AddSignalEventDelegate(SignalName.ControllerDetected, backing_ControllerDetected);
@@ -508,25 +531,29 @@ public class NControllerManager : Node
 		{
 			_lastMousePosition = value2.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._label, out var value3))
+		if (info.TryGetProperty(PropertyName._skipMouseCheckFrames, out var value3))
 		{
-			_label = value3.As<MegaLabel>();
+			_skipMouseCheckFrames = value3.As<int>();
 		}
-		if (info.TryGetProperty(PropertyName._notifyTween, out var value4))
+		if (info.TryGetProperty(PropertyName._label, out var value4))
 		{
-			_notifyTween = value4.As<Tween>();
+			_label = value4.As<MegaLabel>();
 		}
-		if (info.TryGetSignalEventDelegate<ControllerDetectedEventHandler>(SignalName.ControllerDetected, out var value5))
+		if (info.TryGetProperty(PropertyName._notifyTween, out var value5))
 		{
-			backing_ControllerDetected = value5;
+			_notifyTween = value5.As<Tween>();
 		}
-		if (info.TryGetSignalEventDelegate<MouseDetectedEventHandler>(SignalName.MouseDetected, out var value6))
+		if (info.TryGetSignalEventDelegate<ControllerDetectedEventHandler>(SignalName.ControllerDetected, out var value6))
 		{
-			backing_MouseDetected = value6;
+			backing_ControllerDetected = value6;
 		}
-		if (info.TryGetSignalEventDelegate<ControllerTypeChangedEventHandler>(SignalName.ControllerTypeChanged, out var value7))
+		if (info.TryGetSignalEventDelegate<MouseDetectedEventHandler>(SignalName.MouseDetected, out var value7))
 		{
-			backing_ControllerTypeChanged = value7;
+			backing_MouseDetected = value7;
+		}
+		if (info.TryGetSignalEventDelegate<ControllerTypeChangedEventHandler>(SignalName.ControllerTypeChanged, out var value8))
+		{
+			backing_ControllerTypeChanged = value8;
 		}
 	}
 

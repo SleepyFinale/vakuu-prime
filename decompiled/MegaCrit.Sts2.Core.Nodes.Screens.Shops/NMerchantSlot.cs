@@ -258,7 +258,7 @@ public abstract class NMerchantSlot : Control
 
 	protected void TriggerMerchantHandToPointHere()
 	{
-		_merchantRug?.MerchantHand.PointAtTarget(base.GlobalPosition);
+		_merchantRug?.MerchantHand.PointAtTarget(this, Vector2.Zero);
 		_merchantRug?.MerchantHand.StopPointing(2f);
 	}
 
@@ -275,7 +275,7 @@ public abstract class NMerchantSlot : Control
 
 	private void OnMerchantHandHovered(NMerchantSlot _)
 	{
-		_merchantRug?.MerchantHand.PointAtTarget(base.GlobalPosition);
+		_merchantRug?.MerchantHand.PointAtTarget(this, Vector2.Zero);
 	}
 
 	private void OnMerchantHandUnhovered(NMerchantSlot _)

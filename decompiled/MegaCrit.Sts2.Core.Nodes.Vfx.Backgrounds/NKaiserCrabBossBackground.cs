@@ -83,6 +83,7 @@ public class NKaiserCrabBossBackground : Node
 		MegaAnimationState animationState = _animController.GetAnimationState();
 		animationState.SetAnimation(text + "/" + animation, loop: false, (side == ArmSide.Left) ? 1 : 2);
 		animationState.SetAnimation("reactions/attack_" + text, loop: false, 3);
+		AddEmptyReactionAnimation(animationState);
 		animationState.AddAnimation(text + "/idle_loop", 0f, loop: true, (side == ArmSide.Left) ? 1 : 2);
 		await Cmd.Wait(duration);
 	}
@@ -92,6 +93,7 @@ public class NKaiserCrabBossBackground : Node
 		string text = side.ToString().ToLowerInvariant();
 		MegaAnimationState animationState = _animController.GetAnimationState();
 		animationState.SetAnimation("reactions/hurt_" + text, loop: false, 3);
+		AddEmptyReactionAnimation(animationState);
 		if (side == ArmSide.Left)
 		{
 			animationState.SetAnimation(text + "/hurt", loop: false, 1);
@@ -120,6 +122,7 @@ public class NKaiserCrabBossBackground : Node
 		string text = side.ToString().ToLowerInvariant();
 		MegaAnimationState animationState = _animController.GetAnimationState();
 		animationState.SetAnimation("reactions/hurt_" + text, loop: false, 3);
+		AddEmptyReactionAnimation(animationState);
 		if (side == ArmSide.Left)
 		{
 			animationState.SetAnimation(text + "/die", loop: false, 1);
@@ -144,6 +147,7 @@ public class NKaiserCrabBossBackground : Node
 		animationState.SetAnimation("right/charge_up", loop: false, 2);
 		animationState.AddAnimation("right/charged_loop", 0f, loop: true, 2);
 		animationState.SetAnimation("reactions/attack_right", loop: false, 3);
+		AddEmptyReactionAnimation(animationState);
 		await Cmd.Wait(duration);
 	}
 
@@ -154,6 +158,7 @@ public class NKaiserCrabBossBackground : Node
 		animationState.SetAnimation("right/attack_heavy", loop: false, 2);
 		animationState.AddAnimation("right/rest_loop", 0f, loop: true, 2);
 		animationState.SetAnimation("reactions/attack_right", loop: false, 3);
+		AddEmptyReactionAnimation(animationState);
 		await Cmd.Wait(duration);
 	}
 
@@ -170,6 +175,11 @@ public class NKaiserCrabBossBackground : Node
 	{
 		MegaAnimationState animationState = _animController.GetAnimationState();
 		animationState.SetAnimation("body/die", loop: false);
+	}
+
+	private void AddEmptyReactionAnimation(MegaAnimationState state)
+	{
+		state.AddEmptyAnimation(3);
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]

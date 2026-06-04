@@ -7,7 +7,7 @@ public class MegaAnimationState : MegaSpineBinding
 {
 	protected override string SpineClassName => "SpineAnimationState";
 
-	protected override IEnumerable<string> SpineMethods => new global::_003C_003Ez__ReadOnlyArray<string>(new string[6] { "add_animation", "apply", "get_current", "set_animation", "set_time_scale", "update" });
+	protected override IEnumerable<string> SpineMethods => new global::_003C_003Ez__ReadOnlyArray<string>(new string[7] { "add_animation", "add_empty_animation", "apply", "get_current", "set_animation", "set_time_scale", "update" });
 
 	public MegaAnimationState(Variant native)
 		: base(native)
@@ -32,6 +32,16 @@ public class MegaAnimationState : MegaSpineBinding
 	public MegaTrackEntry? SetAnimation(string animationName, bool loop = true, int trackId = 0)
 	{
 		Variant native = Call("set_animation", animationName, loop, trackId);
+		if (native.AsGodotObject() == null)
+		{
+			return null;
+		}
+		return new MegaTrackEntry(native);
+	}
+
+	public MegaTrackEntry? AddEmptyAnimation(int trackId = 0)
+	{
+		Variant native = Call("add_empty_animation", trackId, 0, 0);
 		if (native.AsGodotObject() == null)
 		{
 			return null;

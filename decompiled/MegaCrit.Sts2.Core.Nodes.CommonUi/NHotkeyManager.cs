@@ -139,7 +139,8 @@ public class NHotkeyManager : Node
 		{
 			return;
 		}
-		Control control = GetViewport()?.GuiGetFocusOwner();
+		Viewport viewport = GetViewport();
+		Control control = viewport?.GuiGetFocusOwner();
 		if (control != null && ((control is LineEdit lineEdit && lineEdit.IsEditing()) || (control is NMegaTextEdit nMegaTextEdit && nMegaTextEdit.IsEditing())))
 		{
 			return;
@@ -152,6 +153,7 @@ public class NHotkeyManager : Node
 				if (action != null)
 				{
 					Callable.From(action.Invoke).CallDeferred();
+					viewport?.SetInputAsHandled();
 				}
 			}
 		}
@@ -163,6 +165,7 @@ public class NHotkeyManager : Node
 				if (action2 != null)
 				{
 					Callable.From(action2.Invoke).CallDeferred();
+					viewport?.SetInputAsHandled();
 				}
 			}
 		}

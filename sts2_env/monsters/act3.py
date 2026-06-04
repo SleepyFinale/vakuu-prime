@@ -1837,18 +1837,45 @@ DOOR_DEAD_MOVE = "DEAD_MOVE"
 DOORMAKER_MONSTER_ID = "DOORMAKER"
 DOORMAKER_BASE_HP = 489
 DOORMAKER_TOUGH_HP = 512
-DOORMAKER_BASE_BEAM_DAMAGE = 31
-DOORMAKER_DEADLY_BEAM_DAMAGE = 34
-DOORMAKER_BASE_GET_BACK_IN_DAMAGE = 40
-DOORMAKER_DEADLY_GET_BACK_IN_DAMAGE = 45
-DOORMAKER_STRENGTH = 5
+DOORMAKER_INFINITE_HP = 999_999_999
+DOORMAKER_BASE_HUNGER_DAMAGE = 30
+DOORMAKER_DEADLY_HUNGER_DAMAGE = 35
+DOORMAKER_BASE_SCRUTINY_DAMAGE = 24
+DOORMAKER_DEADLY_SCRUTINY_DAMAGE = 26
+DOORMAKER_BASE_GRASP_DAMAGE = 10
+DOORMAKER_DEADLY_GRASP_DAMAGE = 11
+DOORMAKER_GRASP_HIT_COUNT = 2
+DOORMAKER_BASE_GRASP_STRENGTH = 3
+DOORMAKER_DEADLY_GRASP_STRENGTH = 4
 DOORMAKER_BASE_DOOR_STRENGTH_SCALE = 3
 DOORMAKER_DEADLY_DOOR_STRENGTH_SCALE = 4
 DOORMAKER_BASE_DOOR_HP_SCALE = 20
 DOORMAKER_TOUGH_DOOR_HP_SCALE = 25
-DOORMAKER_WHAT_IS_IT_MOVE = "WHAT_IS_IT_MOVE"
-DOORMAKER_BEAM_MOVE = "BEAM_MOVE"
-DOORMAKER_GET_BACK_IN_MOVE = "GET_BACK_IN_MOVE"
+DOORMAKER_DRAMATIC_OPEN_MOVE = "DRAMATIC_OPEN_MOVE"
+DOORMAKER_HUNGER_MOVE = "HUNGER_MOVE"
+DOORMAKER_SCRUTINY_MOVE = "SCRUTINY_MOVE"
+DOORMAKER_GRASP_MOVE = "GRASP_MOVE"
+
+_DOORMAKER_PHASE_POWERS = (PowerId.HUNGER, PowerId.SCRUTINY, PowerId.GRASP)
+
+
+def _swap_doormaker_phase_power(
+    combat: CombatState,
+    creature: Creature,
+    phase_power_id: PowerId,
+) -> None:
+    for power_id in _DOORMAKER_PHASE_POWERS:
+        if creature.get_power_amount(power_id) > 0:
+            combat._remove_power(creature, power_id)  # noqa: SLF001
+    combat.apply_power_to(creature, phase_power_id, 1, applier=creature)
+
+
+def on_doormaker_added_to_combat(creature: Creature, ai: MonsterAI) -> None:
+    """C# Doormaker.AfterAddedToRoom: store real HP, show infinite until portal opens."""
+    ai.doormaker_original_hp = creature.max_hp
+    ai.doormaker_portal_open = False
+    creature.max_hp = DOORMAKER_INFINITE_HP
+    creature.current_hp = DOORMAKER_INFINITE_HP
 
 
 def create_door(rng: Rng, ascension_level: int = 0) -> tuple[Creature, MonsterAI]:
@@ -1927,66 +1954,108 @@ def create_doormaker(rng: Rng, ascension_level: int = 0) -> tuple[Creature, Mons
     )
     creature = Creature(max_hp=hp, monster_id=DOORMAKER_MONSTER_ID)
 
-    def what_is_it(combat: CombatState) -> None:
-        pass
+    def dramatic_open(combat: CombatState) -> None:
+        ai = combat.enemy_ais[creature.combat_id]
+        original_hp = getattr(ai, "doormaker_original_hp", creature.max_hp)
+        ai.doormaker_portal_open = True
+        creature.max_hp = original_hp
+        creature.current_hp = original_hp
+        for power_id in list(creature.powers.keys()):
+            combat._remove_power(creature, power_id)  # noqa: SLF001
+        _swap_doormaker_phase_power(combat, creature, PowerId.HUNGER)
 
-    def beam(combat: CombatState) -> None:
-        laser_beam_dmg = _ascension_value(
+    def hunger(combat: CombatState) -> None:
+        hunger_dmg = _ascension_value(
             _combat_ascension_level(combat),
             DEADLY_ENEMIES_ASCENSION_LEVEL,
-            DOORMAKER_DEADLY_BEAM_DAMAGE,
-            DOORMAKER_BASE_BEAM_DAMAGE,
+            DOORMAKER_DEADLY_HUNGER_DAMAGE,
+            DOORMAKER_BASE_HUNGER_DAMAGE,
         )
-        _deal_damage_to_player(combat, creature, laser_beam_dmg)
-
-    def get_back_in(combat: CombatState) -> None:
-        get_back_in_dmg = _ascension_value(
-            _combat_ascension_level(combat),
-            DEADLY_ENEMIES_ASCENSION_LEVEL,
-            DOORMAKER_DEADLY_GET_BACK_IN_DAMAGE,
-            DOORMAKER_BASE_GET_BACK_IN_DAMAGE,
-        )
-        _deal_damage_to_player(combat, creature, get_back_in_dmg)
+        _deal_damage_to_player(combat, creature, hunger_dmg)
         if combat.is_over or creature.is_dead:
             return
-        combat.apply_power_to(creature, PowerId.STRENGTH, DOORMAKER_STRENGTH, applier=creature)
-        combat.revive_door()
-        combat.escape_creature(creature)
+        _swap_doormaker_phase_power(combat, creature, PowerId.SCRUTINY)
 
-    laser_beam_intent_damage = _ascension_value(
+    def scrutiny(combat: CombatState) -> None:
+        scrutiny_dmg = _ascension_value(
+            _combat_ascension_level(combat),
+            DEADLY_ENEMIES_ASCENSION_LEVEL,
+            DOORMAKER_DEADLY_SCRUTINY_DAMAGE,
+            DOORMAKER_BASE_SCRUTINY_DAMAGE,
+        )
+        _deal_damage_to_player(combat, creature, scrutiny_dmg)
+        if combat.is_over or creature.is_dead:
+            return
+        _swap_doormaker_phase_power(combat, creature, PowerId.GRASP)
+
+    def grasp(combat: CombatState) -> None:
+        grasp_dmg = _ascension_value(
+            _combat_ascension_level(combat),
+            DEADLY_ENEMIES_ASCENSION_LEVEL,
+            DOORMAKER_DEADLY_GRASP_DAMAGE,
+            DOORMAKER_BASE_GRASP_DAMAGE,
+        )
+        _deal_damage_to_player(combat, creature, grasp_dmg, hits=DOORMAKER_GRASP_HIT_COUNT)
+        if combat.is_over or creature.is_dead:
+            return
+        grasp_strength = _ascension_value(
+            _combat_ascension_level(combat),
+            DEADLY_ENEMIES_ASCENSION_LEVEL,
+            DOORMAKER_DEADLY_GRASP_STRENGTH,
+            DOORMAKER_BASE_GRASP_STRENGTH,
+        )
+        combat.apply_power_to(creature, PowerId.STRENGTH, grasp_strength, applier=creature)
+        _swap_doormaker_phase_power(combat, creature, PowerId.HUNGER)
+
+    hunger_intent_damage = _ascension_value(
         ascension_level,
         DEADLY_ENEMIES_ASCENSION_LEVEL,
-        DOORMAKER_DEADLY_BEAM_DAMAGE,
-        DOORMAKER_BASE_BEAM_DAMAGE,
+        DOORMAKER_DEADLY_HUNGER_DAMAGE,
+        DOORMAKER_BASE_HUNGER_DAMAGE,
     )
-    get_back_in_intent_damage = _ascension_value(
+    scrutiny_intent_damage = _ascension_value(
         ascension_level,
         DEADLY_ENEMIES_ASCENSION_LEVEL,
-        DOORMAKER_DEADLY_GET_BACK_IN_DAMAGE,
-        DOORMAKER_BASE_GET_BACK_IN_DAMAGE,
+        DOORMAKER_DEADLY_SCRUTINY_DAMAGE,
+        DOORMAKER_BASE_SCRUTINY_DAMAGE,
+    )
+    grasp_intent_damage = _ascension_value(
+        ascension_level,
+        DEADLY_ENEMIES_ASCENSION_LEVEL,
+        DOORMAKER_DEADLY_GRASP_DAMAGE,
+        DOORMAKER_BASE_GRASP_DAMAGE,
     )
 
     states: dict[str, MonsterState] = {
-        DOORMAKER_WHAT_IS_IT_MOVE: MoveState(
-            DOORMAKER_WHAT_IS_IT_MOVE,
-            what_is_it,
-            [Intent(IntentType.STUN)],
-            follow_up_id=DOORMAKER_BEAM_MOVE,
+        DOORMAKER_DRAMATIC_OPEN_MOVE: MoveState(
+            DOORMAKER_DRAMATIC_OPEN_MOVE,
+            dramatic_open,
+            [Intent(IntentType.SUMMON)],
+            follow_up_id=DOORMAKER_HUNGER_MOVE,
         ),
-        DOORMAKER_BEAM_MOVE: MoveState(
-            DOORMAKER_BEAM_MOVE,
-            beam,
-            [attack_intent(laser_beam_intent_damage)],
-            follow_up_id=DOORMAKER_GET_BACK_IN_MOVE,
+        DOORMAKER_HUNGER_MOVE: MoveState(
+            DOORMAKER_HUNGER_MOVE,
+            hunger,
+            [attack_intent(hunger_intent_damage)],
+            follow_up_id=DOORMAKER_SCRUTINY_MOVE,
         ),
-        DOORMAKER_GET_BACK_IN_MOVE: MoveState(
-            DOORMAKER_GET_BACK_IN_MOVE,
-            get_back_in,
-            [attack_intent(get_back_in_intent_damage), buff_intent()],
-            follow_up_id=DOORMAKER_GET_BACK_IN_MOVE,
+        DOORMAKER_SCRUTINY_MOVE: MoveState(
+            DOORMAKER_SCRUTINY_MOVE,
+            scrutiny,
+            [attack_intent(scrutiny_intent_damage)],
+            follow_up_id=DOORMAKER_GRASP_MOVE,
+        ),
+        DOORMAKER_GRASP_MOVE: MoveState(
+            DOORMAKER_GRASP_MOVE,
+            grasp,
+            [
+                multi_attack_intent(grasp_intent_damage, DOORMAKER_GRASP_HIT_COUNT),
+                buff_intent(),
+            ],
+            follow_up_id=DOORMAKER_HUNGER_MOVE,
         ),
     }
-    return creature, MonsterAI(states, DOORMAKER_WHAT_IS_IT_MOVE)
+    return creature, MonsterAI(states, DOORMAKER_DRAMATIC_OPEN_MOVE)
 
 
 # ---- Queen ----

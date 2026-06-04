@@ -124,7 +124,7 @@ public class NCompendiumBottomButton : NButton
 	{
 		LocString locString = new LocString("main_menu_ui", _locKeyPrefix + ".title");
 		_label.SetTextAutoSize(locString.GetFormattedText());
-		_label.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.font);
+		_label.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.Font);
 	}
 
 	protected override void OnEnable()

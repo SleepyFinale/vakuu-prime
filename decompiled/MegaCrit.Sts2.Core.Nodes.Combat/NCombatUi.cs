@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -39,6 +40,10 @@ public class NCombatUi : Control
 		public static readonly StringName AddToPlayContainer = "AddToPlayContainer";
 
 		public static readonly StringName AnimIn = "AnimIn";
+
+		public static readonly StringName AnimOut = "AnimOut";
+
+		public static readonly StringName PostCombatCleanUp = "PostCombatCleanUp";
 
 		public static readonly StringName OnHandSelectModeEntered = "OnHandSelectModeEntered";
 
@@ -107,6 +112,8 @@ public class NCombatUi : Control
 	private readonly Dictionary<NCard, Vector2> _originalPlayContainerCardScales = new Dictionary<NCard, Vector2>();
 
 	private Tween? _playContainerPeekModeTween;
+
+	private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
 	private int _originalHandChildIndex;
 
@@ -187,13 +194,13 @@ public class NCombatUi : Control
 
 	public override void _ExitTree()
 	{
+		_cts.Cancel();
 		DisconnectSignals();
 	}
 
 	public void Activate(CombatState state)
 	{
-		CombatManager.Instance.CombatEnded += AnimOut;
-		CombatManager.Instance.CombatEnded += PostCombatCleanUp;
+		CombatManager.Instance.CombatEnded += OnCombatEnded;
 		CombatManager.Instance.CombatWon += OnCombatWon;
 		_state = state;
 		Player me = LocalContext.GetMe(_state);
@@ -219,8 +226,7 @@ public class NCombatUi : Control
 
 	private void DisconnectSignals()
 	{
-		CombatManager.Instance.CombatEnded -= AnimOut;
-		CombatManager.Instance.CombatEnded -= PostCombatCleanUp;
+		CombatManager.Instance.CombatEnded -= OnCombatEnded;
 		CombatManager.Instance.CombatWon -= OnCombatWon;
 	}
 
@@ -233,6 +239,12 @@ public class NCombatUi : Control
 	public NCard? GetCardFromPlayContainer(CardModel model)
 	{
 		return PlayContainerCards.FirstOrDefault((NCard n) => n.Model == model);
+	}
+
+	private void OnCombatEnded(CombatRoom combatRoom)
+	{
+		AnimOut();
+		PostCombatCleanUp();
 	}
 
 	private void OnCombatWon(CombatRoom room)
@@ -249,7 +261,7 @@ public class NCombatUi : Control
 
 	private async Task ProceedWithoutRewards()
 	{
-		await Cmd.Wait(1f);
+		await Cmd.Wait(1f, _cts.Token);
 		await RunManager.Instance.ProceedFromTerminalRewardsScreen();
 	}
 
@@ -271,15 +283,15 @@ public class NCombatUi : Control
 		}
 		if (_isDebugSlowRewards)
 		{
-			await Cmd.Wait(num + 3f);
+			await Cmd.Wait(num + 3f, _cts.Token);
 		}
 		else if (room.RoomType == RoomType.Boss)
 		{
-			await Cmd.CustomScaledWait(num * 0.5f, num + 1f);
+			await Cmd.CustomScaledWait(num * 0.5f, num + 1f, ignoreCombatEnd: false, _cts.Token);
 		}
 		else
 		{
-			await Cmd.CustomScaledWait(0.5f, num + 1f);
+			await Cmd.CustomScaledWait(0.5f, num + 1f, ignoreCombatEnd: false, _cts.Token);
 		}
 		Player me = LocalContext.GetMe(_state);
 		await RewardsCmd.OfferForRoomEnd(me, room);
@@ -292,7 +304,7 @@ public class NCombatUi : Control
 		_combatPilesContainer.AnimIn();
 	}
 
-	public void AnimOut(CombatRoom _)
+	public void AnimOut()
 	{
 		Hand.AnimOut();
 		PlayQueue.AnimOut();
@@ -302,7 +314,7 @@ public class NCombatUi : Control
 		_combatPilesContainer.AnimOut();
 	}
 
-	private void PostCombatCleanUp(CombatRoom _)
+	private void PostCombatCleanUp()
 	{
 		Tween tween = CreateTween();
 		tween.TweenProperty(PlayContainer, "modulate", Colors.Transparent, 0.25);
@@ -497,7 +509,7 @@ public class NCombatUi : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(14);
+		List<MethodInfo> list = new List<MethodInfo>(16);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Deactivate, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -507,6 +519,8 @@ public class NCombatUi : Control
 			new PropertyInfo(Variant.Type.Object, "card", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.AnimIn, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.AnimOut, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.PostCombatCleanUp, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnHandSelectModeEntered, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnHandSelectModeExited, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnPeekButtonReady, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
@@ -563,6 +577,18 @@ public class NCombatUi : Control
 		if (method == MethodName.AnimIn && args.Count == 0)
 		{
 			AnimIn();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.AnimOut && args.Count == 0)
+		{
+			AnimOut();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.PostCombatCleanUp && args.Count == 0)
+		{
+			PostCombatCleanUp();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -641,6 +667,14 @@ public class NCombatUi : Control
 			return true;
 		}
 		if (method == MethodName.AnimIn)
+		{
+			return true;
+		}
+		if (method == MethodName.AnimOut)
+		{
+			return true;
+		}
+		if (method == MethodName.PostCombatCleanUp)
 		{
 			return true;
 		}

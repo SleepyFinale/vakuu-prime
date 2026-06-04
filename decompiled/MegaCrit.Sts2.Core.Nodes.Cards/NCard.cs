@@ -427,6 +427,8 @@ public class NCard : Control, IPoolable
 
 	public override void _ExitTree()
 	{
+		RandomizeCostTween?.Kill();
+		RandomizeCostTween = null;
 		UnsubscribeFromModel(Model);
 	}
 
@@ -645,8 +647,8 @@ public class NCard : Control, IPoolable
 		{
 			_energyLabel.SetTextAutoSize("?");
 			_energyIcon.Visible = true;
-			_energyLabel.AddThemeColorOverride(ThemeConstants.Label.fontColor, StsColors.cream);
-			_energyLabel.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, Model.Pool.EnergyOutlineColor);
+			_energyLabel.AddThemeColorOverride(ThemeConstants.Label.FontColor, StsColors.cream);
+			_energyLabel.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, Model.Pool.EnergyOutlineColor);
 			return;
 		}
 		if (Model.EnergyCost.CostsX)
@@ -699,8 +701,8 @@ public class NCard : Control, IPoolable
 			color = GetCostTextColorInHand(energyCostColor, _pretendCardCanBePlayed, color);
 			color2 = GetCostOutlineColorInHand(energyCostColor, _pretendCardCanBePlayed, color2);
 		}
-		_energyLabel.AddThemeColorOverride(ThemeConstants.Label.fontColor, color);
-		_energyLabel.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, color2);
+		_energyLabel.AddThemeColorOverride(ThemeConstants.Label.FontColor, color);
+		_energyLabel.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, color2);
 	}
 
 	private void UpdateStarCostVisuals(PileType pileType)
@@ -709,8 +711,8 @@ public class NCard : Control, IPoolable
 		{
 			_starLabel.SetTextAutoSize(string.Empty);
 			_starIcon.Visible = false;
-			_starLabel.AddThemeColorOverride(ThemeConstants.Label.fontColor, StsColors.cream);
-			_starLabel.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, Model.Pool.EnergyOutlineColor);
+			_starLabel.AddThemeColorOverride(ThemeConstants.Label.FontColor, StsColors.cream);
+			_starLabel.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, Model.Pool.EnergyOutlineColor);
 			return;
 		}
 		if (Model.HasStarCostX)
@@ -767,8 +769,8 @@ public class NCard : Control, IPoolable
 			color = GetCostTextColorInHand(starCostColor, _pretendCardCanBePlayed, color);
 			color2 = GetCostOutlineColorInHand(starCostColor, _pretendCardCanBePlayed, color2);
 		}
-		_starLabel.AddThemeColorOverride(ThemeConstants.Label.fontColor, color);
-		_starLabel.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, color2);
+		_starLabel.AddThemeColorOverride(ThemeConstants.Label.FontColor, color);
+		_starLabel.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, color2);
 	}
 
 	private static Color GetCostTextColorInHand(CardCostColor costColor, bool pretendCardCanBePlayed, Color defaultColor)
@@ -814,7 +816,10 @@ public class NCard : Control, IPoolable
 		}), 0, 50, Rng.Chaotic.NextFloat(0.4f, 0.6f)).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Sine);
 		RandomizeCostTween.Connect(Tween.SignalName.Finished, Callable.From(delegate
 		{
-			UpdateEnergyCostVisuals(Model.Pile.Type);
+			if (Model != null)
+			{
+				UpdateEnergyCostVisuals(DisplayingPile);
+			}
 		}), 4u);
 	}
 
@@ -956,8 +961,8 @@ public class NCard : Control, IPoolable
 			color2 = StsColors.cardTitleOutlineSpecial;
 		}
 		_titleLabel.SetTextAutoSize(textAutoSize);
-		_titleLabel.AddThemeColorOverride(ThemeConstants.Label.fontColor, color);
-		_titleLabel.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, color2);
+		_titleLabel.AddThemeColorOverride(ThemeConstants.Label.FontColor, color);
+		_titleLabel.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, color2);
 	}
 
 	private Color GetTitleLabelOutlineColor()
@@ -1088,6 +1093,10 @@ public class NCard : Control, IPoolable
 			PlayPileTween.TweenProperty(this, "modulate", StsColors.transparentBlack, 0.2);
 			PlayPileTween.Chain();
 			PlayPileTween.TweenInterval((SaveManager.Instance.PrefsSave.FastMode == FastModeType.Fast) ? 0.1 : 0.2);
+			PlayPileTween.TweenCallback(Callable.From(delegate
+			{
+				UpdateVisuals(PileType.Play, CardPreviewMode.Normal);
+			}));
 			PlayPileTween.Chain();
 			PlayPileTween.TweenProperty(this, "modulate", Colors.White, 0.2).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
 			PlayPileTween.TweenProperty(this, "scale", scale, 0.25).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic)

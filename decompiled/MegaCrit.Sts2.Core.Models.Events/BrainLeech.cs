@@ -34,7 +34,7 @@ public sealed class BrainLeech : EventModel
 		new IntVar("FromCardChoiceCount", 5m)
 	});
 
-	public override bool IsAllowed(RunState runState)
+	public override bool IsAllowed(IRunState runState)
 	{
 		return runState.CurrentActIndex < 2;
 	}
@@ -64,9 +64,10 @@ public sealed class BrainLeech : EventModel
 	{
 		Player owner = base.Owner;
 		List<CardCreationResult> cards = CardFactory.CreateForReward(owner, base.DynamicVars["FromCardChoiceCount"].IntValue, CardCreationOptions.ForNonCombatWithDefaultOdds(new global::_003C_003Ez__ReadOnlySingleElementList<CardPoolModel>(owner.Character.CardPool))).ToList();
-		CardSelectorPrefs cardSelectorPrefs = new CardSelectorPrefs(L10NLookup("BRAIN_LEECH.pages.SHARE_KNOWLEDGE.selectionScreenPrompt"), 1);
-		cardSelectorPrefs.Cancelable = false;
-		CardSelectorPrefs prefs = cardSelectorPrefs;
+		CardSelectorPrefs prefs = new CardSelectorPrefs(L10NLookup("BRAIN_LEECH.pages.SHARE_KNOWLEDGE.selectionScreenPrompt"), 1)
+		{
+			Cancelable = false
+		};
 		CardModel cardModel = (await CardSelectCmd.FromSimpleGridForRewards(new BlockingPlayerChoiceContext(), cards, base.Owner, prefs)).FirstOrDefault();
 		if (cardModel != null)
 		{

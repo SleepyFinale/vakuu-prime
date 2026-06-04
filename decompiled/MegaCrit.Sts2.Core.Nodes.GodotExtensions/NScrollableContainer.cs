@@ -19,6 +19,8 @@ public class NScrollableContainer : Control
 
 		public static readonly StringName SetContent = "SetContent";
 
+		public static readonly StringName UpdatePadding = "UpdatePadding";
+
 		public static readonly StringName DisableScrollingIfContentFits = "DisableScrollingIfContentFits";
 
 		public new static readonly StringName _EnterTree = "_EnterTree";
@@ -162,10 +164,15 @@ public class NScrollableContainer : Control
 		if (_content != null)
 		{
 			_content.Connect(CanvasItem.SignalName.ItemRectChanged, Callable.From(UpdateScrollLimitBottom));
-			_paddingTop = paddingTop;
-			_paddingBottom = paddingBottom;
-			UpdateScrollLimitBottom();
+			UpdatePadding(paddingTop, paddingBottom);
 		}
+	}
+
+	public void UpdatePadding(float paddingTop = 0f, float paddingBottom = 0f)
+	{
+		_paddingTop = paddingTop;
+		_paddingBottom = paddingBottom;
+		UpdateScrollLimitBottom();
 	}
 
 	public void DisableScrollingIfContentFits()
@@ -286,7 +293,7 @@ public class NScrollableContainer : Control
 
 	private void ProcessGuiFocus(Control focusedControl)
 	{
-		if (_content != null && IsVisibleInTree() && NControllerManager.Instance.IsUsingController && _content.IsAncestorOf(focusedControl))
+		if (_content != null && IsVisibleInTree() && NControllerManager.Instance.IsUsingController && !(focusedControl is NDropdownItem) && _content.IsAncestorOf(focusedControl))
 		{
 			float num = _content.GlobalPosition.Y - focusedControl.GlobalPosition.Y;
 			float value = num + ScrollViewportSize * 0.5f;
@@ -343,11 +350,16 @@ public class NScrollableContainer : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(15);
+		List<MethodInfo> list = new List<MethodInfo>(16);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetContent, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "content", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false),
+			new PropertyInfo(Variant.Type.Float, "paddingTop", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false),
+			new PropertyInfo(Variant.Type.Float, "paddingBottom", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+		}, null));
+		list.Add(new MethodInfo(MethodName.UpdatePadding, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
+		{
 			new PropertyInfo(Variant.Type.Float, "paddingTop", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false),
 			new PropertyInfo(Variant.Type.Float, "paddingBottom", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
@@ -403,6 +415,12 @@ public class NScrollableContainer : Control
 		if (method == MethodName.SetContent && args.Count == 3)
 		{
 			SetContent(VariantUtils.ConvertTo<Control>(in args[0]), VariantUtils.ConvertTo<float>(in args[1]), VariantUtils.ConvertTo<float>(in args[2]));
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.UpdatePadding && args.Count == 2)
+		{
+			UpdatePadding(VariantUtils.ConvertTo<float>(in args[0]), VariantUtils.ConvertTo<float>(in args[1]));
 			ret = default(godot_variant);
 			return true;
 		}
@@ -495,6 +513,10 @@ public class NScrollableContainer : Control
 			return true;
 		}
 		if (method == MethodName.SetContent)
+		{
+			return true;
+		}
+		if (method == MethodName.UpdatePadding)
 		{
 			return true;
 		}

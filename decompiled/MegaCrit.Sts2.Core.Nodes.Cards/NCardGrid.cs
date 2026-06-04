@@ -218,7 +218,7 @@ public class NCardGrid : Control
 					},
 					{
 						SortingOrders.CostAscending,
-						(CardModel a, CardModel b) => a.EnergyCost.Canonical.CompareTo(b.EnergyCost.Canonical)
+						(CardModel a, CardModel b) => a.EnergyCost.GetResolved().CompareTo(b.EnergyCost.GetResolved())
 					},
 					{
 						SortingOrders.TypeAscending,
@@ -234,7 +234,7 @@ public class NCardGrid : Control
 					},
 					{
 						SortingOrders.CostDescending,
-						(CardModel a, CardModel b) => -a.EnergyCost.Canonical.CompareTo(b.EnergyCost.Canonical)
+						(CardModel a, CardModel b) => -a.EnergyCost.GetResolved().CompareTo(b.EnergyCost.GetResolved())
 					},
 					{
 						SortingOrders.TypeDescending,
@@ -793,7 +793,7 @@ public class NCardGrid : Control
 					nGridCardHolder.Scale = nGridCardHolder.SmallScale;
 					_scrollContainer.AddChildSafely(nGridCardHolder);
 					nCard.UpdateVisuals(_pileType, CardPreviewMode.Normal);
-					if (nGridCardHolder.CardModel.CanonicalInstance.IsUpgradable)
+					if (nGridCardHolder.CardModel.IsUpgradable)
 					{
 						nGridCardHolder.SetIsPreviewingUpgrade(IsShowingUpgrades);
 					}

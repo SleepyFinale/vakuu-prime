@@ -46,6 +46,8 @@ public class NHandImage : Control
 
 		public static readonly StringName SetIsDown = "SetIsDown";
 
+		public static readonly StringName SetSkipped = "SetSkipped";
+
 		public static readonly StringName SetAnimateInProgress = "SetAnimateInProgress";
 
 		public new static readonly StringName _Process = "_Process";
@@ -56,6 +58,8 @@ public class NHandImage : Control
 		public static readonly StringName Index = "Index";
 
 		public static readonly StringName IsDown = "IsDown";
+
+		public static readonly StringName IsShown = "IsShown";
 
 		public static readonly StringName _grabMarker = "_grabMarker";
 
@@ -109,6 +113,8 @@ public class NHandImage : Control
 	public int Index { get; private set; }
 
 	public bool IsDown { get; private set; }
+
+	public bool IsShown { get; private set; }
 
 	public static NHandImage Create(Player player, int slotIndex)
 	{
@@ -244,6 +250,7 @@ public class NHandImage : Control
 		Rect2 viewportRect = GetViewportRect();
 		Vector2 vector = Vector2.Down.Rotated(base.Rotation);
 		_desiredPosition = viewportRect.Size / 2f + viewportRect.Size * vector * 0.8f;
+		IsShown = false;
 	}
 
 	public void AnimateIn()
@@ -254,6 +261,7 @@ public class NHandImage : Control
 		{
 			_handAnimateInProgress = v;
 		}), 0f, 1f, 0.6000000238418579).SetTrans(Tween.TransitionType.Expo).SetEase(Tween.EaseType.Out);
+		IsShown = true;
 	}
 
 	public void SetIsDown(bool isDown)
@@ -301,6 +309,11 @@ public class NHandImage : Control
 		tween.TweenProperty(this, "global_position", _desiredPosition, 0.5).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 		await ToSignal(tween, Tween.SignalName.Finished);
 		_state = oldState;
+	}
+
+	public void SetSkipped()
+	{
+		SetTextureToFightMove(RelicPickingFightMove.Rock);
 	}
 
 	public void SetAnimateInProgress(float animateInProgress)
@@ -353,7 +366,7 @@ public class NHandImage : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(11);
+		List<MethodInfo> list = new List<MethodInfo>(12);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetIsInFight, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -382,6 +395,7 @@ public class NHandImage : Control
 		{
 			new PropertyInfo(Variant.Type.Bool, "isDown", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName.SetSkipped, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetAnimateInProgress, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Float, "animateInProgress", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
@@ -449,6 +463,12 @@ public class NHandImage : Control
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.SetSkipped && args.Count == 0)
+		{
+			SetSkipped();
+			ret = default(godot_variant);
+			return true;
+		}
 		if (method == MethodName.SetAnimateInProgress && args.Count == 1)
 		{
 			SetAnimateInProgress(VariantUtils.ConvertTo<float>(in args[0]));
@@ -503,6 +523,10 @@ public class NHandImage : Control
 		{
 			return true;
 		}
+		if (method == MethodName.SetSkipped)
+		{
+			return true;
+		}
 		if (method == MethodName.SetAnimateInProgress)
 		{
 			return true;
@@ -525,6 +549,11 @@ public class NHandImage : Control
 		if (name == PropertyName.IsDown)
 		{
 			IsDown = VariantUtils.ConvertTo<bool>(in value);
+			return true;
+		}
+		if (name == PropertyName.IsShown)
+		{
+			IsShown = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
 		if (name == PropertyName._grabMarker)
@@ -583,9 +612,17 @@ public class NHandImage : Control
 			value = VariantUtils.CreateFrom<int>(Index);
 			return true;
 		}
+		bool from;
 		if (name == PropertyName.IsDown)
 		{
-			value = VariantUtils.CreateFrom<bool>(IsDown);
+			from = IsDown;
+			value = VariantUtils.CreateFrom(in from);
+			return true;
+		}
+		if (name == PropertyName.IsShown)
+		{
+			from = IsShown;
+			value = VariantUtils.CreateFrom(in from);
 			return true;
 		}
 		if (name == PropertyName._grabMarker)
@@ -651,6 +688,7 @@ public class NHandImage : Control
 		list.Add(new PropertyInfo(Variant.Type.Float, PropertyName._handAnimateInProgress, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Int, PropertyName.Index, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsDown, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.IsShown, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 
@@ -660,6 +698,7 @@ public class NHandImage : Control
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName.Index, Variant.From<int>(Index));
 		info.AddProperty(PropertyName.IsDown, Variant.From<bool>(IsDown));
+		info.AddProperty(PropertyName.IsShown, Variant.From<bool>(IsShown));
 		info.AddProperty(PropertyName._grabMarker, Variant.From(in _grabMarker));
 		info.AddProperty(PropertyName._textureRect, Variant.From(in _textureRect));
 		info.AddProperty(PropertyName._currentVelocity, Variant.From(in _currentVelocity));
@@ -683,41 +722,45 @@ public class NHandImage : Control
 		{
 			IsDown = value2.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._grabMarker, out var value3))
+		if (info.TryGetProperty(PropertyName.IsShown, out var value3))
 		{
-			_grabMarker = value3.As<Marker2D>();
+			IsShown = value3.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._textureRect, out var value4))
+		if (info.TryGetProperty(PropertyName._grabMarker, out var value4))
 		{
-			_textureRect = value4.As<TextureRect>();
+			_grabMarker = value4.As<Marker2D>();
 		}
-		if (info.TryGetProperty(PropertyName._currentVelocity, out var value5))
+		if (info.TryGetProperty(PropertyName._textureRect, out var value5))
 		{
-			_currentVelocity = value5.As<Vector2>();
+			_textureRect = value5.As<TextureRect>();
 		}
-		if (info.TryGetProperty(PropertyName._desiredPosition, out var value6))
+		if (info.TryGetProperty(PropertyName._currentVelocity, out var value6))
 		{
-			_desiredPosition = value6.As<Vector2>();
+			_currentVelocity = value6.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._downTween, out var value7))
+		if (info.TryGetProperty(PropertyName._desiredPosition, out var value7))
 		{
-			_downTween = value7.As<Tween>();
+			_desiredPosition = value7.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._state, out var value8))
+		if (info.TryGetProperty(PropertyName._downTween, out var value8))
 		{
-			_state = value8.As<State>();
+			_downTween = value8.As<Tween>();
 		}
-		if (info.TryGetProperty(PropertyName._isInFight, out var value9))
+		if (info.TryGetProperty(PropertyName._state, out var value9))
 		{
-			_isInFight = value9.As<bool>();
+			_state = value9.As<State>();
 		}
-		if (info.TryGetProperty(PropertyName._originalPosition, out var value10))
+		if (info.TryGetProperty(PropertyName._isInFight, out var value10))
 		{
-			_originalPosition = value10.As<Vector2>();
+			_isInFight = value10.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._handAnimateInProgress, out var value11))
+		if (info.TryGetProperty(PropertyName._originalPosition, out var value11))
 		{
-			_handAnimateInProgress = value11.As<float>();
+			_originalPosition = value11.As<Vector2>();
+		}
+		if (info.TryGetProperty(PropertyName._handAnimateInProgress, out var value12))
+		{
+			_handAnimateInProgress = value12.As<float>();
 		}
 	}
 }

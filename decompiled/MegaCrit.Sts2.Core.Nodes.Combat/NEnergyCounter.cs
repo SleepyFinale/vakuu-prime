@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
 using MegaCrit.Sts2.Core.TestSupport;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -52,9 +53,9 @@ public class NEnergyCounter : Control
 
 		public static readonly StringName _rotationLayers = "_rotationLayers";
 
-		public static readonly StringName _backParticles = "_backParticles";
+		public static readonly StringName _backVfx = "_backVfx";
 
-		public static readonly StringName _frontParticles = "_frontParticles";
+		public static readonly StringName _frontVfx = "_frontVfx";
 
 		public static readonly StringName _animInTween = "_animInTween";
 
@@ -75,9 +76,9 @@ public class NEnergyCounter : Control
 
 	private Control _rotationLayers;
 
-	private CpuParticles2D _backParticles;
+	private NParticlesContainer? _backVfx;
 
-	private CpuParticles2D _frontParticles;
+	private NParticlesContainer? _frontVfx;
 
 	private HoverTip _hoverTip;
 
@@ -111,8 +112,8 @@ public class NEnergyCounter : Control
 		_label = GetNode<MegaLabel>("Label");
 		_layers = GetNode<Control>("%Layers");
 		_rotationLayers = GetNode<Control>("%RotationLayers");
-		_backParticles = GetNode<CpuParticles2D>("%BurstBack");
-		_frontParticles = GetNode<CpuParticles2D>("%BurstFront");
+		_backVfx = GetNode<NParticlesContainer>("%EnergyVfxBack");
+		_frontVfx = GetNode<NParticlesContainer>("%EnergyVfxFront");
 		LocString locString = new LocString("static_hover_tips", "ENERGY_COUNT.description");
 		locString.Add("energyPrefix", EnergyIconHelper.GetPrefix(_player.Character.CardPool));
 		_hoverTip = new HoverTip(new LocString("static_hover_tips", "ENERGY_COUNT.title"), locString);
@@ -155,8 +156,8 @@ public class NEnergyCounter : Control
 	{
 		PlayerCombatState playerCombatState = _player.PlayerCombatState;
 		_label.SetTextAutoSize($"{playerCombatState.Energy}/{playerCombatState.MaxEnergy}");
-		_label.AddThemeColorOverride(ThemeConstants.Label.fontColor, (playerCombatState.Energy == 0) ? StsColors.red : StsColors.cream);
-		_label.AddThemeColorOverride(ThemeConstants.Label.fontOutlineColor, (playerCombatState.Energy == 0) ? StsColors.unplayableEnergyCostOutline : OutlineColor);
+		_label.AddThemeColorOverride(ThemeConstants.Label.FontColor, (playerCombatState.Energy == 0) ? StsColors.red : StsColors.cream);
+		_label.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, (playerCombatState.Energy == 0) ? StsColors.unplayableEnergyCostOutline : OutlineColor);
 		Material material = ((playerCombatState.Energy == 0) ? PreloadManager.Cache.GetMaterial("res://materials/ui/energy_orb_dark.tres") : null);
 		foreach (Control item in _layers.GetChildren().OfType<Control>())
 		{
@@ -173,8 +174,8 @@ public class NEnergyCounter : Control
 	{
 		if (oldEnergy < newEnergy)
 		{
-			_frontParticles.Emitting = true;
-			_backParticles.Emitting = true;
+			_backVfx?.Restart();
+			_frontVfx?.Restart();
 		}
 	}
 
@@ -357,14 +358,14 @@ public class NEnergyCounter : Control
 			_rotationLayers = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
-		if (name == PropertyName._backParticles)
+		if (name == PropertyName._backVfx)
 		{
-			_backParticles = VariantUtils.ConvertTo<CpuParticles2D>(in value);
+			_backVfx = VariantUtils.ConvertTo<NParticlesContainer>(in value);
 			return true;
 		}
-		if (name == PropertyName._frontParticles)
+		if (name == PropertyName._frontVfx)
 		{
-			_frontParticles = VariantUtils.ConvertTo<CpuParticles2D>(in value);
+			_frontVfx = VariantUtils.ConvertTo<NParticlesContainer>(in value);
 			return true;
 		}
 		if (name == PropertyName._animInTween)
@@ -403,14 +404,14 @@ public class NEnergyCounter : Control
 			value = VariantUtils.CreateFrom(in _rotationLayers);
 			return true;
 		}
-		if (name == PropertyName._backParticles)
+		if (name == PropertyName._backVfx)
 		{
-			value = VariantUtils.CreateFrom(in _backParticles);
+			value = VariantUtils.CreateFrom(in _backVfx);
 			return true;
 		}
-		if (name == PropertyName._frontParticles)
+		if (name == PropertyName._frontVfx)
 		{
-			value = VariantUtils.CreateFrom(in _frontParticles);
+			value = VariantUtils.CreateFrom(in _frontVfx);
 			return true;
 		}
 		if (name == PropertyName._animInTween)
@@ -433,8 +434,8 @@ public class NEnergyCounter : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._label, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._layers, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._rotationLayers, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._backParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._frontParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._backVfx, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._frontVfx, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._animInTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._animOutTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Color, PropertyName.OutlineColor, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -448,8 +449,8 @@ public class NEnergyCounter : Control
 		info.AddProperty(PropertyName._label, Variant.From(in _label));
 		info.AddProperty(PropertyName._layers, Variant.From(in _layers));
 		info.AddProperty(PropertyName._rotationLayers, Variant.From(in _rotationLayers));
-		info.AddProperty(PropertyName._backParticles, Variant.From(in _backParticles));
-		info.AddProperty(PropertyName._frontParticles, Variant.From(in _frontParticles));
+		info.AddProperty(PropertyName._backVfx, Variant.From(in _backVfx));
+		info.AddProperty(PropertyName._frontVfx, Variant.From(in _frontVfx));
 		info.AddProperty(PropertyName._animInTween, Variant.From(in _animInTween));
 		info.AddProperty(PropertyName._animOutTween, Variant.From(in _animOutTween));
 	}
@@ -470,13 +471,13 @@ public class NEnergyCounter : Control
 		{
 			_rotationLayers = value3.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._backParticles, out var value4))
+		if (info.TryGetProperty(PropertyName._backVfx, out var value4))
 		{
-			_backParticles = value4.As<CpuParticles2D>();
+			_backVfx = value4.As<NParticlesContainer>();
 		}
-		if (info.TryGetProperty(PropertyName._frontParticles, out var value5))
+		if (info.TryGetProperty(PropertyName._frontVfx, out var value5))
 		{
-			_frontParticles = value5.As<CpuParticles2D>();
+			_frontVfx = value5.As<NParticlesContainer>();
 		}
 		if (info.TryGetProperty(PropertyName._animInTween, out var value6))
 		{

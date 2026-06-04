@@ -371,10 +371,12 @@ from sts2_env.monsters.act3 import (
     DOOR_DRAMATIC_OPEN_MOVE,
     DOOR_ENFORCE_MOVE,
     DOOR_MONSTER_ID,
-    DOORMAKER_BEAM_MOVE,
-    DOORMAKER_GET_BACK_IN_MOVE,
+    DOORMAKER_DRAMATIC_OPEN_MOVE,
+    DOORMAKER_GRASP_MOVE,
+    DOORMAKER_HUNGER_MOVE,
+    DOORMAKER_INFINITE_HP,
     DOORMAKER_MONSTER_ID,
-    DOORMAKER_WHAT_IS_IT_MOVE,
+    DOORMAKER_SCRUTINY_MOVE,
     FABRICATOR_FABRICATE_BRANCH,
     FABRICATOR_DISINTEGRATE_MOVE,
     FABRICATOR_FABRICATE_MOVE,
@@ -483,7 +485,7 @@ from sts2_env.monsters.act3 import (
     create_turret_operator,
     create_zapbot,
 )
-from sts2_env.monsters.intents import attack_intent, buff_intent, debuff_intent
+from sts2_env.monsters.intents import IntentType, attack_intent, buff_intent, debuff_intent
 from sts2_env.monsters.state_machine import (
     MonsterAI, MoveState, RandomBranchState, ConditionalBranchState,
 )
@@ -742,9 +744,11 @@ DOOR_SLAM_HITS = 2
 DOOR_REVIVAL = 1
 DOORMAKER_BASE_HP = 489
 DOORMAKER_A8_HP = 512
-DOORMAKER_BEAM_DAMAGE_A9 = 34
-DOORMAKER_GET_BACK_IN_DAMAGE_A9 = 45
-DOORMAKER_STRENGTH = 5
+DOORMAKER_HUNGER_DAMAGE_A9 = 35
+DOORMAKER_SCRUTINY_DAMAGE_A9 = 26
+DOORMAKER_GRASP_DAMAGE_A9 = 11
+DOORMAKER_GRASP_STRENGTH_A9 = 4
+DOORMAKER_GRASP_HITS = 2
 DOORMAKER_DOOR_HP_SCALE_A8 = 25
 DOORMAKER_DOOR_STRENGTH_SCALE_A9 = 4
 TORCH_HEAD_AMALGAM_BASE_HP = 199
@@ -5223,13 +5227,17 @@ class TestFixedRotation:
         assert lethal_door.get_power_amount(PowerId.STRENGTH) == 0
 
         lethal_doormaker_combat = _make_combat(146)
+        lethal_doormaker_combat.ascension_level = 9
         lethal_door_2, lethal_door_ai_2 = create_door(Rng(146))
-        lethal_doormaker, lethal_doormaker_ai = create_doormaker(Rng(146))
+        lethal_doormaker, lethal_doormaker_ai = create_doormaker(Rng(146), ascension_level=9)
         lethal_doormaker_combat.add_enemy(lethal_door_2, lethal_door_ai_2)
         lethal_doormaker_combat.add_enemy(lethal_doormaker, lethal_doormaker_ai)
         lethal_door_2.current_hp = 0
-        lethal_doormaker_combat.player.current_hp = 40
-        lethal_doormaker_ai.states[DOORMAKER_GET_BACK_IN_MOVE].perform(lethal_doormaker_combat)
+        lethal_doormaker_combat.player.current_hp = DOORMAKER_HUNGER_DAMAGE_A9
+        lethal_doormaker_ai.doormaker_portal_open = True
+        lethal_doormaker.max_hp = lethal_doormaker_ai.doormaker_original_hp
+        lethal_doormaker.current_hp = lethal_doormaker.max_hp
+        lethal_doormaker_ai.states[DOORMAKER_HUNGER_MOVE].perform(lethal_doormaker_combat)
         assert lethal_doormaker_combat.is_over
         assert lethal_doormaker_combat.player_won is False
         assert lethal_doormaker.get_power_amount(PowerId.STRENGTH) == 0
@@ -5275,17 +5283,40 @@ class TestFixedRotation:
         doormaker_combat.ascension_level = 9
         doormaker, doormaker_ai = create_doormaker(Rng(rng_seed), ascension_level=9)
         doormaker_combat.add_enemy(doormaker, doormaker_ai)
+        assert doormaker.max_hp == DOORMAKER_INFINITE_HP
+        assert doormaker_ai.doormaker_original_hp == DOORMAKER_A8_HP
+        assert doormaker_ai.current_move.state_id == DOORMAKER_DRAMATIC_OPEN_MOVE
+
+        dramatic_open = doormaker_ai.states[DOORMAKER_DRAMATIC_OPEN_MOVE]
+        assert dramatic_open.intents[0].intent_type == IntentType.SUMMON
+        dramatic_open.perform(doormaker_combat)
         assert doormaker.max_hp == DOORMAKER_A8_HP
-        assert doormaker_ai.current_move.state_id == DOORMAKER_WHAT_IS_IT_MOVE
+        assert doormaker.get_power_amount(PowerId.HUNGER) == 1
 
-        beam = doormaker_ai.states[DOORMAKER_BEAM_MOVE]
-        assert beam.intents[0].damage == DOORMAKER_BEAM_DAMAGE_A9
-        player_hp_before_beam = doormaker_combat.player.current_hp
-        beam.perform(doormaker_combat)
-        assert doormaker_combat.player.current_hp == player_hp_before_beam - DOORMAKER_BEAM_DAMAGE_A9
+        hunger = doormaker_ai.states[DOORMAKER_HUNGER_MOVE]
+        assert hunger.intents[0].damage == DOORMAKER_HUNGER_DAMAGE_A9
+        player_hp_before_hunger = doormaker_combat.player.current_hp
+        hunger.perform(doormaker_combat)
+        assert doormaker_combat.player.current_hp == player_hp_before_hunger - DOORMAKER_HUNGER_DAMAGE_A9
+        assert doormaker.get_power_amount(PowerId.SCRUTINY) == 1
 
-        get_back_in = doormaker_ai.states[DOORMAKER_GET_BACK_IN_MOVE]
-        assert get_back_in.intents[0].damage == DOORMAKER_GET_BACK_IN_DAMAGE_A9
+        scrutiny = doormaker_ai.states[DOORMAKER_SCRUTINY_MOVE]
+        assert scrutiny.intents[0].damage == DOORMAKER_SCRUTINY_DAMAGE_A9
+        player_hp_before_scrutiny = doormaker_combat.player.current_hp
+        scrutiny.perform(doormaker_combat)
+        assert doormaker_combat.player.current_hp == player_hp_before_scrutiny - DOORMAKER_SCRUTINY_DAMAGE_A9
+        assert doormaker.get_power_amount(PowerId.GRASP) == 1
+
+        grasp = doormaker_ai.states[DOORMAKER_GRASP_MOVE]
+        assert grasp.intents[0].damage == DOORMAKER_GRASP_DAMAGE_A9
+        assert grasp.intents[0].hits == DOORMAKER_GRASP_HITS
+        player_hp_before_grasp = doormaker_combat.player.current_hp
+        grasp.perform(doormaker_combat)
+        assert doormaker_combat.player.current_hp == (
+            player_hp_before_grasp - DOORMAKER_GRASP_DAMAGE_A9 * DOORMAKER_GRASP_HITS
+        )
+        assert doormaker.get_power_amount(PowerId.STRENGTH) == DOORMAKER_GRASP_STRENGTH_A9
+        assert doormaker.get_power_amount(PowerId.HUNGER) == 1
 
         revival_combat = _make_combat(rng_seed)
         revival_combat.ascension_level = 9
@@ -5295,12 +5326,13 @@ class TestFixedRotation:
         revival_combat.add_enemy(revival_doormaker, revival_doormaker_ai)
         assert revival_combat.kill_creature(revival_door)
         starting_max_hp = revival_door.max_hp
-        revival_doormaker_ai.states[DOORMAKER_GET_BACK_IN_MOVE].perform(revival_combat)
+        revived = revival_combat.revive_door()
+        assert revived is revival_door
         assert revival_door.max_hp == starting_max_hp + DOORMAKER_DOOR_HP_SCALE_A8
         assert revival_door.current_hp == revival_door.max_hp
         assert revival_door.get_power_amount(PowerId.STRENGTH) == DOORMAKER_DOOR_STRENGTH_SCALE_A9
         assert revival_combat.enemy_ais[revival_door.combat_id].current_move.state_id == DOOR_DRAMATIC_OPEN_MOVE
-        assert revival_doormaker.escaped is True
+        assert revival_doormaker.escaped is False
 
         encounter_combat = _make_combat(rng_seed)
         encounter_combat.ascension_level = 9

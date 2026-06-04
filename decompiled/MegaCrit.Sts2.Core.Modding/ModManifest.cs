@@ -1,11 +1,12 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace MegaCrit.Sts2.Core.Modding;
 
 public class ModManifest
 {
-	[JsonPropertyName("pck_name")]
-	public string? pckName;
+	[JsonPropertyName("id")]
+	public string? id;
 
 	[JsonPropertyName("name")]
 	public string? name;
@@ -18,4 +19,16 @@ public class ModManifest
 
 	[JsonPropertyName("version")]
 	public string? version;
+
+	[JsonPropertyName("has_pck")]
+	public bool hasPck;
+
+	[JsonPropertyName("has_dll")]
+	public bool hasDll;
+
+	[JsonPropertyName("dependencies")]
+	public List<string>? dependencies;
+
+	[JsonPropertyName("affects_gameplay")]
+	public bool affectsGameplay = true;
 }

@@ -194,9 +194,10 @@ public class CombatStateTracker
 
 	private async Task CallCombatStateChangedDeferred()
 	{
-		if (NRun.Instance != null)
+		SceneTree sceneTree = NRun.Instance?.GetTree();
+		if (sceneTree != null)
 		{
-			await NRun.Instance.GetTree().ToSignal(NRun.Instance.GetTree(), SceneTree.SignalName.ProcessFrame);
+			await sceneTree.ToSignal(sceneTree, SceneTree.SignalName.ProcessFrame);
 		}
 		CombatState state = _state;
 		if (state != null)

@@ -103,6 +103,7 @@ from sts2_env.encounters.act4 import (
     setup_haunted_ship_normal,
     setup_living_fog_normal,
     setup_punch_construct_normal,
+    setup_seapunk_normal,
     setup_sewer_clam_normal,
     setup_skulking_colony_elite,
     setup_terror_eel_elite,
@@ -221,6 +222,7 @@ CS_ENCOUNTER_PARITY_CASES = [
     ("OvicopterNormal", setup_ovicopter_normal, ("OVICOPTER",)),
     ("PunchConstructNormal", setup_punch_construct_normal, ("PUNCH_CONSTRUCT",)),
     ("PunchOffEventEncounter", setup_punch_off, ("PUNCH_CONSTRUCT", "PUNCH_CONSTRUCT")),
+    ("SeapunkNormal", setup_seapunk_normal, ("CALCIFIED_CULTIST", "SEAPUNK")),
     ("SewerClamNormal", setup_sewer_clam_normal, ("SEWER_CLAM",)),
     ("SkulkingColonyElite", setup_skulking_colony_elite, ("SKULKING_COLONY",)),
     ("SlumberingBeetleNormal", setup_slumbering_beetle_normal, ("SLUMBERING_BEETLE",)),
@@ -970,7 +972,7 @@ class TestAct4Pools:
         assert len(ACT4_WEAK) == 4
 
     def test_normal_encounter_count(self):
-        assert len(ACT4_NORMAL) == 10
+        assert len(ACT4_NORMAL) == 11
 
     def test_elite_encounter_count(self):
         assert len(ACT4_ELITE) == 3
@@ -979,7 +981,7 @@ class TestAct4Pools:
         assert len(ACT4_BOSS) == 3
 
     def test_all_act4_total(self):
-        assert len(ALL_ACT4_ENCOUNTERS) == 4 + 10 + 3 + 3  # 20
+        assert len(ALL_ACT4_ENCOUNTERS) == 4 + 11 + 3 + 3  # 21
 
 
 # ========================================================================
@@ -1080,3 +1082,15 @@ def test_deprecated_encounter_is_debug_placeholder_with_no_monsters():
 
     assert combat.enemies == []
     assert get_event_encounter_setup(DEPRECATED_ENCOUNTER_ID) is setup_deprecated_encounter
+
+
+def test_deprecated_monster_is_zero_hp_stub():
+    """DeprecatedMonster.cs: 0 HP creature with a stub move."""
+    from sts2_env.monsters.deprecated import DEPRECATED_MONSTER_ID, create_deprecated_monster
+
+    creature, ai = create_deprecated_monster(Rng(42))
+
+    assert creature.monster_id == DEPRECATED_MONSTER_ID
+    assert creature.max_hp == 0
+    assert creature.current_hp == 0
+    assert ai.current_move.state_id == "STUB"

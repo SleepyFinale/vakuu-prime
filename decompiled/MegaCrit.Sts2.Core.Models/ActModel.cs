@@ -282,7 +282,7 @@ public abstract class ActModel : AbstractModel
 	{
 		if (_rooms.Boss is DeprecatedEncounter)
 		{
-			_rooms.Boss = rng.NextItem(AllBossEncounters);
+			_rooms.Boss = rng.NextItem(AllBossEncounters.Where((EncounterModel e) => e.Id != _rooms.SecondBoss?.Id));
 		}
 		if (_rooms.SecondBoss is DeprecatedEncounter)
 		{
@@ -411,10 +411,9 @@ public abstract class ActModel : AbstractModel
 		return StandardActMap.CreateFor(runState, replaceTreasureWithElites);
 	}
 
-	public static IEnumerable<ActModel> GetRandomList(string seed, UnlockState unlockState, bool isMultiplayer)
+	public static IEnumerable<ActModel> GetRandomList(Rng rng, UnlockState unlockState, bool isMultiplayer)
 	{
 		List<ActModel> list = GetDefaultList().ToList();
-		Rng rng = new Rng((uint)StringHelper.GetDeterministicHashCode(seed));
 		bool flag = unlockState.IsEpochRevealed<UnderdocksEpoch>();
 		bool flag2 = !isMultiplayer && !SaveManager.Instance.Progress.DiscoveredActs.Contains(ModelDb.Act<Underdocks>().Id);
 		if (flag && (flag2 || rng.NextBool()))

@@ -1881,16 +1881,250 @@ class ReaperFormPower(PowerInstance):
 
 
 # ---------------------------------------------------------------------------
+# BorrowedTimePower
+# ---------------------------------------------------------------------------
+class BorrowedTimePower(PowerInstance):
+    """Increases owner's card energy costs by Amount until end of turn.
+
+    C# ref: BorrowedTimePower.cs
+    """
+
+    power_type = PowerType.DEBUFF
+    stack_type = PowerStackType.COUNTER
+
+    def __init__(self, amount: int = 1):
+        super().__init__(PowerId.BORROWED_TIME, amount)
+
+    def modify_card_cost(self, owner: Creature, card: object) -> int | None:
+        card_owner = getattr(card, "owner", None)
+        if card_owner is not owner:
+            return None
+        base_cost = max(0, getattr(card, "cost", 0))
+        return base_cost + self.amount
+
+    def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
+        if side == owner.side:
+            self.amount = 0
+
+
+# ---------------------------------------------------------------------------
+# NoEnergyGainPower
+# ---------------------------------------------------------------------------
+class NoEnergyGainPower(PowerInstance):
+    """Blocks energy gain for the owner's player. Removed at end of turn.
+
+    C# ref: NoEnergyGainPower.cs
+    """
+
+    power_type = PowerType.DEBUFF
+    stack_type = PowerStackType.SINGLE
+
+    def __init__(self, amount: int = 1):
+        super().__init__(PowerId.NO_ENERGY_GAIN, amount)
+
+    def modify_energy_gain(self, owner: Creature, amount: int) -> int:
+        return 0
+
+    def after_modifying_energy_gain(self, owner: Creature, combat: CombatState) -> None:
+        pass
+
+    def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
+        if side == owner.side:
+            self.amount = 0
+
+
+# ---------------------------------------------------------------------------
+# ScrutinyPower
+# ---------------------------------------------------------------------------
+class ScrutinyPower(PowerInstance):
+    """Blocks non-opening hand draws for the owner.
+
+    C# ref: ScrutinyPower.cs
+    """
+
+    power_type = PowerType.BUFF
+    stack_type = PowerStackType.SINGLE
+
+    def __init__(self, amount: int = 1):
+        super().__init__(PowerId.SCRUTINY, amount)
+
+    def should_block_player_draw(self, player: Creature, from_hand_draw: bool) -> bool | None:
+        if from_hand_draw:
+            return None
+        return False
+
+
+def _iter_player_combat_cards(combat: CombatState) -> list[object]:
+    cards: list[object] = []
+    for state in combat.combat_player_states:
+        for pile in state.all_piles:
+            cards.extend(pile)
+    return cards
+
+
+def _card_belongs_to_player(card: object, combat: CombatState) -> bool:
+    card_owner = getattr(card, "owner", None)
+    if card_owner is None:
+        return False
+    return combat.combat_player_state_for(card_owner) is not None
+
+
+# ---------------------------------------------------------------------------
+# GraspPower
+# ---------------------------------------------------------------------------
+class GraspPower(PowerInstance):
+    """Afflicts all player cards with Weighted while active.
+
+    C# ref: GraspPower.cs
+    """
+
+    power_type = PowerType.BUFF
+    stack_type = PowerStackType.SINGLE
+    _AFFLICTION = "weighted"
+
+    def __init__(self, amount: int = 1):
+        super().__init__(PowerId.GRASP, amount)
+        self._active = False
+        self._afflicted_cards: list[object] = []
+
+    def _afflict_card(self, card: object) -> None:
+        affliction = getattr(card, "affliction", None)
+        if callable(affliction):
+            current = affliction()
+            if current is not None:
+                return
+        afflict = getattr(card, "afflict", None)
+        if callable(afflict) and afflict(self._AFFLICTION):
+            combat_vars = getattr(card, "combat_vars", None)
+            if isinstance(combat_vars, dict):
+                combat_vars["_affliction_amount"] = self.amount
+            self._afflicted_cards.append(card)
+
+    def after_power_amount_changed(
+        self,
+        owner: Creature,
+        target: Creature,
+        power_id: PowerId,
+        amount: int,
+        applier: Creature | None,
+        source: object | None,
+        combat: CombatState,
+    ) -> None:
+        if owner is target and power_id == PowerId.GRASP and amount > 0 and not self._active:
+            self._active = True
+            for card in _iter_player_combat_cards(combat):
+                self._afflict_card(card)
+
+    def after_card_entered_combat(self, owner: Creature, card: object, combat: CombatState) -> None:
+        if _card_belongs_to_player(card, combat):
+            self._afflict_card(card)
+
+    def on_removed(self, owner: Creature, combat: CombatState) -> None:
+        for card in self._afflicted_cards:
+            clear_affliction = getattr(card, "clear_affliction", None)
+            if callable(clear_affliction):
+                clear_affliction(self._AFFLICTION)
+            combat_vars = getattr(card, "combat_vars", None)
+            if isinstance(combat_vars, dict):
+                combat_vars.pop("_affliction_amount", None)
+        self._afflicted_cards.clear()
+        self._active = False
+
+
+# ---------------------------------------------------------------------------
+# HungerPower
+# ---------------------------------------------------------------------------
+class HungerPower(PowerInstance):
+    """Afflicts player Attack/Skill cards with Devoured and adds Exhaust.
+
+    C# ref: HungerPower.cs
+    """
+
+    power_type = PowerType.BUFF
+    stack_type = PowerStackType.SINGLE
+    _AFFLICTION = "devoured"
+
+    def __init__(self, amount: int = 1):
+        super().__init__(PowerId.HUNGER, amount)
+        self._active = False
+        self._afflicted_cards: list[object] = []
+
+    def _should_afflict_type(self, card: object) -> bool:
+        card_type = getattr(card, "card_type", None) or getattr(card, "type", None)
+        return card_type in (CardType.ATTACK, CardType.SKILL)
+
+    def _afflict_card(self, card: object) -> None:
+        if not self._should_afflict_type(card):
+            return
+        affliction = getattr(card, "affliction", None)
+        if callable(affliction):
+            current = affliction()
+            if current is not None:
+                return
+        afflict = getattr(card, "afflict", None)
+        if not callable(afflict) or not afflict(self._AFFLICTION):
+            return
+        combat_vars = getattr(card, "combat_vars", None)
+        if isinstance(combat_vars, dict):
+            combat_vars["_affliction_amount"] = self.amount
+        keywords = set(getattr(card, "keywords", set()))
+        if "exhaust" not in keywords:
+            keywords.add("exhaust")
+            card.keywords = frozenset(keywords)
+            if isinstance(combat_vars, dict):
+                combat_vars["_devoured_applied_exhaust"] = True
+        self._afflicted_cards.append(card)
+
+    def after_power_amount_changed(
+        self,
+        owner: Creature,
+        target: Creature,
+        power_id: PowerId,
+        amount: int,
+        applier: Creature | None,
+        source: object | None,
+        combat: CombatState,
+    ) -> None:
+        if owner is target and power_id == PowerId.HUNGER and amount > 0 and not self._active:
+            self._active = True
+            for card in _iter_player_combat_cards(combat):
+                self._afflict_card(card)
+
+    def after_card_entered_combat(self, owner: Creature, card: object, combat: CombatState) -> None:
+        if _card_belongs_to_player(card, combat):
+            self._afflict_card(card)
+
+    def on_removed(self, owner: Creature, combat: CombatState) -> None:
+        for card in self._afflicted_cards:
+            combat_vars = getattr(card, "combat_vars", None)
+            if isinstance(combat_vars, dict) and combat_vars.get("_devoured_applied_exhaust"):
+                keywords = set(getattr(card, "keywords", set()))
+                keywords.discard("exhaust")
+                card.keywords = frozenset(keywords)
+                combat_vars.pop("_devoured_applied_exhaust", None)
+            clear_affliction = getattr(card, "clear_affliction", None)
+            if callable(clear_affliction):
+                clear_affliction(self._AFFLICTION)
+            if isinstance(combat_vars, dict):
+                combat_vars.pop("_affliction_amount", None)
+        self._afflicted_cards.clear()
+        self._active = False
+
+
+# ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
 from sts2_env.core.creature import register_power_class  # noqa: E402
 
 _ALL_POWERS: dict[PowerId, type[PowerInstance]] = {
+    PowerId.BORROWED_TIME: BorrowedTimePower,
+    PowerId.GRASP: GraspPower,
     PowerId.GRAVITY: GravityPower,
     PowerId.GUARDED: GuardedPower,
     PowerId.HAILSTORM: HailstormPower,
     PowerId.HAMMER_TIME: HammerTimePower,
     PowerId.HANG: HangPower,
+    PowerId.HUNGER: HungerPower,
     PowerId.HARD_TO_KILL: HardToKillPower,
     PowerId.HAUNT: HauntPower,
     PowerId.HELICAL_DART: HelicalDartPower,
@@ -1915,6 +2149,7 @@ _ALL_POWERS: dict[PowerId, type[PowerInstance]] = {
     PowerId.NEUROSURGE: NeurosurgePower,
     PowerId.NIGHTMARE: NightmarePower,
     PowerId.NO_DRAW: NoDrawPower,
+    PowerId.NO_ENERGY_GAIN: NoEnergyGainPower,
     PowerId.NOSTALGIA: NostalgiaPower,
     PowerId.OBLIVION: OblivionPower,
     PowerId.ORBIT: OrbitPower,
@@ -1931,6 +2166,7 @@ _ALL_POWERS: dict[PowerId, type[PowerInstance]] = {
     PowerId.PYRE: PyrePower,
     PowerId.RADIANCE: RadiancePower,
     PowerId.RAMPART: RampartPower,
+    PowerId.SCRUTINY: ScrutinyPower,
     PowerId.REAPER_FORM: ReaperFormPower,
 }
 

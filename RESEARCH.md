@@ -2,26 +2,30 @@
 
 ## 1. STS2 Technical Architecture
 
-| Item | Details |
-| ---- | ---- |
-| Game engine | Godot 4 (migrated from Unity due to Unity’s 2023 per-install pricing policy) |
-| Programming language | C# / .NET 8 |
-| Core file | `sts2.dll` (all game logic) |
-| Code obfuscation | None — class names, method names, and game logic are fully readable |
-| Asset format | `.pck` files (Godot standard pack format) |
-| Monster animations | Spine skeletal animation (`.skel` + `.atlas` + `.png`) |
+
+| Item                 | Details                                                                      |
+| -------------------- | ---------------------------------------------------------------------------- |
+| Game engine          | Godot 4 (migrated from Unity due to Unity’s 2023 per-install pricing policy) |
+| Programming language | C# / .NET 8                                                                  |
+| Core file            | `sts2.dll` (all game logic)                                                  |
+| Code obfuscation     | None — class names, method names, and game logic are fully readable          |
+| Asset format         | `.pck` files (Godot standard pack format)                                    |
+| Monster animations   | Spine skeletal animation (`.skel` + `.atlas` + `.png`)                       |
+
 
 Comparison with STS1:
 
-| Aspect | STS1 | STS2 |
-| ---- | ---- | ---- |
-| Engine | libGDX | Godot 4 |
-| Language | Java | C# / .NET 8 |
-| Game files | `.jar` (ZIP containing `.class`) | `.pck` + `sts2.dll` |
-| Decompilation tools | CFR / IntelliJ / JD-GUI | ILSpy + GDRE Tools |
-| Mod loading | ModTheSpire + BaseMod | Native `mods` folder + BaseLib-StS2 |
-| Automation interface | CommunicationMod (stdin/stdout JSON) | None yet |
-| Bot frameworks | spirecomm (Python), bottled_ai | None yet |
+
+| Aspect               | STS1                                 | STS2                                |
+| -------------------- | ------------------------------------ | ----------------------------------- |
+| Engine               | libGDX                               | Godot 4                             |
+| Language             | Java                                 | C# / .NET 8                         |
+| Game files           | `.jar` (ZIP containing `.class`)     | `.pck` + `sts2.dll`                 |
+| Decompilation tools  | CFR / IntelliJ / JD-GUI              | ILSpy + GDRE Tools                  |
+| Mod loading          | ModTheSpire + BaseMod                | Native `mods` folder + BaseLib-StS2 |
+| Automation interface | CommunicationMod (stdin/stdout JSON) | None yet                            |
+| Bot frameworks       | spirecomm (Python), bottled_ai       | None yet                            |
+
 
 ## 2. Decompilation Methods
 
@@ -58,21 +62,25 @@ ilspycmd -p -o <output-dir> sts2.dll
 
 ### 3.2 Key modding tools
 
-| Tool | Description |
-| ---- | ---- |
-| [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) | Mod base library (similar to STS1’s BaseMod) |
-| [Harmony](https://github.com/pardeike/Harmony) | C# runtime method hooking library (note: Mac ARM64 has bugs) |
-| GUMM | Alternative mod loading approach |
-| R2Modman / Thunderstore | Community mod managers |
+
+| Tool                                                   | Description                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
+| [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) | Mod base library (similar to STS1’s BaseMod)                 |
+| [Harmony](https://github.com/pardeike/Harmony)         | C# runtime method hooking library (note: Mac ARM64 has bugs) |
+| GUMM                                                   | Alternative mod loading approach                             |
+| R2Modman / Thunderstore                                | Community mod managers                                       |
+
 
 ### 3.3 Useful existing projects
 
-| Project | Description |
-| ---- | ---- |
-| [spire-codex](https://github.com/ptrlrd/spire-codex) | Extracts structured data from decompiled code (cards/relics/monsters/potions); includes 20 Python parsers |
-| [BetterSpire2](https://www.nexusmods.com/slaythespire2/mods/2) | QoL mod (damage counter, auto-confirm, fast mode, etc.) |
-| DevConsole mod | Enables the built-in developer console (`card`, `block`, `act`, `afflict`, etc.) |
-| [Nexus Mods (STS2)](https://www.nexusmods.com/slaythespire2) | Mod hosting platform |
+
+| Project                                                        | Description                                                                                               |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [spire-codex](https://github.com/ptrlrd/spire-codex)           | Extracts structured data from decompiled code (cards/relics/monsters/potions); includes 20 Python parsers |
+| [BetterSpire2](https://www.nexusmods.com/slaythespire2/mods/2) | QoL mod (damage counter, auto-confirm, fast mode, etc.)                                                   |
+| DevConsole mod                                                 | Enables the built-in developer console (`card`, `block`, `act`, `afflict`, etc.)                          |
+| [Nexus Mods (STS2)](https://www.nexusmods.com/slaythespire2)   | Mod hosting platform                                                                                      |
+
 
 ## 4. RL Environment Setup
 
@@ -94,12 +102,14 @@ Reimplement core game logic in Python from decompiled C# source, with a Gymnasiu
 
 STS1 precedent projects:
 
-| Project | Language | Description |
-| ---- | ---- | ---- |
-| [decapitate-the-spire](https://github.com/jahabrewer/decapitate-the-spire) | Python | Headless simulator, gym-style `step()` API; focused on Silent/Exordium |
-| [conquer-the-spire](https://github.com/utilForever/conquer-the-spire) | C++ | Cross-platform simulator |
-| [MiniStS](https://github.com/iambb5445/MiniSTS) | Python | Simplified implementation; published at AAAI/AIIDE 2024 |
-| Miles Oram’s C++ remake | C++ | Full Ironclad 4-act experience + deep RL |
+
+| Project                                                                    | Language | Description                                                            |
+| -------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------- |
+| [decapitate-the-spire](https://github.com/jahabrewer/decapitate-the-spire) | Python   | Headless simulator, gym-style `step()` API; focused on Silent/Exordium |
+| [conquer-the-spire](https://github.com/utilForever/conquer-the-spire)      | C++      | Cross-platform simulator                                               |
+| [MiniStS](https://github.com/iambb5445/MiniSTS)                            | Python   | Simplified implementation; published at AAAI/AIIDE 2024                |
+| Miles Oram’s C++ remake                                                    | C++      | Full Ironclad 4-act experience + deep RL                               |
+
 
 **Key lesson** (from the decapitate-the-spire author): RL training by connecting directly to the game is not viable; you need a headless simulator to reach thousands of games per second.
 
@@ -117,13 +127,15 @@ Route A (Mod bridge) — validate agent behavior in the real game
 
 ### 5.1 Recommended: PPO + invalid action masking
 
-| Algorithm | Fit | Notes |
-| ---- | ---- | ---- |
-| **PPO** | **Recommended** | Policy gradient method; stable; validated in multiple STS projects |
-| DQN | Not recommended | Unstable with large action spaces; poor results reported for UNO / mahjong / dou dizhu |
-| AlphaZero | Not directly applicable | Designed for perfect-information games; STS has hidden information (draw order, enemy intents) |
-| NFSP / CFR | Not recommended | High compute cost; better suited to multi-player adversarial games (e.g. poker) |
-| Two-Step RL | Worth exploring | Splits the problem into deck-building and combat phases |
+
+| Algorithm   | Fit                     | Notes                                                                                          |
+| ----------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| **PPO**     | **Recommended**         | Policy gradient method; stable; validated in multiple STS projects                             |
+| DQN         | Not recommended         | Unstable with large action spaces; poor results reported for UNO / mahjong / dou dizhu         |
+| AlphaZero   | Not directly applicable | Designed for perfect-information games; STS has hidden information (draw order, enemy intents) |
+| NFSP / CFR  | Not recommended         | High compute cost; better suited to multi-player adversarial games (e.g. poker)                |
+| Two-Step RL | Worth exploring         | Splits the problem into deck-building and combat phases                                        |
+
 
 Key paper: [A Closer Look at Invalid Action Masking in Policy Gradient Algorithms](https://arxiv.org/abs/2006.14171)
 
@@ -139,13 +151,15 @@ Note: action spaces above ~1400 may have numerical precision issues.
 
 ## 6. RL Framework Selection
 
-| Framework | Recommendation | Notes |
-| ---- | ---- | ---- |
-| **[SB3](https://github.com/DLR-RM/stable-baselines3) + [sb3-contrib](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html)** | **Best for getting started** | Built-in MaskablePPO; simple API; PyTorch backend; 95% code coverage |
-| [Ray RLlib](https://docs.ray.io/en/latest/rllib/) | Large-scale training | Distributed training; native action masking; steeper learning curve |
-| [RLCard](https://rlcard.org/) | Design reference | Card-game RL toolkit; standardized state formats |
-| [OpenSpiel](https://github.com/google-deepmind/open_spiel) | Research reference | DeepMind; 70+ game environments; supports imperfect-information games |
-| [Gymnasium](https://gymnasium.farama.org/) | Interface standard | All custom environments should implement the Gymnasium API |
+
+| Framework                                                                                                                                  | Recommendation               | Notes                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | --------------------------------------------------------------------- |
+| **[SB3](https://github.com/DLR-RM/stable-baselines3) + [sb3-contrib**](https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html) | **Best for getting started** | Built-in MaskablePPO; simple API; PyTorch backend; 95% code coverage  |
+| [Ray RLlib](https://docs.ray.io/en/latest/rllib/)                                                                                          | Large-scale training         | Distributed training; native action masking; steeper learning curve   |
+| [RLCard](https://rlcard.org/)                                                                                                              | Design reference             | Card-game RL toolkit; standardized state formats                      |
+| [OpenSpiel](https://github.com/google-deepmind/open_spiel)                                                                                 | Research reference           | DeepMind; 70+ game environments; supports imperfect-information games |
+| [Gymnasium](https://gymnasium.farama.org/)                                                                                                 | Interface standard           | All custom environments should implement the Gymnasium API            |
+
 
 ## 7. Observation Space Design
 
@@ -168,12 +182,14 @@ Map state (for path selection)
 
 ### 7.2 Encoding approaches (reference)
 
-| Approach | Description | Source |
-| ---- | ---- | ---- |
-| One-hot card vector | Each card maps to a binary vector (1×234) | LearnTheSpire |
-| Bag-of-cards | Count per card type | Common across ML projects |
-| Binary relic vector | 0/1 per relic | Tilburg University research |
-| Dimensionality reduction | Compress to abstract concepts (e.g. “ongoing damage capability”) | decapitate-the-spire |
+
+| Approach                 | Description                                                      | Source                      |
+| ------------------------ | ---------------------------------------------------------------- | --------------------------- |
+| One-hot card vector      | Each card maps to a binary vector (1×234)                        | LearnTheSpire               |
+| Bag-of-cards             | Count per card type                                              | Common across ML projects   |
+| Binary relic vector      | 0/1 per relic                                                    | Tilburg University research |
+| Dimensionality reduction | Compress to abstract concepts (e.g. “ongoing damage capability”) | decapitate-the-spire        |
+
 
 ### 7.3 Known pitfalls
 
@@ -202,14 +218,16 @@ Mask unavailable actions each step with `action_masks()`.
 
 ## 9. Reward Shaping
 
-| Signal | Description |
-| ---- | ---- |
-| Win run | Large positive reward |
-| Death | Large negative reward |
-| Kill monster | Small positive reward |
-| Advance floor | Small positive reward |
-| Lose HP | Small negative reward (encourages flawless runs) |
-| Gain relic / upgrade card | Optional small positive reward |
+
+| Signal                    | Description                                      |
+| ------------------------- | ------------------------------------------------ |
+| Win run                   | Large positive reward                            |
+| Death                     | Large negative reward                            |
+| Kill monster              | Small positive reward                            |
+| Advance floor             | Small positive reward                            |
+| Lose HP                   | Small negative reward (encourages flawless runs) |
+| Gain relic / upgrade card | Optional small positive reward                   |
+
 
 **Warning**: Excessive reward shaping can let the agent exploit reward hacks (e.g. dragging out fights for more kill rewards). Balance carefully.
 
@@ -217,38 +235,44 @@ Mask unavailable actions each step with `action_masks()`.
 
 ### Academic papers
 
-| Paper | Venue / source | Link |
-| ---- | ---- | ---- |
-| Language-Driven Play: LLMs as Game-Playing Agents in StS | FDG 2024 | [ACM](https://dl.acm.org/doi/10.1145/3649921.3650013) |
-| MiniStS: A Testbed for Dynamic Rule Exploration | AAAI AIIDE/EXAG 2024 | [GitHub](https://github.com/iambb5445/MiniSTS) |
-| Strategic Delegation: A Modular and Hybrid Agent | agents4science 2025 | [OpenReview](https://openreview.net/pdf?id=gC3D2ESSyK) |
-| LLMs May Not Be Human-Level Players, But They Can Be Testers | arXiv 2024 | [arXiv:2410.02829](https://arxiv.org/html/2410.02829v1) |
-| Predicting a Successful Run in StS | Tilburg University | [Paper](http://arno.uvt.nl/show.cgi?fid=169629) |
-| A Closer Look at Invalid Action Masking | arXiv 2020 | [arXiv:2006.14171](https://arxiv.org/abs/2006.14171) |
-| Two-Step RL for Multistage Strategy Card Game | arXiv 2023 | [arXiv:2311.17305](https://arxiv.org/html/2311.17305v1) |
-| Playing Non-Embedded Card-Based Games with RL | arXiv 2025 | [arXiv:2504.04783](https://arxiv.org/html/2504.04783v1) |
+
+| Paper                                                        | Venue / source       | Link                                                    |
+| ------------------------------------------------------------ | -------------------- | ------------------------------------------------------- |
+| Language-Driven Play: LLMs as Game-Playing Agents in StS     | FDG 2024             | [ACM](https://dl.acm.org/doi/10.1145/3649921.3650013)   |
+| MiniStS: A Testbed for Dynamic Rule Exploration              | AAAI AIIDE/EXAG 2024 | [GitHub](https://github.com/iambb5445/MiniSTS)          |
+| Strategic Delegation: A Modular and Hybrid Agent             | agents4science 2025  | [OpenReview](https://openreview.net/pdf?id=gC3D2ESSyK)  |
+| LLMs May Not Be Human-Level Players, But They Can Be Testers | arXiv 2024           | [arXiv:2410.02829](https://arxiv.org/html/2410.02829v1) |
+| Predicting a Successful Run in StS                           | Tilburg University   | [Paper](http://arno.uvt.nl/show.cgi?fid=169629)         |
+| A Closer Look at Invalid Action Masking                      | arXiv 2020           | [arXiv:2006.14171](https://arxiv.org/abs/2006.14171)    |
+| Two-Step RL for Multistage Strategy Card Game                | arXiv 2023           | [arXiv:2311.17305](https://arxiv.org/html/2311.17305v1) |
+| Playing Non-Embedded Card-Based Games with RL                | arXiv 2025           | [arXiv:2504.04783](https://arxiv.org/html/2504.04783v1) |
+
 
 ### Blogs
 
-| Article | Link |
-| ---- | ---- |
-| Creating an AI for Slay the Spire (PPO/A2C in practice) | [toypiper.com](https://www.toypiper.com/creating-an-ai-for-slay-the-spire/) |
-| Tackling UNO with RL | [Towards Data Science](https://towardsdatascience.com/tackling-uno-card-game-with-reinforcement-learning-fad2fc19355c/) |
-| Training an AI for Dominion (deck-building RL) | [ianwdavis.com](https://ianwdavis.com/dominion2.html) |
+
+| Article                                                 | Link                                                                                                                    |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Creating an AI for Slay the Spire (PPO/A2C in practice) | [toypiper.com](https://www.toypiper.com/creating-an-ai-for-slay-the-spire/)                                             |
+| Tackling UNO with RL                                    | [Towards Data Science](https://towardsdatascience.com/tackling-uno-card-game-with-reinforcement-learning-fad2fc19355c/) |
+| Training an AI for Dominion (deck-building RL)          | [ianwdavis.com](https://ianwdavis.com/dominion2.html)                                                                   |
+
 
 ### GitHub projects
 
-| Project | Description |
-| ---- | ---- |
-| [decapitate-the-spire](https://github.com/jahabrewer/decapitate-the-spire) | STS1 Python headless simulator |
-| [conquer-the-spire](https://github.com/utilForever/conquer-the-spire) | STS1 C++ simulator |
-| [MiniStS](https://github.com/iambb5445/MiniSTS) | Simplified STS Python implementation |
-| [spire-codex](https://github.com/ptrlrd/spire-codex) | STS2 decompiled data extraction |
-| [CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod) | STS1 game–external process bridge |
-| [spirecomm](https://github.com/ForgottenArbiter/spirecomm) | STS1 Python communication library |
-| [bottled_ai](https://github.com/xaved88/bottled_ai) | STS1 bot (52% Watcher win rate) |
-| [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) | STS2 mod base library |
-| [GDRE Tools](https://github.com/GDRETools/gdsdecomp) | Godot decompilation tools |
+
+| Project                                                                    | Description                          |
+| -------------------------------------------------------------------------- | ------------------------------------ |
+| [decapitate-the-spire](https://github.com/jahabrewer/decapitate-the-spire) | STS1 Python headless simulator       |
+| [conquer-the-spire](https://github.com/utilForever/conquer-the-spire)      | STS1 C++ simulator                   |
+| [MiniStS](https://github.com/iambb5445/MiniSTS)                            | Simplified STS Python implementation |
+| [spire-codex](https://github.com/ptrlrd/spire-codex)                       | STS2 decompiled data extraction      |
+| [CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod)   | STS1 game–external process bridge    |
+| [spirecomm](https://github.com/ForgottenArbiter/spirecomm)                 | STS1 Python communication library    |
+| [bottled_ai](https://github.com/xaved88/bottled_ai)                        | STS1 bot (52% Watcher win rate)      |
+| [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2)                     | STS2 mod base library                |
+| [GDRE Tools](https://github.com/GDRETools/gdsdecomp)                       | Godot decompilation tools            |
+
 
 ## 11. spire-codex Deep Dive
 
@@ -288,27 +312,29 @@ spire-codex/
 
 `data/` already contains complete structured JSON — **usable without running parsers**:
 
-| Category | File | Count | Value for RL |
-| ---- | ---- | ---- | ---- |
-| Cards | `cards.json` | 576 | **Core** — cost/type/rarity/damage/block/hit count/powers applied/keywords/upgrade deltas/character |
-| Monsters | `monsters.json` | 111 | **Core** — HP range (normal + ascension) / move list / damage per move (normal + ascension) / block values |
-| Encounters | `encounters.json` | 87 | **Core** — monster groups / room type / act |
-| Powers | `powers.json` | 260 | **Core** — Buff/Debuff type / stack type (Counter/Single/None) |
-| Relics | `relics.json` | 289 | **Important** — rarity / character pool / description |
-| Characters | `characters.json` | 5 | **Important** — starting HP/gold/energy/deck/relics |
-| Potions | `potions.json` | 63 | **Important** — rarity / character pool |
-| Acts | `acts.json` | 4 | **Important** — boss pool / encounter pool / event pool / ancient NPCs |
-| Events | `events.json` | 66 | **Useful** — options / outcomes / full decision trees |
-| Enchantments | `enchantments.json` | 22 | **Useful** — card type restrictions / stackable or not |
-| Keywords | `keywords.json` | 8 | Reference |
-| Intents | `intents.json` | 14 | Reference |
-| Orbs | `orbs.json` | 5 | Reference |
-| Afflictions | `afflictions.json` | 9 | Reference |
-| Modifiers | `modifiers.json` | 16 | Reference |
-| Achievements | `achievements.json` | 33 | Not relevant (for RL) |
-| Ascensions | `ascensions.json` | 11 | Parametric difficulty |
-| Epochs | `epochs.json` | several | Unlock system |
-| Stories | `stories.json` | several | Unlock system |
+
+| Category     | File                | Count   | Value for RL                                                                                               |
+| ------------ | ------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
+| Cards        | `cards.json`        | 576     | **Core** — cost/type/rarity/damage/block/hit count/powers applied/keywords/upgrade deltas/character        |
+| Monsters     | `monsters.json`     | 111     | **Core** — HP range (normal + ascension) / move list / damage per move (normal + ascension) / block values |
+| Encounters   | `encounters.json`   | 87      | **Core** — monster groups / room type / act                                                                |
+| Powers       | `powers.json`       | 260     | **Core** — Buff/Debuff type / stack type (Counter/Single/None)                                             |
+| Relics       | `relics.json`       | 289     | **Important** — rarity / character pool / description                                                      |
+| Characters   | `characters.json`   | 5       | **Important** — starting HP/gold/energy/deck/relics                                                        |
+| Potions      | `potions.json`      | 63      | **Important** — rarity / character pool                                                                    |
+| Acts         | `acts.json`         | 4       | **Important** — boss pool / encounter pool / event pool / ancient NPCs                                     |
+| Events       | `events.json`       | 66      | **Useful** — options / outcomes / full decision trees                                                      |
+| Enchantments | `enchantments.json` | 22      | **Useful** — card type restrictions / stackable or not                                                     |
+| Keywords     | `keywords.json`     | 8       | Reference                                                                                                  |
+| Intents      | `intents.json`      | 14      | Reference                                                                                                  |
+| Orbs         | `orbs.json`         | 5       | Reference                                                                                                  |
+| Afflictions  | `afflictions.json`  | 9       | Reference                                                                                                  |
+| Modifiers    | `modifiers.json`    | 16      | Reference                                                                                                  |
+| Achievements | `achievements.json` | 33      | Not relevant (for RL)                                                                                      |
+| Ascensions   | `ascensions.json`   | 11      | Parametric difficulty                                                                                      |
+| Epochs       | `epochs.json`       | several | Unlock system                                                                                              |
+| Stories      | `stories.json`      | several | Unlock system                                                                                              |
+
 
 Playable characters: **Ironclad, Silent, Defect, Necrobinder, Regent** (5 total).
 Acts: **Overgrowth (Act 1), Hive (Act 2), Glory (Act 3), Underdocks**.
@@ -379,12 +405,14 @@ def class_name_to_id(name: str) -> str:
 
 **Core parsers (detail)**:
 
-| Parser | Key regex / logic |
-| ---- | ---- |
-| `card_parser.py` | Extract `base(cost, CardType, CardRarity, TargetType)` from constructors; scan `DamageVar`/`BlockVar` for values; `CanonicalKeywords` for keywords; pool files for character color |
-| `monster_parser.py` | HP from `MinInitialHp => AscensionHelper.GetValueIfAscension(level, asc, normal)`; moves from `new MoveState("NAME", ...)`; damage from `(\w+)Damage =>` |
-| `description_resolver.py` | **Shared core**: `extract_vars_from_source()` pulls numeric vars from C#; `resolve_description()` resolves SmartFormat templates (conditionals, plurals, icons, etc.) |
-| `event_parser.py` | Most complex — multi-page event trees, StringVar resolution, random ranges, ancient NPC dialogue |
+
+| Parser                    | Key regex / logic                                                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `card_parser.py`          | Extract `base(cost, CardType, CardRarity, TargetType)` from constructors; scan `DamageVar`/`BlockVar` for values; `CanonicalKeywords` for keywords; pool files for character color |
+| `monster_parser.py`       | HP from `MinInitialHp => AscensionHelper.GetValueIfAscension(level, asc, normal)`; moves from `new MoveState("NAME", ...)`; damage from `(\w+)Damage =>`                           |
+| `description_resolver.py` | **Shared core**: `extract_vars_from_source()` pulls numeric vars from C#; `resolve_description()` resolves SmartFormat templates (conditionals, plurals, icons, etc.)              |
+| `event_parser.py`         | Most complex — multi-page event trees, StringVar resolution, random ranges, ancient NPC dialogue                                                                                   |
+
 
 **Parser dependencies**:
 
@@ -425,7 +453,7 @@ Also available at [spire-codex.com/api/](https://spire-codex.com/api/)
 
 **Directly reusable**:
 
-1. **`data/*.json`** — 576 cards, 111 monsters, 87 encounters, 260 powers as structured data for the headless simulator’s static data layer
+1. `**data/*.json`** — 576 cards, 111 monsters, 87 encounters, 260 powers as structured data for the headless simulator’s static data layer
 2. **Parser code** — re-run parsers after game updates for fresh data
 3. **ID convention** — UPPER_SNAKE_CASE as the simulator’s unified ID system
 4. **Description resolver** — SmartFormat logic in `description_resolver.py` for understanding card effects
@@ -443,24 +471,26 @@ Also available at [spire-codex.com/api/](https://spire-codex.com/api/)
 
 Key decompiled directories when building the simulator:
 
-| C# namespace directory | Parser | Simulator use |
-| ---- | ---- | ---- |
-| `MegaCrit.Sts2.Core.Models.Cards/` | card_parser | Card effect implementation |
-| `MegaCrit.Sts2.Core.Models.Monsters/` | monster_parser | Monster AI logic |
-| `MegaCrit.Sts2.Core.Models.Powers/` | power_parser | Power logic |
-| `MegaCrit.Sts2.Core.Models.Relics/` | relic_parser | Relic trigger logic |
-| `MegaCrit.Sts2.Core.Models.Encounters/` | encounter_parser | Encounter composition |
-| `MegaCrit.Sts2.Core.Models.Events/` | event_parser | Event decision trees |
-| `MegaCrit.Sts2.Core.Models.Characters/` | character_parser | Character starting state |
-| `MegaCrit.Sts2.Core.Models.Potions/` | potion_parser | Potion effects |
-| `MegaCrit.Sts2.Core.Models.{Card,Relic,Potion}Pools/` | pool_parser | Character → item mapping |
+
+| C# namespace directory                                | Parser           | Simulator use              |
+| ----------------------------------------------------- | ---------------- | -------------------------- |
+| `MegaCrit.Sts2.Core.Models.Cards/`                    | card_parser      | Card effect implementation |
+| `MegaCrit.Sts2.Core.Models.Monsters/`                 | monster_parser   | Monster AI logic           |
+| `MegaCrit.Sts2.Core.Models.Powers/`                   | power_parser     | Power logic                |
+| `MegaCrit.Sts2.Core.Models.Relics/`                   | relic_parser     | Relic trigger logic        |
+| `MegaCrit.Sts2.Core.Models.Encounters/`               | encounter_parser | Encounter composition      |
+| `MegaCrit.Sts2.Core.Models.Events/`                   | event_parser     | Event decision trees       |
+| `MegaCrit.Sts2.Core.Models.Characters/`               | character_parser | Character starting state   |
+| `MegaCrit.Sts2.Core.Models.Potions/`                  | potion_parser    | Potion effects             |
+| `MegaCrit.Sts2.Core.Models.{Card,Relic,Potion}Pools/` | pool_parser      | Character → item mapping   |
+
 
 ## 12. Recommended Implementation Roadmap
 
 ### Phase 1: Decompilation and understanding
 
 1. Install ILSpy and decompile `sts2.dll`
-2. Study game state models (`MegaCrit.Sts2.Core.Models.*`)
+2. Study game state models (`MegaCrit.Sts2.Core.Models.`*)
 3. Follow spire-codex’s data extraction approach
 4. Compile full lists of cards, relics, monsters, and powers
 
@@ -484,3 +514,4 @@ Key decompiled directories when building the simulator:
 1. Build C# mod (Harmony hooks + JSON serialization + TCP)
 2. Run the trained agent in the real game
 3. Compare simulator vs. real game behavior and iterate
+

@@ -34,6 +34,7 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs.History;
@@ -158,36 +159,7 @@ public class RunManager : IRunLobbyListener
 
 	public Dictionary<int, SerializableActMap>? SavedMapsToLoad { get; set; }
 
-	public bool ShouldIgnoreUnlocks
-	{
-		get
-		{
-			if (IsInProgress)
-			{
-				return !IsSinglePlayerOrFakeMultiplayer;
-			}
-			return false;
-		}
-	}
-
 	private RunState? State { get; set; }
-
-	private GameMode GameMode
-	{
-		get
-		{
-			RunState? state = State;
-			if (state != null && state.Modifiers.Count > 0)
-			{
-				if (!DailyTime.HasValue)
-				{
-					return GameMode.Custom;
-				}
-				return GameMode.Daily;
-			}
-			return GameMode.Standard;
-		}
-	}
 
 	public event Action<RunState>? RunStarted;
 
@@ -291,6 +263,7 @@ public class RunManager : IRunLobbyListener
 		NetService = netService;
 		ulong netId = NetService.NetId;
 		ChecksumTracker = new ChecksumTracker(NetService, State);
+		ChecksumTracker.IsEnabled = !TestMode.IsOn && NetService.Type.IsMultiplayer();
 		RunLocationTargetedBuffer = new RunLocationTargetedMessageBuffer(NetService);
 		FlavorSynchronizer = new FlavorSynchronizer(NetService, State, netId);
 		ActionQueueSet = new ActionQueueSet(State.Players);
@@ -306,7 +279,7 @@ public class RunManager : IRunLobbyListener
 		TreasureRoomRelicSynchronizer = new TreasureRoomRelicSynchronizer(State, netId, ActionQueueSynchronizer, State.SharedRelicGrabBag, State.Rng.TreasureRoomRelics);
 		CombatReplayWriter = new CombatReplayWriter(PlayerChoiceSynchronizer, ActionQueueSet, ActionQueueSynchronizer, ChecksumTracker);
 		CombatReplayWriter.IsEnabled = !TestMode.IsOn;
-		ActionExecutor.AfterActionExecuted += SendPostActionChecksum;
+		ActionExecutor.JustBeforeActionFinishedExecuting += SendPostActionChecksum;
 		ChecksumTracker.StateDiverged += StateDiverged;
 		ActionExecutor.Pause();
 		IsAbandoned = false;
@@ -325,7 +298,7 @@ public class RunManager : IRunLobbyListener
 	{
 		if (netService.Type.IsMultiplayer())
 		{
-			RunLobby = new RunLobby(GameMode, netService, this, state, state.Players.Select((Player p) => p.NetId));
+			RunLobby = new RunLobby(state.GameMode, netService, this, state, state.Players.Select((Player p) => p.NetId));
 			RunLobby.RemotePlayerDisconnected += RemotePlayerDisconnected;
 		}
 		CombatStateSynchronizer = new CombatStateSynchronizer(NetService, RunLobby, state);
@@ -355,7 +328,7 @@ public class RunManager : IRunLobbyListener
 		{
 			act.ValidateRoomsAfterLoad(State.Rng.UpFront);
 		}
-		AfterLocationChanged();
+		AfterMapLocationChanged();
 		MapDrawingsToLoad = save.MapDrawings;
 		SavedMapsToLoad = null;
 		for (int i = 0; i < save.Acts.Count; i++)
@@ -380,7 +353,7 @@ public class RunManager : IRunLobbyListener
 	{
 		if (CombatManager.Instance.IsInProgress && ((!(action is EndPlayerTurnAction) && !(action is ReadyToBeginEnemyTurnAction)) || 1 == 0))
 		{
-			ChecksumTracker.GenerateChecksum($"after executing action {action}", action);
+			ChecksumTracker.GenerateChecksum($"finished action execution {action}", action);
 		}
 	}
 
@@ -400,9 +373,15 @@ public class RunManager : IRunLobbyListener
 		SerializableRun serializableRun = new SerializableRun
 		{
 			SchemaVersion = latestSchemaVersion,
-			Acts = runState.Acts.Select((ActModel a) => a.ToSave()).ToList(),
+			Acts = runState.Acts.Zip(save.Acts, delegate(ActModel act, SerializableActModel savedAct)
+			{
+				SerializableActModel serializableActModel = act.ToSave();
+				serializableActModel.SavedMap = savedAct.SavedMap;
+				return serializableActModel;
+			}).ToList(),
 			Modifiers = runState.Modifiers.Select((ModifierModel m) => m.ToSerializable()).ToList(),
 			DailyTime = save.DailyTime,
+			GameMode = runState.GameMode,
 			CurrentActIndex = runState.CurrentActIndex,
 			EventsSeen = runState.VisitedEventIds.ToList(),
 			SerializableOdds = runState.Odds.ToSerializable(),
@@ -457,6 +436,7 @@ public class RunManager : IRunLobbyListener
 			DailyTime = DailyTime,
 			CurrentActIndex = State.CurrentActIndex,
 			EventsSeen = State.VisitedEventIds.ToList(),
+			GameMode = State.GameMode,
 			SerializableOdds = State.Odds.ToSerializable(),
 			SerializableSharedRelicGrabBag = State.SharedRelicGrabBag.ToSerializable(),
 			Players = State.Players.Select((Player p) => p.ToSerializable()).ToList(),
@@ -485,6 +465,10 @@ public class RunManager : IRunLobbyListener
 
 	public async Task FinalizeStartingRelics()
 	{
+		if (State == null)
+		{
+			return;
+		}
 		foreach (Player player in State.Players)
 		{
 			foreach (RelicModel relic in player.Relics)
@@ -534,7 +518,7 @@ public class RunManager : IRunLobbyListener
 		{
 			return false;
 		}
-		if (GameMode != GameMode.Standard)
+		if (State.GameMode != GameMode.Standard)
 		{
 			return false;
 		}
@@ -557,7 +541,7 @@ public class RunManager : IRunLobbyListener
 			{
 				SavedMapsToLoad = null;
 			}
-			map = Hook.ModifyGeneratedMap(State, map, State.CurrentActIndex);
+			map = Hook.ModifyGeneratedMapLate(State, map, State.CurrentActIndex);
 			await Hook.AfterMapGenerated(State, map, State.CurrentActIndex);
 		}
 		else
@@ -571,11 +555,16 @@ public class RunManager : IRunLobbyListener
 			}
 		}
 		State.Map = map;
+		State.RemoveStaleVisitedMapCoords(map);
 		NMapScreen.Instance?.SetMap(map, State.Rng.Seed, clearDrawings: true);
 	}
 
 	public Task EnterMapCoord(MapCoord coord)
 	{
+		if (State == null)
+		{
+			return Task.CompletedTask;
+		}
 		if (!State.AddVisitedMapCoord(coord))
 		{
 			return Task.CompletedTask;
@@ -585,26 +574,37 @@ public class RunManager : IRunLobbyListener
 
 	public async Task LoadIntoLatestMapCoord(AbstractRoom? preFinishedRoom)
 	{
-		if (State.VisitedMapCoords.Count > 0)
+		if (State != null)
 		{
-			RunManager runManager = this;
-			IReadOnlyList<MapCoord> visitedMapCoords = State.VisitedMapCoords;
-			await runManager.EnterMapCoordInternal(visitedMapCoords[visitedMapCoords.Count - 1], preFinishedRoom, saveGame: false);
-		}
-		else
-		{
-			await EnterRoomInternal(new MapRoom());
+			if (State.VisitedMapCoords.Count > 0)
+			{
+				RunManager runManager = this;
+				IReadOnlyList<MapCoord> visitedMapCoords = State.VisitedMapCoords;
+				await runManager.EnterMapCoordInternal(visitedMapCoords[visitedMapCoords.Count - 1], preFinishedRoom, saveGame: false);
+			}
+			else
+			{
+				await EnterRoomInternal(new MapRoom());
+			}
 		}
 	}
 
 	private Task EnterMapCoordInternal(MapCoord coord, AbstractRoom? preFinishedRoom, bool saveGame)
 	{
+		if (State == null)
+		{
+			return Task.CompletedTask;
+		}
 		MapPoint point = State.Map.GetPoint(coord);
-		return EnterMapPointInternal(coord.row + 1, point.PointType, coord, preFinishedRoom, saveGame);
+		return EnterMapPointInternal(coord.row + 1, point.PointType, preFinishedRoom, saveGame);
 	}
 
-	public async Task EnterMapPointInternal(int actFloor, MapPointType pointType, MapCoord? coord, AbstractRoom? preFinishedRoom, bool saveGame)
+	public async Task EnterMapPointInternal(int actFloor, MapPointType pointType, AbstractRoom? preFinishedRoom, bool saveGame)
 	{
+		if (State == null)
+		{
+			return;
+		}
 		using (new NetLoadingHandle(NetService))
 		{
 			if (State.MapPointHistory.Count > 0)
@@ -660,7 +660,7 @@ public class RunManager : IRunLobbyListener
 			{
 				NRun.Instance.GlobalUi.MapScreen.IsTraveling = false;
 			}
-			AfterLocationChanged();
+			AfterMapLocationChanged();
 			await FadeIn();
 		}
 	}
@@ -837,15 +837,22 @@ public class RunManager : IRunLobbyListener
 
 	private async Task ExitCurrentRooms()
 	{
-		while (State.CurrentRoomCount > 0)
+		if (State != null)
 		{
-			await ExitCurrentRoom();
+			while (State.CurrentRoomCount > 0)
+			{
+				await ExitCurrentRoom();
+			}
+			NRun.Instance?.GlobalUi.TopBar.RoomIcon.DebugClearMapPointTypeOverride();
 		}
-		NRun.Instance?.GlobalUi.TopBar.RoomIcon.DebugClearMapPointTypeOverride();
 	}
 
-	private async Task<AbstractRoom> ExitCurrentRoom()
+	private async Task<AbstractRoom?> ExitCurrentRoom()
 	{
+		if (State == null)
+		{
+			return null;
+		}
 		AbstractRoom currentRoom = State.PopCurrentRoom();
 		await currentRoom.Exit(State);
 		this.RoomExited?.Invoke();
@@ -854,6 +861,10 @@ public class RunManager : IRunLobbyListener
 
 	private async Task EnterRoomInternal(AbstractRoom room, bool isRestoringRoomStackBase = false)
 	{
+		if (State == null)
+		{
+			return;
+		}
 		bool flag = isRestoringRoomStackBase;
 		bool flag2 = flag;
 		bool flag3;
@@ -863,24 +874,18 @@ public class RunManager : IRunLobbyListener
 			{
 				if (combatRoom.IsPreFinished)
 				{
-					goto IL_0065;
+					goto IL_0072;
 				}
 			}
 			else if (room is EventRoom { IsPreFinished: not false })
 			{
-				goto IL_0065;
+				goto IL_0072;
 			}
 			flag3 = false;
-			goto IL_006d;
+			goto IL_007a;
 		}
-		goto IL_0070;
-		IL_006d:
-		flag2 = flag3;
-		goto IL_0070;
-		IL_0065:
-		flag3 = true;
-		goto IL_006d;
-		IL_0070:
+		goto IL_007d;
+		IL_007d:
 		bool runExternalEffects = !flag2;
 		State.PushRoom(room);
 		if (runExternalEffects && !(room is MapRoom))
@@ -896,12 +901,20 @@ public class RunManager : IRunLobbyListener
 				State.Act.MarkRoomVisited(room.RoomType);
 			}
 		}
+		RunLocationTargetedBuffer.OnLocationChanged(State.RunLocation);
 		if (!(room is CombatRoom))
 		{
 			ActionExecutor.Unpause();
 		}
 		NRunMusicController.Instance?.UpdateAmbience();
 		this.RoomEntered?.Invoke();
+		return;
+		IL_007a:
+		flag2 = flag3;
+		goto IL_007d;
+		IL_0072:
+		flag3 = true;
+		goto IL_007a;
 	}
 
 	public async Task EnterRoom(AbstractRoom room)
@@ -912,6 +925,11 @@ public class RunManager : IRunLobbyListener
 
 	public async Task EnterRoomWithoutExitingCurrentRoom(AbstractRoom room, bool fadeToBlack)
 	{
+		if (State == null)
+		{
+			return;
+		}
+		ActionExecutor.Pause();
 		CombatStateSynchronizer.StartSync();
 		using (new NetLoadingHandle(NetService))
 		{
@@ -924,12 +942,13 @@ public class RunManager : IRunLobbyListener
 				ClearScreens();
 			}
 			await CombatStateSynchronizer.WaitForSync();
-			State.CurrentMapPointHistoryEntry.Rooms.Add(new MapPointRoomHistoryEntry
+			State.CurrentMapPointHistoryEntry?.Rooms.Add(new MapPointRoomHistoryEntry
 			{
 				RoomType = room.RoomType,
 				ModelId = room.ModelId
 			});
 			await EnterRoomInternal(room);
+			ActiveScreenContext.Instance.Update();
 			if (fadeToBlack)
 			{
 				await FadeIn();
@@ -939,6 +958,10 @@ public class RunManager : IRunLobbyListener
 
 	public async Task EnterNextAct()
 	{
+		if (State == null)
+		{
+			return;
+		}
 		using (new NetLoadingHandle(NetService))
 		{
 			if (State.CurrentActIndex >= State.Acts.Count - 1)
@@ -966,14 +989,21 @@ public class RunManager : IRunLobbyListener
 
 	private async Task WinRun()
 	{
-		EventRoom eventRoom = (EventRoom)State.CurrentRoom;
-		((TheArchitect)eventRoom.LocalMutableEvent).TriggerVictory();
-		OnEnded(isVictory: true);
-		await GuaranteeKillAllPlayers();
+		if (State != null)
+		{
+			EventRoom eventRoom = (EventRoom)State.CurrentRoom;
+			((TheArchitect)eventRoom.LocalMutableEvent).TriggerVictory();
+			OnEnded(isVictory: true);
+			await GuaranteeKillAllPlayers();
+		}
 	}
 
 	public async Task EnterAct(int currentActIndex, bool doTransition = true)
 	{
+		if (State == null)
+		{
+			return;
+		}
 		if (TestMode.IsOff)
 		{
 			await NGame.Instance.Transition.RoomFadeOut();
@@ -1004,15 +1034,18 @@ public class RunManager : IRunLobbyListener
 
 	public async Task SetActInternal(int actIndex)
 	{
-		State.CurrentActIndex = actIndex;
-		State.ClearVisitedMapCoordsDebug();
-		State.Odds.UnknownMapPoint.ResetToBase();
-		AfterLocationChanged();
-		await PreloadManager.LoadActAssets(State.Act);
-		await GenerateMap();
-		NMapScreen.Instance?.SetTravelEnabled(enabled: false);
-		NRunMusicController.Instance?.UpdateMusic();
-		UpdateRichPresence();
+		if (State != null)
+		{
+			State.CurrentActIndex = actIndex;
+			State.ClearVisitedMapCoordsDebug();
+			State.Odds.UnknownMapPoint.ResetToBase();
+			AfterMapLocationChanged();
+			await PreloadManager.LoadActAssets(State.Act);
+			await GenerateMap();
+			NMapScreen.Instance?.SetTravelEnabled(enabled: false);
+			NRunMusicController.Instance?.UpdateMusic();
+			UpdateRichPresence();
+		}
 	}
 
 	private void UpdateRichPresence()
@@ -1028,6 +1061,10 @@ public class RunManager : IRunLobbyListener
 
 	public async Task ProceedFromTerminalRewardsScreen()
 	{
+		if (State == null)
+		{
+			return;
+		}
 		if (State.CurrentRoomCount > 1)
 		{
 			if (State.CurrentRoom is CombatRoom { ShouldResumeParentEventAfterCombat: not false })
@@ -1047,17 +1084,27 @@ public class RunManager : IRunLobbyListener
 
 	private async Task ResumePreviousRoom()
 	{
-		ClearScreens();
-		AbstractRoom exitedRoom = await ExitCurrentRoom();
-		await State.CurrentRoom.Resume(exitedRoom, State);
-		NRunMusicController.Instance?.UpdateTrack();
-		await FadeIn();
+		if (State != null)
+		{
+			ClearScreens();
+			AbstractRoom abstractRoom = await ExitCurrentRoom();
+			if (abstractRoom != null)
+			{
+				await State.CurrentRoom.Resume(abstractRoom, State);
+				NRunMusicController.Instance?.UpdateTrack();
+				await FadeIn();
+			}
+			else
+			{
+				Log.Error("Current room returned null while exiting.");
+			}
+		}
 	}
 
-	private void AfterLocationChanged()
+	private void AfterMapLocationChanged()
 	{
-		MapSelectionSynchronizer.OnRunLocationChanged(State.CurrentLocation);
-		RunLocationTargetedBuffer.OnRunLocationChanged(State.CurrentLocation);
+		MapSelectionSynchronizer.OnLocationChanged(State.MapLocation);
+		RunLocationTargetedBuffer.OnLocationChanged(State.RunLocation);
 	}
 
 	public void Abandon()
@@ -1087,7 +1134,6 @@ public class RunManager : IRunLobbyListener
 		{
 			NCapstoneContainer.Instance.Close();
 			NMapScreen.Instance.Close(animateOut: false);
-			ActionQueueSet.Reset();
 		}
 		catch (Exception value)
 		{
@@ -1107,6 +1153,10 @@ public class RunManager : IRunLobbyListener
 
 	private async Task GuaranteeKillAllPlayers()
 	{
+		if (State == null)
+		{
+			return;
+		}
 		foreach (Player player in State.Players)
 		{
 			await CreatureCmd.Kill(player.Creature, force: true);
@@ -1119,7 +1169,7 @@ public class RunManager : IRunLobbyListener
 		if (NetService.Type != NetGameType.Replay)
 		{
 			Log.Info("Abandoning run and returning to main menu because our state diverged from host's");
-			WriteReplay(stopRecording: true);
+			WriteReplay(stopRecording: false);
 		}
 	}
 
@@ -1135,19 +1185,20 @@ public class RunManager : IRunLobbyListener
 		{
 			return;
 		}
+		ShouldSave = false;
 		IsCleaningUp = true;
 		try
 		{
 			_runHistoryWasUploaded = false;
+			ActionQueueSet.Reset();
+			CardSelectCmd.Reset();
 			NAudioManager.Instance?.StopAllLoops();
 			NOverlayStack.Instance?.Clear();
 			NCapstoneContainer.Instance?.CleanUp();
 			NMapScreen.Instance?.CleanUp();
 			NModalContainer.Instance?.Clear();
-			if (graceful)
-			{
-				CombatManager.Instance.Reset();
-			}
+			CombatManager.Instance.Reset(graceful);
+			ActionExecutor.JustBeforeActionFinishedExecuting -= SendPostActionChecksum;
 			CombatReplayWriter.Dispose();
 			ActionQueueSynchronizer.Dispose();
 			PlayerChoiceSynchronizer.Dispose();
@@ -1233,12 +1284,12 @@ public class RunManager : IRunLobbyListener
 			NetGameType type = NetService.Type;
 			if ((uint)(type - 1) <= 1u)
 			{
-				int score2 = ScoreUtility.CalculateScore(serializableRun, isVictory);
+				int score2 = ScoreUtility.CalculateDailyScore(serializableRun, me.NetId, isVictory);
 				TaskHelper.RunSafely(DailyRunUtility.UploadScore(DailyTime.Value, score2, serializableRun.Players));
 			}
 			else if (NetService.Type == NetGameType.Client)
 			{
-				TaskHelper.RunSafely(DailyRunUtility.UploadScore(DailyTime.Value, -99999, serializableRun.Players));
+				TaskHelper.RunSafely(DailyRunUtility.UploadScore(DailyTime.Value, -999999999, serializableRun.Players));
 			}
 		}
 		return serializableRun;
@@ -1256,7 +1307,7 @@ public class RunManager : IRunLobbyListener
 
 	private void UpdatePlayerStatsInMapPointHistory()
 	{
-		if (TestMode.IsOn)
+		if (TestMode.IsOn || State == null)
 		{
 			return;
 		}
@@ -1319,7 +1370,6 @@ public class RunManager : IRunLobbyListener
 	{
 		NCapstoneContainer.Instance?.Close();
 		NMapScreen.Instance?.Close(animateOut: false);
-		ActionQueueSet.Reset();
 		if (TestMode.IsOff)
 		{
 			await NGame.Instance.ReturnToMainMenuAfterRun();

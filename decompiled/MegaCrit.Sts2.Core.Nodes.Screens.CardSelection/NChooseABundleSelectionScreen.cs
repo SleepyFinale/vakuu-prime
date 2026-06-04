@@ -179,7 +179,7 @@ public class NChooseABundleSelectionScreen : Control, IOverlayScreen, IScreenCon
 		NChooseABundleSelectionScreen nChooseABundleSelectionScreen = PreloadManager.Cache.GetScene(ScenePath).Instantiate<NChooseABundleSelectionScreen>(PackedScene.GenEditState.Disabled);
 		nChooseABundleSelectionScreen.Name = "NChooseABundleSelectionScreen";
 		nChooseABundleSelectionScreen._bundles = bundles;
-		NOverlayStack.Instance.Push(nChooseABundleSelectionScreen);
+		NOverlayStack.Instance?.Push(nChooseABundleSelectionScreen);
 		return nChooseABundleSelectionScreen;
 	}
 
@@ -215,6 +215,7 @@ public class NChooseABundleSelectionScreen : Control, IOverlayScreen, IScreenCon
 			child.FocusNeighborBottom = child.Hitbox.GetPath();
 		}
 		_bundlePreviewCards.GetChild<Control>(_bundlePreviewCards.GetChildCount() - 1).TryGrabFocus();
+		ActiveScreenContext.Instance.Update();
 	}
 
 	private void OpenPreviewScreen(NCardHolder cardHolder)
@@ -241,6 +242,7 @@ public class NChooseABundleSelectionScreen : Control, IOverlayScreen, IScreenCon
 		_previewConfirmButton.Disable();
 		_selectedBundle = null;
 		_bundleRow.Visible = true;
+		ActiveScreenContext.Instance.Update();
 	}
 
 	private void ConfirmSelection(NButton _)

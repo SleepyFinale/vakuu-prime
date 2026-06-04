@@ -136,7 +136,7 @@ public class NMerchantCardRemoval : NMerchantSlot
 	{
 		LocString title = Title;
 		LocString description = Description;
-		description.Add("Amount", _removalEntry.CalcPriceIncrease());
+		description.Add("Amount", MerchantCardRemovalEntry.PriceIncrease);
 		NHoverTipSet nHoverTipSet = NHoverTipSet.CreateAndShow(this, new HoverTip(title, description));
 		nHoverTipSet.GlobalPosition = base.GlobalPosition;
 		if (base.GlobalPosition.X > GetViewport().GetVisibleRect().Size.X * 0.5f)

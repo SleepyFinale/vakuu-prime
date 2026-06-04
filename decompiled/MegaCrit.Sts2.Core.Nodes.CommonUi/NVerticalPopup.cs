@@ -18,6 +18,8 @@ public class NVerticalPopup : Control
 	{
 		public new static readonly StringName _Ready = "_Ready";
 
+		public static readonly StringName EnsureNodesAreSet = "EnsureNodesAreSet";
+
 		public static readonly StringName SetText = "SetText";
 
 		public static readonly StringName Close = "Close";
@@ -38,6 +40,8 @@ public class NVerticalPopup : Control
 		public static readonly StringName YesButton = "YesButton";
 
 		public static readonly StringName NoButton = "NoButton";
+
+		public static readonly StringName _nodesAreSet = "_nodesAreSet";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -46,15 +50,17 @@ public class NVerticalPopup : Control
 
 	private static readonly string _scenePath = SceneHelper.GetScenePath("ui/vertical_popup");
 
+	private bool _nodesAreSet;
+
 	private Callable? _yesCallable;
 
 	private Callable? _noCallable;
 
 	public static IEnumerable<string> AssetPaths => new global::_003C_003Ez__ReadOnlySingleElementList<string>(_scenePath);
 
-	public MegaLabel TitleLabel { get; private set; }
+	private MegaLabel TitleLabel { get; set; }
 
-	public MegaRichTextLabel BodyLabel { get; private set; }
+	private MegaRichTextLabel BodyLabel { get; set; }
 
 	public NPopupYesNoButton YesButton { get; private set; }
 
@@ -62,26 +68,38 @@ public class NVerticalPopup : Control
 
 	public override void _Ready()
 	{
-		TitleLabel = GetNode<MegaLabel>("Header");
-		BodyLabel = GetNode<MegaRichTextLabel>("Description");
-		YesButton = GetNode<NPopupYesNoButton>("YesButton");
-		NoButton = GetNode<NPopupYesNoButton>("NoButton");
+		EnsureNodesAreSet();
+	}
+
+	private void EnsureNodesAreSet()
+	{
+		if (!_nodesAreSet)
+		{
+			TitleLabel = GetNode<MegaLabel>("Header");
+			BodyLabel = GetNode<MegaRichTextLabel>("Description");
+			YesButton = GetNode<NPopupYesNoButton>("YesButton");
+			NoButton = GetNode<NPopupYesNoButton>("NoButton");
+			_nodesAreSet = true;
+		}
 	}
 
 	public void SetText(LocString title, LocString body)
 	{
+		EnsureNodesAreSet();
 		TitleLabel.SetTextAutoSize(title.GetFormattedText());
 		BodyLabel.Text = "[center]" + body.GetFormattedText() + "[/center]";
 	}
 
 	public void SetText(string title, string body)
 	{
+		EnsureNodesAreSet();
 		TitleLabel.SetTextAutoSize(title);
 		BodyLabel.Text = "[center]" + body + "[/center]";
 	}
 
 	public void InitYesButton(LocString yesButton, Action<NButton> onPressed)
 	{
+		EnsureNodesAreSet();
 		_yesCallable = Callable.From(onPressed);
 		YesButton.IsYes = true;
 		YesButton.SetText(yesButton.GetFormattedText());
@@ -91,6 +109,7 @@ public class NVerticalPopup : Control
 
 	public void InitNoButton(LocString noButton, Action<NButton> onPressed)
 	{
+		EnsureNodesAreSet();
 		_noCallable = Callable.From(onPressed);
 		NoButton.Visible = true;
 		NoButton.IsYes = false;
@@ -138,8 +157,9 @@ public class NVerticalPopup : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(6);
+		List<MethodInfo> list = new List<MethodInfo>(7);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.EnsureNodesAreSet, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetText, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.String, "title", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false),
@@ -161,6 +181,12 @@ public class NVerticalPopup : Control
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.EnsureNodesAreSet && args.Count == 0)
+		{
+			EnsureNodesAreSet();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -201,6 +227,10 @@ public class NVerticalPopup : Control
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName.EnsureNodesAreSet)
 		{
 			return true;
 		}
@@ -250,6 +280,11 @@ public class NVerticalPopup : Control
 			NoButton = VariantUtils.ConvertTo<NPopupYesNoButton>(in value);
 			return true;
 		}
+		if (name == PropertyName._nodesAreSet)
+		{
+			_nodesAreSet = VariantUtils.ConvertTo<bool>(in value);
+			return true;
+		}
 		return base.SetGodotClassPropertyValue(in name, in value);
 	}
 
@@ -279,6 +314,11 @@ public class NVerticalPopup : Control
 			value = VariantUtils.CreateFrom(in from);
 			return true;
 		}
+		if (name == PropertyName._nodesAreSet)
+		{
+			value = VariantUtils.CreateFrom(in _nodesAreSet);
+			return true;
+		}
 		return base.GetGodotClassPropertyValue(in name, out value);
 	}
 
@@ -290,6 +330,7 @@ public class NVerticalPopup : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.BodyLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.YesButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.NoButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._nodesAreSet, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 
@@ -301,6 +342,7 @@ public class NVerticalPopup : Control
 		info.AddProperty(PropertyName.BodyLabel, Variant.From<MegaRichTextLabel>(BodyLabel));
 		info.AddProperty(PropertyName.YesButton, Variant.From<NPopupYesNoButton>(YesButton));
 		info.AddProperty(PropertyName.NoButton, Variant.From<NPopupYesNoButton>(NoButton));
+		info.AddProperty(PropertyName._nodesAreSet, Variant.From(in _nodesAreSet));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -322,6 +364,10 @@ public class NVerticalPopup : Control
 		if (info.TryGetProperty(PropertyName.NoButton, out var value4))
 		{
 			NoButton = value4.As<NPopupYesNoButton>();
+		}
+		if (info.TryGetProperty(PropertyName._nodesAreSet, out var value5))
+		{
+			_nodesAreSet = value5.As<bool>();
 		}
 	}
 }

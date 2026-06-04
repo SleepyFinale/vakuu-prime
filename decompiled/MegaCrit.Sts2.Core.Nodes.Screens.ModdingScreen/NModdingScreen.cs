@@ -87,9 +87,9 @@ public class NModdingScreen : NSubmenu
 		{
 			child.QueueFreeSafely();
 		}
-		foreach (Mod allMod in ModManager.AllMods)
+		foreach (Mod mod in ModManager.Mods)
 		{
-			OnNewModDetected(allMod);
+			OnNewModDetected(mod);
 		}
 		node.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OnGetModsPressed));
 		node2.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OnMakeModsPressed));
@@ -97,6 +97,8 @@ public class NModdingScreen : NSubmenu
 		node2.GetNode<MegaLabel>("Visuals/Label").SetTextAutoSize(new LocString("settings_ui", "MODDING_SCREEN.MAKE_MODS_BUTTON").GetFormattedText());
 		GetNode<MegaRichTextLabel>("%InstalledModsTitle").SetTextAutoSize(new LocString("settings_ui", "MODDING_SCREEN.INSTALLED_MODS_TITLE").GetFormattedText());
 		GetNode<MegaRichTextLabel>("%PendingChangesLabel").SetTextAutoSize(new LocString("settings_ui", "MODDING_SCREEN.PENDING_CHANGES_WARNING").GetFormattedText());
+		node2.Visible = false;
+		node.Visible = false;
 		_pendingChangesWarning.Visible = false;
 		ModManager.OnModDetected += OnNewModDetected;
 		ConnectSignals();
@@ -104,7 +106,7 @@ public class NModdingScreen : NSubmenu
 
 	public override void OnSubmenuOpened()
 	{
-		if (!ModManager.PlayerAgreedToModLoading && ModManager.AllMods.Count > 0)
+		if (!ModManager.PlayerAgreedToModLoading && ModManager.Mods.Count > 0)
 		{
 			NModalContainer.Instance.Add(NConfirmModLoadingPopup.Create());
 		}
@@ -142,10 +144,10 @@ public class NModdingScreen : NSubmenu
 
 	public void OnModEnabledOrDisabled()
 	{
-		foreach (Mod allMod in ModManager.AllMods)
+		foreach (Mod mod in ModManager.Mods)
 		{
-			bool flag = SaveManager.Instance.SettingsSave.ModSettings?.IsModDisabled(allMod) ?? false;
-			if (allMod.wasLoaded == flag)
+			bool flag = SaveManager.Instance.SettingsSave.ModSettings?.IsModDisabled(mod) ?? false;
+			if ((mod.state == ModLoadState.Disabled && !flag) || (mod.state == ModLoadState.Loaded && flag))
 			{
 				_pendingChangesWarning.Visible = true;
 				return;

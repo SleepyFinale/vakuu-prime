@@ -282,7 +282,10 @@ public class NTargetManager : Node2D
 		{
 			flag = true;
 			cancel = true;
-			GetViewport().SetInputAsHandled();
+			if (inputEvent.IsActionPressed(MegaInput.cancel))
+			{
+				GetViewport().SetInputAsHandled();
+			}
 		}
 		if (_exitEarlyCondition != null && _exitEarlyCondition())
 		{
@@ -304,7 +307,7 @@ public class NTargetManager : Node2D
 		if (HoveredNode is NCreature nCreature)
 		{
 			Creature entity = nCreature.Entity;
-			if (entity != null && !entity.IsHittable && _targetMode == TargetMode.Controller)
+			if (entity != null && !entity.IsHittable)
 			{
 				FinishTargeting(cancel: true);
 			}
@@ -417,7 +420,7 @@ public class NTargetManager : Node2D
 		switch (_validTargetsType)
 		{
 		case TargetType.AnyEnemy:
-			if (creature.Side != CombatSide.Enemy)
+			if (creature.Side != CombatSide.Enemy || creature.IsDead)
 			{
 				return false;
 			}

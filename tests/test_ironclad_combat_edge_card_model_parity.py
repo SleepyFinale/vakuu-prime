@@ -38,6 +38,7 @@ from sts2_env.cards.ironclad import (
     make_inferno,
     make_iron_wave,
     make_mangle,
+    make_not_yet,
     make_molten_fist,
     make_pacts_end,
     make_pillage,
@@ -936,18 +937,26 @@ class TestIroncladCombatEdgeCardModelParity:
         assert damaged_combat.play_card(0, 0)
         assert damaged_combat.hand == [drawn]
 
-    def test_expect_a_fight_gains_energy_for_attacks_in_hand_not_skills(self):
+    def test_not_yet_heals_owner_for_reference_amount(self):
+        """NotYet.cs: heal the owner for the reference amount."""
         combat = _make_combat()
-        combat.hand = [
-            make_expect_a_fight(),
-            make_strike_ironclad(),
-            make_strike_ironclad(),
-            make_defend_ironclad(),
-        ]
+        combat.player.current_hp = 50
+        combat.hand = [make_not_yet()]
         combat.energy = 2
 
         assert combat.play_card(0)
-        assert combat.energy == 2
+        assert combat.player.current_hp == 60
+
+    def test_expect_a_fight_applies_no_energy_gain_power(self):
+        """Matches ExpectAFight.cs: apply NoEnergyGainPower to the owner."""
+        combat = _make_combat()
+        combat.hand = [make_expect_a_fight()]
+        combat.energy = 2
+
+        assert combat.play_card(0)
+        assert combat.player.get_power_amount(PowerId.NO_ENERGY_GAIN) == 1
+        combat.gain_energy(combat.player, 3)
+        assert combat.energy == 0
 
     def test_brand_still_gains_strength_when_selection_returns_none(self):
         combat = _make_combat()

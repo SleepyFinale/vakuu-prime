@@ -52,6 +52,8 @@ public class NMouseCardPlay : NCardPlay
 
 		public static readonly StringName CancelZoneThreshold = "CancelZoneThreshold";
 
+		public static readonly StringName _hasLeftCardCancelZoneOnce = "_hasLeftCardCancelZoneOnce";
+
 		public static readonly StringName _dragStartYPosition = "_dragStartYPosition";
 
 		public static readonly StringName _isLeftMouseDown = "_isLeftMouseDown";
@@ -78,6 +80,8 @@ public class NMouseCardPlay : NCardPlay
 	private const float _playZoneScreenProportion = 0.75f;
 
 	private const float _cancelZoneScreenProportion = 0.95f;
+
+	private bool _hasLeftCardCancelZoneOnce;
 
 	private float _dragStartYPosition;
 
@@ -272,6 +276,10 @@ public class NMouseCardPlay : NCardPlay
 		_signalsConnected = true;
 		instance.StartTargeting(targetType, base.CardNode, targetMode, () => IsCardInCancelZone() || _cancellationTokenSource.IsCancellationRequested, null);
 		Node node = await instance.SelectionFinished();
+		if (_cancellationTokenSource.IsCancellationRequested)
+		{
+			return;
+		}
 		if (node != null)
 		{
 			Creature target;
@@ -353,7 +361,12 @@ public class NMouseCardPlay : NCardPlay
 
 	private bool IsCardInCancelZone()
 	{
-		return _viewport.GetMousePosition().Y > CancelZoneThreshold;
+		_hasLeftCardCancelZoneOnce |= _viewport.GetMousePosition().Y <= CancelZoneThreshold;
+		if (_viewport.GetMousePosition().Y > CancelZoneThreshold)
+		{
+			return _hasLeftCardCancelZoneOnce;
+		}
+		return false;
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -494,6 +507,11 @@ public class NMouseCardPlay : NCardPlay
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool SetGodotClassPropertyValue(in godot_string_name name, in godot_variant value)
 	{
+		if (name == PropertyName._hasLeftCardCancelZoneOnce)
+		{
+			_hasLeftCardCancelZoneOnce = VariantUtils.ConvertTo<bool>(in value);
+			return true;
+		}
 		if (name == PropertyName._dragStartYPosition)
 		{
 			_dragStartYPosition = VariantUtils.ConvertTo<float>(in value);
@@ -548,6 +566,11 @@ public class NMouseCardPlay : NCardPlay
 			value = VariantUtils.CreateFrom(in from);
 			return true;
 		}
+		if (name == PropertyName._hasLeftCardCancelZoneOnce)
+		{
+			value = VariantUtils.CreateFrom(in _hasLeftCardCancelZoneOnce);
+			return true;
+		}
 		if (name == PropertyName._dragStartYPosition)
 		{
 			value = VariantUtils.CreateFrom(in _dragStartYPosition);
@@ -590,6 +613,7 @@ public class NMouseCardPlay : NCardPlay
 	internal new static List<PropertyInfo> GetGodotPropertyList()
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._hasLeftCardCancelZoneOnce, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Float, PropertyName.PlayZoneThreshold, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Float, PropertyName.CancelZoneThreshold, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Float, PropertyName._dragStartYPosition, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -606,6 +630,7 @@ public class NMouseCardPlay : NCardPlay
 	protected override void SaveGodotObjectData(GodotSerializationInfo info)
 	{
 		base.SaveGodotObjectData(info);
+		info.AddProperty(PropertyName._hasLeftCardCancelZoneOnce, Variant.From(in _hasLeftCardCancelZoneOnce));
 		info.AddProperty(PropertyName._dragStartYPosition, Variant.From(in _dragStartYPosition));
 		info.AddProperty(PropertyName._isLeftMouseDown, Variant.From(in _isLeftMouseDown));
 		info.AddProperty(PropertyName._onCreatureHoverCallable, Variant.From(in _onCreatureHoverCallable));
@@ -619,33 +644,37 @@ public class NMouseCardPlay : NCardPlay
 	protected override void RestoreGodotObjectData(GodotSerializationInfo info)
 	{
 		base.RestoreGodotObjectData(info);
-		if (info.TryGetProperty(PropertyName._dragStartYPosition, out var value))
+		if (info.TryGetProperty(PropertyName._hasLeftCardCancelZoneOnce, out var value))
 		{
-			_dragStartYPosition = value.As<float>();
+			_hasLeftCardCancelZoneOnce = value.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._isLeftMouseDown, out var value2))
+		if (info.TryGetProperty(PropertyName._dragStartYPosition, out var value2))
 		{
-			_isLeftMouseDown = value2.As<bool>();
+			_dragStartYPosition = value2.As<float>();
 		}
-		if (info.TryGetProperty(PropertyName._onCreatureHoverCallable, out var value3))
+		if (info.TryGetProperty(PropertyName._isLeftMouseDown, out var value3))
 		{
-			_onCreatureHoverCallable = value3.As<Callable>();
+			_isLeftMouseDown = value3.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._onCreatureUnhoverCallable, out var value4))
+		if (info.TryGetProperty(PropertyName._onCreatureHoverCallable, out var value4))
 		{
-			_onCreatureUnhoverCallable = value4.As<Callable>();
+			_onCreatureHoverCallable = value4.As<Callable>();
 		}
-		if (info.TryGetProperty(PropertyName._signalsConnected, out var value5))
+		if (info.TryGetProperty(PropertyName._onCreatureUnhoverCallable, out var value5))
 		{
-			_signalsConnected = value5.As<bool>();
+			_onCreatureUnhoverCallable = value5.As<Callable>();
 		}
-		if (info.TryGetProperty(PropertyName._cancelShortcut, out var value6))
+		if (info.TryGetProperty(PropertyName._signalsConnected, out var value6))
 		{
-			_cancelShortcut = value6.As<StringName>();
+			_signalsConnected = value6.As<bool>();
 		}
-		if (info.TryGetProperty(PropertyName._skipStartCardDrag, out var value7))
+		if (info.TryGetProperty(PropertyName._cancelShortcut, out var value7))
 		{
-			_skipStartCardDrag = value7.As<bool>();
+			_cancelShortcut = value7.As<StringName>();
+		}
+		if (info.TryGetProperty(PropertyName._skipStartCardDrag, out var value8))
+		{
+			_skipStartCardDrag = value8.As<bool>();
 		}
 	}
 }

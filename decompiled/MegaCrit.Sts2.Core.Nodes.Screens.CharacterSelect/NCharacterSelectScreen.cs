@@ -33,7 +33,6 @@ using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
 using MegaCrit.Sts2.Core.Platform;
-using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
@@ -71,8 +70,6 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		public new static readonly StringName _Process = "_Process";
 
 		public static readonly StringName CleanUpLobby = "CleanUpLobby";
-
-		public static readonly StringName RollRandomCharacter = "RollRandomCharacter";
 
 		public static readonly StringName OnAscensionPanelLevelChanged = "OnAscensionPanelLevelChanged";
 
@@ -145,6 +142,8 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 
 		public static readonly StringName _infoPanelPosFinalVal = "_infoPanelPosFinalVal";
 
+		public static readonly StringName _delayEmbarkForCharacterSelect = "_delayEmbarkForCharacterSelect";
+
 		public static readonly StringName _charSelectButtonScene = "_charSelectButtonScene";
 	}
 
@@ -203,6 +202,8 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 	private Vector2 _infoPanelPosFinalVal;
 
 	private const string _sceneCharSelectButtonPath = "res://scenes/screens/char_select/char_select_button.tscn";
+
+	private bool _delayEmbarkForCharacterSelect;
 
 	[Export(PropertyHint.None, "")]
 	private PackedScene _charSelectButtonScene;
@@ -286,6 +287,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		_lobby = new StartRunLobby(GameMode.Standard, gameService, this, maxPlayers);
 		_ascensionPanel.Initialize(MultiplayerUiMode.Host);
 		_lobby.AddLocalHostPlayer(new UnlockState(SaveManager.Instance.Progress), SaveManager.Instance.Progress.MaxMultiplayerAscension);
+		OnAscensionPanelLevelChanged();
 		AfterInitialized();
 	}
 
@@ -322,6 +324,26 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		_charButtonContainer.AddChildSafely(_randomCharacterButton);
 		_randomCharacterButton.Init(ModelDb.Character<RandomCharacter>(), this);
 		UpdateRandomCharacterVisibility();
+		List<NCharacterSelectButton> list = (from c in _charButtonContainer.GetChildren().OfType<NCharacterSelectButton>()
+			where c.Visible
+			select c).ToList();
+		for (int num = 0; num < list.Count; num++)
+		{
+			list[num].FocusNeighborTop = list[num].GetPath();
+			list[num].FocusNeighborBottom = list[num].GetPath();
+			NCharacterSelectButton nCharacterSelectButton2 = list[num];
+			NodePath path;
+			if (num <= 0)
+			{
+				path = list[list.Count - 1].GetPath();
+			}
+			else
+			{
+				path = list[num - 1].GetPath();
+			}
+			nCharacterSelectButton2.FocusNeighborLeft = path;
+			list[num].FocusNeighborRight = ((num < list.Count - 1) ? list[num + 1].GetPath() : list[0].GetPath());
+		}
 	}
 
 	private void UpdateRandomCharacterVisibility()
@@ -492,39 +514,38 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		}
 	}
 
+	private void OnLocalCharacterChangedForRandom(CharacterModel characterModel)
+	{
+		NGame.Instance?.ScreenShake(ShakeStrength.Weak, ShakeDuration.Short, 90f);
+		SfxCmd.Play(characterModel.CharacterSelectSfx);
+		Control control = PreloadManager.Cache.GetScene(characterModel.CharacterSelectBg).Instantiate<Control>(PackedScene.GenEditState.Disabled);
+		control.Name = characterModel.Id.Entry + "_bg";
+		_bgContainer.AddChildSafely(control);
+		_delayEmbarkForCharacterSelect = true;
+	}
+
 	private async Task StartNewSingleplayerRun(string seed, List<ActModel> acts)
 	{
 		Log.Info($"Embarking on a singleplayer {_lobby.LocalPlayer.character.Id.Entry} run. Ascension: {_lobby.Ascension} Seed: {seed}");
 		int ascensionToEmbark = _lobby.Ascension;
-		if (_lobby.LocalPlayer.character is RandomCharacter)
+		if (_delayEmbarkForCharacterSelect)
 		{
-			RollRandomCharacter();
-			CharacterModel character = _lobby.LocalPlayer.character;
-			int maxAscension = SaveManager.Instance.Progress.GetOrCreateCharacterStats(_lobby.LocalPlayer.character.Id).MaxAscension;
-			ascensionToEmbark = Math.Min(maxAscension, ascensionToEmbark);
-			NGame.Instance?.ScreenShake(ShakeStrength.Weak, ShakeDuration.Short, 90f);
-			SfxCmd.Play(character.CharacterSelectSfx);
-			Control control = PreloadManager.Cache.GetScene(character.CharacterSelectBg).Instantiate<Control>(PackedScene.GenEditState.Disabled);
-			control.Name = character.Id.Entry + "_bg";
-			_bgContainer.AddChildSafely(control);
-			if (ascensionToEmbark < maxAscension)
-			{
-				_ascensionPanel.SetAscensionLevel(ascensionToEmbark);
-			}
-			await Task.Delay(1000);
+			await Cmd.Wait(1f);
+			_delayEmbarkForCharacterSelect = false;
 		}
 		SfxCmd.Play(_lobby.LocalPlayer.character.CharacterTransitionSfx);
 		await NGame.Instance.Transition.FadeOut(0.8f, _lobby.LocalPlayer.character.CharacterSelectTransitionPath);
-		await NGame.Instance.StartNewSingleplayerRun(_lobby.LocalPlayer.character, shouldSave: true, acts, Array.Empty<ModifierModel>(), seed, ascensionToEmbark);
+		await NGame.Instance.StartNewSingleplayerRun(_lobby.LocalPlayer.character, shouldSave: true, acts, Array.Empty<ModifierModel>(), seed, GameMode.Standard, ascensionToEmbark);
 		CleanUpLobby(disconnectSession: false);
 	}
 
 	private async Task StartNewMultiplayerRun(string seed, List<ActModel> acts)
 	{
 		Log.Info($"Embarking on a multiplayer run. Players: {string.Join(",", _lobby.Players)}. Ascension: {_lobby.Ascension} Seed: {seed}");
-		if (_lobby.LocalPlayer.character is RandomCharacter)
+		if (_delayEmbarkForCharacterSelect)
 		{
-			RollRandomCharacter();
+			await Cmd.Wait(1f);
+			_delayEmbarkForCharacterSelect = false;
 		}
 		SfxCmd.Play(_lobby.LocalPlayer.character.CharacterTransitionSfx);
 		await NGame.Instance.Transition.FadeOut(0.8f, _lobby.LocalPlayer.character.CharacterSelectTransitionPath);
@@ -534,7 +555,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 			using (new NetLoadingHandle(_lobby.NetService))
 			{
 				acts[0] = _settings.Act;
-				RunState runState = RunState.CreateForNewRun(_lobby.Players.Select((LobbyPlayer p) => Player.CreateForNewRun(p.character, UnlockState.FromSerializable(p.unlockState), p.id)).ToList(), acts.Select((ActModel a) => a.ToMutable()).ToList(), _settings.Modifiers, _lobby.Ascension, seed);
+				RunState runState = RunState.CreateForNewRun(_lobby.Players.Select((LobbyPlayer p) => Player.CreateForNewRun(p.character, UnlockState.FromSerializable(p.unlockState), p.id)).ToList(), acts.Select((ActModel a) => a.ToMutable()).ToList(), _settings.Modifiers, GameMode.Standard, _lobby.Ascension, seed);
 				RunManager.Instance.SetUpNewMultiPlayer(runState, _lobby, _settings.SaveRunHistory);
 				await PreloadManager.LoadRunAssets(runState.Players.Select((Player p) => p.Character));
 				await RunManager.Instance.FinalizeStartingRelics();
@@ -569,12 +590,6 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 			await NGame.Instance.StartNewMultiplayerRun(_lobby, shouldSave: true, acts, Array.Empty<ModifierModel>(), seed, _lobby.Ascension);
 			CleanUpLobby(disconnectSession: false);
 		}
-	}
-
-	private void RollRandomCharacter()
-	{
-		CharacterModel[] items = ModelDb.AllCharacters.ToArray();
-		_lobby.SetLocalCharacter(Rng.Chaotic.NextItem(items));
 	}
 
 	public void SelectCharacter(NCharacterSelectButton charSelectButton, CharacterModel characterModel)
@@ -686,6 +701,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		{
 			item.Enable();
 		}
+		_selectedButton?.TryGrabFocus();
 		_readyAndWaitingContainer.Visible = false;
 		_embarkButton.Enable();
 		_backButton.Enable();
@@ -713,8 +729,12 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		UpdateRandomCharacterVisibility();
 	}
 
-	public void PlayerChanged(LobbyPlayer player)
+	public void PlayerChanged(LobbyPlayer player, bool isRandomCharacterResolution)
 	{
+		if (player.id == _lobby.LocalPlayer.id && isRandomCharacterResolution)
+		{
+			OnLocalCharacterChangedForRandom(player.character);
+		}
 		_remotePlayerContainer.OnPlayerChanged(player);
 		RefreshButtonSelectionForPlayer(player);
 	}
@@ -779,6 +799,8 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		}
 		NAudioManager.Instance?.StopMusic();
 		_ascensionPanel.Cleanup();
+		_embarkButton.Disable();
+		_unreadyButton.Disable();
 		if (_lobby.NetService.Type == NetGameType.Singleplayer)
 		{
 			TaskHelper.RunSafely(StartNewSingleplayerRun(seed, acts));
@@ -795,7 +817,10 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		{
 			return;
 		}
-		_stack.Pop();
+		if (_stack != null && _stack.Peek() == this)
+		{
+			_stack.Pop();
+		}
 		if (TestMode.IsOff)
 		{
 			NErrorPopup nErrorPopup = NErrorPopup.Create(info);
@@ -831,7 +856,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal new static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(21);
+		List<MethodInfo> list = new List<MethodInfo>(20);
 		list.Add(new MethodInfo(MethodName.Create, new PropertyInfo(Variant.Type.Object, "", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false), MethodFlags.Normal | MethodFlags.Static, null, null));
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.InitializeSingleplayer, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -856,7 +881,6 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		{
 			new PropertyInfo(Variant.Type.Bool, "disconnectSession", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
-		list.Add(new MethodInfo(MethodName.RollRandomCharacter, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnAscensionPanelLevelChanged, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnUnreadyPressed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -942,12 +966,6 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		if (method == MethodName.CleanUpLobby && args.Count == 1)
 		{
 			CleanUpLobby(VariantUtils.ConvertTo<bool>(in args[0]));
-			ret = default(godot_variant);
-			return true;
-		}
-		if (method == MethodName.RollRandomCharacter && args.Count == 0)
-		{
-			RollRandomCharacter();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -1062,10 +1080,6 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 			return true;
 		}
 		if (method == MethodName.CleanUpLobby)
-		{
-			return true;
-		}
-		if (method == MethodName.RollRandomCharacter)
 		{
 			return true;
 		}
@@ -1227,6 +1241,11 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 			_infoPanelPosFinalVal = VariantUtils.ConvertTo<Vector2>(in value);
 			return true;
 		}
+		if (name == PropertyName._delayEmbarkForCharacterSelect)
+		{
+			_delayEmbarkForCharacterSelect = VariantUtils.ConvertTo<bool>(in value);
+			return true;
+		}
 		if (name == PropertyName._charSelectButtonScene)
 		{
 			_charSelectButtonScene = VariantUtils.ConvertTo<PackedScene>(in value);
@@ -1368,6 +1387,11 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 			value = VariantUtils.CreateFrom(in _infoPanelPosFinalVal);
 			return true;
 		}
+		if (name == PropertyName._delayEmbarkForCharacterSelect)
+		{
+			value = VariantUtils.CreateFrom(in _delayEmbarkForCharacterSelect);
+			return true;
+		}
 		if (name == PropertyName._charSelectButtonScene)
 		{
 			value = VariantUtils.CreateFrom(in _charSelectButtonScene);
@@ -1404,6 +1428,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._randomCharacterButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._infoPanelTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._infoPanelPosFinalVal, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._delayEmbarkForCharacterSelect, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._charSelectButtonScene, PropertyHint.ResourceType, "PackedScene", PropertyUsageFlags.Default | PropertyUsageFlags.ScriptVariable, exported: true));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.InitialFocusedControl, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.ShouldShowActDropdown, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -1438,6 +1463,7 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		info.AddProperty(PropertyName._randomCharacterButton, Variant.From(in _randomCharacterButton));
 		info.AddProperty(PropertyName._infoPanelTween, Variant.From(in _infoPanelTween));
 		info.AddProperty(PropertyName._infoPanelPosFinalVal, Variant.From(in _infoPanelPosFinalVal));
+		info.AddProperty(PropertyName._delayEmbarkForCharacterSelect, Variant.From(in _delayEmbarkForCharacterSelect));
 		info.AddProperty(PropertyName._charSelectButtonScene, Variant.From(in _charSelectButtonScene));
 	}
 
@@ -1541,9 +1567,13 @@ public class NCharacterSelectScreen : NSubmenu, IStartRunLobbyListener, ICharact
 		{
 			_infoPanelPosFinalVal = value24.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._charSelectButtonScene, out var value25))
+		if (info.TryGetProperty(PropertyName._delayEmbarkForCharacterSelect, out var value25))
 		{
-			_charSelectButtonScene = value25.As<PackedScene>();
+			_delayEmbarkForCharacterSelect = value25.As<bool>();
+		}
+		if (info.TryGetProperty(PropertyName._charSelectButtonScene, out var value26))
+		{
+			_charSelectButtonScene = value26.As<PackedScene>();
 		}
 	}
 }

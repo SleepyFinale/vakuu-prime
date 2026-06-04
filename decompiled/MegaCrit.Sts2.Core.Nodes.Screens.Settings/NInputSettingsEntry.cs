@@ -202,7 +202,8 @@ public class NInputSettingsEntry : NButton
 		{
 			if (NInputManager.remappableKeyboardInputs.Contains(InputName))
 			{
-				_keyBindingLabel.Text = NInputManager.Instance.GetShortcutKey(InputName).ToString();
+				Key shortcutKey = NInputManager.Instance.GetShortcutKey(InputName);
+				_keyBindingLabel.Text = ((shortcutKey != Key.None) ? shortcutKey.ToString() : "");
 			}
 			else
 			{

@@ -51,7 +51,7 @@ public class NMerchantButton : NButton
 		public static readonly StringName MerchantOpened = "MerchantOpened";
 	}
 
-	private MegaSkeleton _merchantSkeleton;
+	private MegaSkeleton? _merchantSkeleton;
 
 	private NSelectionReticle _merchantSelectionReticle;
 
@@ -102,8 +102,8 @@ public class NMerchantButton : NButton
 		}
 		else
 		{
-			_merchantSkeleton.SetSkinByName("default");
-			_merchantSkeleton.SetSlotsToSetupPose();
+			_merchantSkeleton?.SetSkinByName("default");
+			_merchantSkeleton?.SetSlotsToSetupPose();
 		}
 		_focusedWhileTargeting = false;
 	}
@@ -150,8 +150,8 @@ public class NMerchantButton : NButton
 		}
 		else
 		{
-			_merchantSkeleton.SetSkinByName("outline");
-			_merchantSkeleton.SetSlotsToSetupPose();
+			_merchantSkeleton?.SetSkinByName("outline");
+			_merchantSkeleton?.SetSlotsToSetupPose();
 			_focusedWhileTargeting = false;
 		}
 	}

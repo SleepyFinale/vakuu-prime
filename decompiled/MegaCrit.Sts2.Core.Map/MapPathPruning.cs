@@ -10,6 +10,56 @@ namespace MegaCrit.Sts2.Core.Map;
 
 public static class MapPathPruning
 {
+	public static void PruneAndRepair(MapPoint?[,] grid, HashSet<MapPoint> startMapPoints, ActMap map, MapPointTypeCounts pointTypeCounts, Rng rng, Func<MapPointType, MapPoint, bool> isValidPointType)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			PruneDuplicateSegments(grid, startMapPoints, map.StartingMapPoint, rng);
+			if (!RepairPrunedPointTypes(map, pointTypeCounts, rng, isValidPointType))
+			{
+				break;
+			}
+		}
+	}
+
+	public static bool RepairPrunedPointTypes(ActMap map, MapPointTypeCounts pointTypeCounts, Rng rng, Func<MapPointType, MapPoint, bool> isValidPointType)
+	{
+		bool flag = false;
+		flag |= RepairPointType(map, MapPointType.Shop, pointTypeCounts.NumOfShops, rng, isValidPointType);
+		flag |= RepairPointType(map, MapPointType.Elite, pointTypeCounts.NumOfElites, rng, isValidPointType);
+		flag |= RepairPointType(map, MapPointType.RestSite, pointTypeCounts.NumOfRests, rng, isValidPointType);
+		return flag | RepairPointType(map, MapPointType.Unknown, pointTypeCounts.NumOfUnknowns, rng, isValidPointType);
+	}
+
+	private static bool RepairPointType(ActMap map, MapPointType type, int targetCount, Rng rng, Func<MapPointType, MapPoint, bool> isValidPointType)
+	{
+		int num = map.GetAllMapPoints().Count((MapPoint p) => p.PointType == type);
+		int num2 = targetCount - num;
+		if (num2 <= 0)
+		{
+			return false;
+		}
+		bool result = false;
+		List<MapPoint> list = (from p in map.GetAllMapPoints()
+			where p.PointType == MapPointType.Monster && p.CanBeModified
+			select p).ToList();
+		list.StableShuffle(rng);
+		foreach (MapPoint item in list)
+		{
+			if (num2 == 0)
+			{
+				break;
+			}
+			if (isValidPointType(type, item))
+			{
+				item.PointType = type;
+				num2--;
+				result = true;
+			}
+		}
+		return result;
+	}
+
 	public static void PruneDuplicateSegments(MapPoint?[,] grid, HashSet<MapPoint> startMapPoints, MapPoint startingMapPoint, Rng rng)
 	{
 		int num = 0;
@@ -28,7 +78,7 @@ public static class MapPathPruning
 	public static List<List<MapPoint[]>> FindMatchingSegments(MapPoint startingMapPoint)
 	{
 		List<List<MapPoint>> list = FindAllPaths(startingMapPoint);
-		Dictionary<string, List<MapPoint[]>> segments = new Dictionary<string, List<MapPoint[]>>();
+		SortedDictionary<string, List<MapPoint[]>> segments = new SortedDictionary<string, List<MapPoint[]>>(StringComparer.Ordinal);
 		foreach (List<MapPoint> item in list)
 		{
 			AddSegmentsToDictionary(item, segments);
@@ -175,7 +225,7 @@ public static class MapPathPruning
 		return false;
 	}
 
-	private static List<List<MapPoint[]>> GetDuplicateSegments(Dictionary<string, List<MapPoint[]>> segments)
+	private static List<List<MapPoint[]>> GetDuplicateSegments(IDictionary<string, List<MapPoint[]>> segments)
 	{
 		return segments.Values.Where((List<MapPoint[]> segmentList) => segmentList.Count > 1).ToList();
 	}
@@ -235,7 +285,7 @@ public static class MapPathPruning
 				{
 					return false;
 				}
-				if (!mapPoint.Children.Where((MapPoint c) => !segment.Contains(c)).Any((MapPoint c) => c.parents.Count == 1))
+				if (!mapPoint.Children.Where((MapPoint c) => !Enumerable.Contains(segment, c)).Any((MapPoint c) => c.parents.Count == 1))
 				{
 					RemovePoint(grid, startMapPoints, mapPoint);
 					result = true;

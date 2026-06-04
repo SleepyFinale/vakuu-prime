@@ -57,7 +57,6 @@ public class NEpochOffscreenVfx : Control
 
 	public override void _Ready()
 	{
-		_tween = CreateTween().SetParallel();
 		_viewportSizeX = GetViewportRect().Size.X;
 	}
 

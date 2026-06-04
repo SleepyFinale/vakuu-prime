@@ -7,6 +7,7 @@ using Godot;
 using Godot.Bridge;
 using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Assets;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
@@ -16,6 +17,7 @@ using MegaCrit.Sts2.Core.Multiplayer.Game.PeerInput;
 using MegaCrit.Sts2.Core.Multiplayer.Messages.Game.Flavor;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Saves.MapDrawing;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -34,6 +36,8 @@ public class NMapDrawings : Control
 		public Line2D? currentlyDrawingLine;
 
 		public required SubViewport drawViewport;
+
+		public required TextureRect drawingTexture;
 
 		public bool IsDrawing => currentlyDrawingLine != null;
 
@@ -65,6 +69,8 @@ public class NMapDrawings : Control
 		public static readonly StringName ToNetPosition = "ToNetPosition";
 
 		public static readonly StringName FromNetPosition = "FromNetPosition";
+
+		public static readonly StringName UpdateVisibilityFromSettings = "UpdateVisibilityFromSettings";
 
 		public static readonly StringName ClearAllLines = "ClearAllLines";
 
@@ -396,25 +402,41 @@ public class NMapDrawings : Control
 			drawingState = new DrawingState
 			{
 				playerId = playerId,
-				drawViewport = control.GetNode<SubViewport>("DrawViewport")
+				drawViewport = control.GetNode<SubViewport>("DrawViewport"),
+				drawingTexture = control.GetNode<TextureRect>("DrawViewportTextureRect")
 			};
-			TaskHelper.RunSafely(SetVisibleLater(control));
+			TaskHelper.RunSafely(SetVisibleLater(drawingState));
 			_drawingStates.Add(drawingState);
 		}
 		return drawingState;
 	}
 
-	private async Task SetVisibleLater(Control mapDrawingScene)
+	private async Task SetVisibleLater(DrawingState state)
 	{
-		TextureRect drawingTexture = mapDrawingScene.GetNode<TextureRect>("DrawViewportTextureRect");
-		SubViewport drawViewport = mapDrawingScene.GetNode<SubViewport>("DrawViewport");
-		drawViewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Always;
-		drawingTexture.Visible = false;
+		state.drawViewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Always;
+		state.drawingTexture.Visible = false;
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-		drawingTexture.Visible = true;
-		drawViewport.RenderTargetUpdateMode = SubViewport.UpdateMode.WhenVisible;
+		state.drawingTexture.Visible = ShouldShowMapDrawing(state);
+		state.drawViewport.RenderTargetUpdateMode = SubViewport.UpdateMode.WhenVisible;
+	}
+
+	public void UpdateVisibilityFromSettings()
+	{
+		foreach (DrawingState drawingState in _drawingStates)
+		{
+			drawingState.drawingTexture.Visible = ShouldShowMapDrawing(drawingState);
+		}
+	}
+
+	private bool ShouldShowMapDrawing(DrawingState state)
+	{
+		if (!SaveManager.Instance.PrefsSave.ShowMultiplayerDrawings)
+		{
+			return LocalContext.NetId == state.playerId;
+		}
+		return true;
 	}
 
 	public void ClearAllLines()
@@ -578,7 +600,7 @@ public class NMapDrawings : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(18);
+		List<MethodInfo> list = new List<MethodInfo>(19);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.UpdateCurrentLinePositionLocal, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
@@ -612,6 +634,7 @@ public class NMapDrawings : Control
 		{
 			new PropertyInfo(Variant.Type.Vector2, "pos", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName.UpdateVisibilityFromSettings, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ClearAllLines, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnPlayerScreenChanged, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -695,6 +718,12 @@ public class NMapDrawings : Control
 		if (method == MethodName.FromNetPosition && args.Count == 1)
 		{
 			ret = VariantUtils.CreateFrom<Vector2>(FromNetPosition(VariantUtils.ConvertTo<Vector2>(in args[0])));
+			return true;
+		}
+		if (method == MethodName.UpdateVisibilityFromSettings && args.Count == 0)
+		{
+			UpdateVisibilityFromSettings();
+			ret = default(godot_variant);
 			return true;
 		}
 		if (method == MethodName.ClearAllLines && args.Count == 0)
@@ -784,6 +813,10 @@ public class NMapDrawings : Control
 			return true;
 		}
 		if (method == MethodName.FromNetPosition)
+		{
+			return true;
+		}
+		if (method == MethodName.UpdateVisibilityFromSettings)
 		{
 			return true;
 		}

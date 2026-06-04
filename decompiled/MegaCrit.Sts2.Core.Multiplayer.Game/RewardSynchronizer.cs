@@ -202,7 +202,7 @@ public class RewardSynchronizer : IDisposable
 			return;
 		}
 		Player player = _playerCollection.GetPlayer(senderId);
-		MapPointHistoryEntry historyEntryFor = player.RunState.GetHistoryEntryFor(message.location);
+		MapPointHistoryEntry historyEntryFor = player.RunState.GetHistoryEntryFor(message.location.mapLocation);
 		PlayerMapPointHistoryEntry playerMapPointHistoryEntry = null;
 		if (historyEntryFor != null)
 		{
@@ -376,10 +376,11 @@ public class RewardSynchronizer : IDisposable
 
 	private async Task<bool> DoCardRemoval(Player player)
 	{
-		CardSelectorPrefs cardSelectorPrefs = new CardSelectorPrefs(new LocString("gameplay_ui", "COMBAT_REWARD_CARD_REMOVAL.selectionScreenPrompt"), 1);
-		cardSelectorPrefs.Cancelable = true;
-		cardSelectorPrefs.RequireManualConfirmation = true;
-		CardSelectorPrefs prefs = cardSelectorPrefs;
+		CardSelectorPrefs prefs = new CardSelectorPrefs(new LocString("gameplay_ui", "COMBAT_REWARD_CARD_REMOVAL.selectionScreenPrompt"), 1)
+		{
+			Cancelable = true,
+			RequireManualConfirmation = true
+		};
 		CardModel card = (await CardSelectCmd.FromDeckForRemoval(player, prefs)).FirstOrDefault();
 		if (card != null)
 		{

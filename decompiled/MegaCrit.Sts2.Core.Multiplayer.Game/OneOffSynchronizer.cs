@@ -67,10 +67,11 @@ public class OneOffSynchronizer : IDisposable
 
 	private async Task<bool> DoMerchantCardRemoval(Player player, int goldCost, bool cancelable = true)
 	{
-		CardSelectorPrefs cardSelectorPrefs = new CardSelectorPrefs(CardSelectorPrefs.RemoveSelectionPrompt, 1);
-		cardSelectorPrefs.Cancelable = cancelable;
-		cardSelectorPrefs.RequireManualConfirmation = true;
-		CardSelectorPrefs prefs = cardSelectorPrefs;
+		CardSelectorPrefs prefs = new CardSelectorPrefs(CardSelectorPrefs.RemoveSelectionPrompt, 1)
+		{
+			Cancelable = cancelable,
+			RequireManualConfirmation = true
+		};
 		CardModel card = (await CardSelectCmd.FromDeckForRemoval(player, prefs)).FirstOrDefault();
 		if (card != null)
 		{

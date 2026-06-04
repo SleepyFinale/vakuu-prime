@@ -11,7 +11,6 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
-using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
@@ -28,6 +27,8 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 
 		public static readonly StringName ConnectSignals = "ConnectSignals";
 
+		public static readonly StringName OnInspectCardHidden = "OnInspectCardHidden";
+
 		public static readonly StringName ToggleShowUpgrades = "ToggleShowUpgrades";
 
 		public static readonly StringName OnReturnButtonPressed = "OnReturnButtonPressed";
@@ -35,6 +36,8 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		public static readonly StringName AfterCapstoneOpened = "AfterCapstoneOpened";
 
 		public static readonly StringName AfterCapstoneClosed = "AfterCapstoneClosed";
+
+		public static readonly StringName OnControllerStateUpdated = "OnControllerStateUpdated";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -101,22 +104,17 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		_backButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(OnReturnButtonPressed));
 		_backButton.Enable();
 		_grid = GetNode<NCardGrid>("CardGrid");
-		_grid.Connect(NCardGrid.SignalName.HolderPressed, Callable.From(delegate(NCardHolder h)
-		{
-			ShowCardDetail(h.CardModel);
-		}));
-		_grid.Connect(NCardGrid.SignalName.HolderAltPressed, Callable.From(delegate(NCardHolder h)
-		{
-			ShowCardDetail(h.CardModel);
-		}));
 		_grid.InsetForTopBar();
 		_bottomLabel.Text = _infoText.GetFormattedText();
 		_showUpgrades = GetNode<NTickbox>("%Upgrades");
 		_showUpgrades.Connect(NTickbox.SignalName.Toggled, Callable.From<NTickbox>(ToggleShowUpgrades));
+		OnControllerStateUpdated();
+		NControllerManager.Instance.Connect(NControllerManager.SignalName.MouseDetected, Callable.From(OnControllerStateUpdated));
+		NControllerManager.Instance.Connect(NControllerManager.SignalName.ControllerDetected, Callable.From(OnControllerStateUpdated));
 		base.ProcessMode = (ProcessModeEnum)(base.Visible ? 0 : 4);
 	}
 
-	private void ShowCardDetail(CardModel cardModel)
+	protected void ShowCardDetail(CardModel cardModel)
 	{
 		_backButton.Disable();
 		List<CardModel> list = _grid.CurrentlyDisplayedCards.ToList();
@@ -126,9 +124,14 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		{
 			if (!inspectCardScreen.Visible)
 			{
-				_backButton.Enable();
+				OnInspectCardHidden();
 			}
 		}), 4u);
+	}
+
+	protected virtual void OnInspectCardHidden()
+	{
+		_backButton.Enable();
 	}
 
 	private void ToggleShowUpgrades(NTickbox tickbox)
@@ -152,12 +155,23 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		this.QueueFreeSafely();
 	}
 
+	private void OnControllerStateUpdated()
+	{
+		_showUpgrades.Visible = !NControllerManager.Instance.IsUsingController;
+		if (NControllerManager.Instance.IsUsingController)
+		{
+			_showUpgrades.IsTicked = false;
+			ToggleShowUpgrades(_showUpgrades);
+		}
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(6);
+		List<MethodInfo> list = new List<MethodInfo>(8);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ConnectSignals, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnInspectCardHidden, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ToggleShowUpgrades, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "tickbox", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -168,6 +182,7 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		}, null));
 		list.Add(new MethodInfo(MethodName.AfterCapstoneOpened, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AfterCapstoneClosed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnControllerStateUpdated, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -183,6 +198,12 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 		if (method == MethodName.ConnectSignals && args.Count == 0)
 		{
 			ConnectSignals();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.OnInspectCardHidden && args.Count == 0)
+		{
+			OnInspectCardHidden();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -210,6 +231,12 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.OnControllerStateUpdated && args.Count == 0)
+		{
+			OnControllerStateUpdated();
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -221,6 +248,10 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 			return true;
 		}
 		if (method == MethodName.ConnectSignals)
+		{
+			return true;
+		}
+		if (method == MethodName.OnInspectCardHidden)
 		{
 			return true;
 		}
@@ -237,6 +268,10 @@ public abstract class NCardsViewScreen : Control, ICapstoneScreen, IScreenContex
 			return true;
 		}
 		if (method == MethodName.AfterCapstoneClosed)
+		{
+			return true;
+		}
+		if (method == MethodName.OnControllerStateUpdated)
 		{
 			return true;
 		}

@@ -24,13 +24,19 @@ namespace MegaCrit.Sts2.Core.Rewards;
 
 public class RewardsSet
 {
+	public static Func<RewardsSet, Task>? testSelector;
+
 	private bool _allowEmptyRewards;
+
+	private bool _disallowSkipping;
 
 	public AbstractRoom? Room { get; private set; }
 
 	public Player Player { get; }
 
 	public List<Reward> Rewards { get; } = new List<Reward>();
+
+	public bool DisallowSkipping => _disallowSkipping;
 
 	public RewardsSet(Player player)
 	{
@@ -65,6 +71,12 @@ public class RewardsSet
 	public RewardsSet WithCustomRewards(List<Reward> rewards)
 	{
 		Rewards.AddRange(rewards);
+		return this;
+	}
+
+	public RewardsSet WithSkippingDisallowed()
+	{
+		_disallowSkipping = true;
 		return this;
 	}
 
@@ -111,6 +123,11 @@ public class RewardsSet
 		}
 		if (TestMode.IsOn)
 		{
+			if (testSelector != null)
+			{
+				await testSelector(this);
+				return;
+			}
 			foreach (Reward reward in Rewards)
 			{
 				await reward.OnSelectWrapper();
@@ -120,6 +137,10 @@ public class RewardsSet
 		{
 			NRewardsScreen nRewardsScreen = NRewardsScreen.ShowScreen(isTerminal, Player.RunState);
 			nRewardsScreen.SetRewards(Rewards);
+			if (_disallowSkipping)
+			{
+				nRewardsScreen.DisallowSkipping();
+			}
 			await nRewardsScreen.ClosedTask;
 		}
 	}
@@ -178,6 +199,7 @@ public class RewardsSet
 
 	private bool TryGenerateTutorialRewards(Player player, AbstractRoom room)
 	{
+		CardCreationOptions rerollOptions = CardCreationOptions.ForRoom(player, room.RoomType);
 		if (player.UnlockState.NumberOfRuns == 0 && player.UnlockState.EpochUnlockCount() == 0 && player.Character is Ironclad && room is CombatRoom combatRoom)
 		{
 			int num = player.RunState.MapPointHistory.SelectMany((IReadOnlyList<MapPointHistoryEntry> p) => p).Count((MapPointHistoryEntry e) => e.Rooms.FindIndex((MapPointRoomHistoryEntry r) => r.RoomType == RoomType.Monster) >= 0);
@@ -240,7 +262,7 @@ public class RewardsSet
 				{
 					Rewards.Add(new PotionReward(potionModel, player));
 				}
-				Rewards.Add(new CardReward(array[num - 1], CardCreationSource.Encounter, player));
+				Rewards.Add(new CardReward(array[num - 1], CardCreationSource.Encounter, player, rerollOptions));
 				return true;
 			}
 			if (room.RoomType == RoomType.Elite)
@@ -258,7 +280,7 @@ public class RewardsSet
 					Rewards.Add(new GoldReward(combatRoom.Encounter.MinGoldReward, combatRoom.Encounter.MaxGoldReward, player));
 					Rewards.Add(new PotionReward(ModelDb.Potion<BlockPotion>().ToMutable(), player));
 					Rewards.Add(new RelicReward(ModelDb.Relic<Vajra>().ToMutable(), player));
-					Rewards.Add(new CardReward(cardsToOffer2, CardCreationSource.Encounter, player));
+					Rewards.Add(new CardReward(cardsToOffer2, CardCreationSource.Encounter, player, rerollOptions));
 					return true;
 				}
 				case 2:
@@ -271,7 +293,7 @@ public class RewardsSet
 					};
 					Rewards.Add(new GoldReward(combatRoom.Encounter.MinGoldReward, combatRoom.Encounter.MaxGoldReward, player));
 					Rewards.Add(new RelicReward(ModelDb.Relic<OrnamentalFan>().ToMutable(), player));
-					Rewards.Add(new CardReward(cardsToOffer, CardCreationSource.Encounter, player));
+					Rewards.Add(new CardReward(cardsToOffer, CardCreationSource.Encounter, player, rerollOptions));
 					return true;
 				}
 				}
@@ -285,7 +307,7 @@ public class RewardsSet
 					player.RunState.CreateCard<Thrash>(player)
 				};
 				Rewards.Add(new GoldReward(combatRoom.Encounter.MinGoldReward, combatRoom.Encounter.MaxGoldReward, player));
-				Rewards.Add(new CardReward(cardsToOffer3, CardCreationSource.Encounter, player));
+				Rewards.Add(new CardReward(cardsToOffer3, CardCreationSource.Encounter, player, rerollOptions));
 				return true;
 			}
 		}

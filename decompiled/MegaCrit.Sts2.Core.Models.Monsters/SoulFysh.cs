@@ -33,6 +33,8 @@ public sealed class SoulFysh : MonsterModel
 
 	private const string _attackDebuffTrigger = "AttackDebuffTrigger";
 
+	private const string _beckonTrigger = "Beckon";
+
 	private bool _isInvisible;
 
 	public override string HurtSfx => "event:/sfx/enemy/enemy_attacks/soul_fysh/soul_fysh_hurt";
@@ -92,7 +94,7 @@ public sealed class SoulFysh : MonsterModel
 	private async Task BeckonMove(IReadOnlyList<Creature> targets)
 	{
 		SfxCmd.Play("event:/sfx/enemy/enemy_attacks/soul_fysh/soul_fysh_beckon");
-		await CreatureCmd.TriggerAnim(base.Creature, "AttackBeckon", 0f);
+		await CreatureCmd.TriggerAnim(base.Creature, "Beckon", 0f);
 		await Cmd.Wait(0.3f);
 		VfxCmd.PlayOnCreatureCenter(base.Creature, "vfx/vfx_spooky_scream");
 		await Cmd.CustomScaledWait(0f, 0.3f);
@@ -170,30 +172,33 @@ public sealed class SoulFysh : MonsterModel
 		AnimState animState4 = new AnimState("attack_beckon");
 		AnimState animState5 = new AnimState("hurt");
 		AnimState state = new AnimState("die");
+		AnimState animState6 = new AnimState("beckon");
 		AnimState nextState = new AnimState("intangible_loop", isLooping: true);
-		AnimState animState6 = new AnimState("intangible_start");
-		AnimState animState7 = new AnimState("intangible_end");
-		AnimState animState8 = new AnimState("hurt_intangible");
+		AnimState animState7 = new AnimState("intangible_start");
+		AnimState animState8 = new AnimState("intangible_end");
+		AnimState animState9 = new AnimState("hurt_intangible");
 		AnimState state2 = new AnimState("die_intangible");
-		AnimState animState9 = new AnimState("attack_debuff");
+		AnimState animState10 = new AnimState("attack_debuff");
 		animState2.NextState = animState;
 		animState3.NextState = animState;
 		animState4.NextState = animState;
 		animState5.NextState = animState;
-		animState6.NextState = nextState;
-		animState8.NextState = nextState;
-		animState9.NextState = animState7;
-		animState7.NextState = animState;
+		animState6.NextState = animState;
+		animState7.NextState = nextState;
+		animState9.NextState = nextState;
+		animState10.NextState = animState8;
+		animState8.NextState = animState;
 		CreatureAnimator creatureAnimator = new CreatureAnimator(animState, controller);
 		creatureAnimator.AddAnyState("Cast", animState2);
 		creatureAnimator.AddAnyState("Attack", animState3);
 		creatureAnimator.AddAnyState("AttackBeckon", animState4);
-		creatureAnimator.AddAnyState("IntangibleStart", animState6);
-		creatureAnimator.AddAnyState("AttackDebuffTrigger", animState9);
+		creatureAnimator.AddAnyState("Beckon", animState6);
+		creatureAnimator.AddAnyState("IntangibleStart", animState7);
+		creatureAnimator.AddAnyState("AttackDebuffTrigger", animState10);
 		creatureAnimator.AddAnyState("Dead", state, () => !IsInvisible);
 		creatureAnimator.AddAnyState("Hit", animState5, () => !IsInvisible);
 		creatureAnimator.AddAnyState("Dead", state2, () => IsInvisible);
-		creatureAnimator.AddAnyState("Hit", animState8, () => IsInvisible);
+		creatureAnimator.AddAnyState("Hit", animState9, () => IsInvisible);
 		return creatureAnimator;
 	}
 }

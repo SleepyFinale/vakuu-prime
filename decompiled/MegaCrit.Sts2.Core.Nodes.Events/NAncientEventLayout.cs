@@ -247,7 +247,12 @@ public class NAncientEventLayout : NEventLayout
 	public void ClearDialogue()
 	{
 		_dialogue.Clear();
-		_dialogueContainer.FreeChildren();
+		_currentDialogueLine = 0;
+		foreach (Node item in _dialogueContainer.GetChildren().ToList())
+		{
+			_dialogueContainer.RemoveChildSafely(item);
+			item.QueueFreeSafely();
+		}
 	}
 
 	public override void OnSetupComplete()
@@ -291,8 +296,13 @@ public class NAncientEventLayout : NEventLayout
 		}
 		UpdateFakeNextButton();
 		NAncientDialogueLine childOrNull = _dialogueContainer.GetChildOrNull<NAncientDialogueLine>(_currentDialogueLine);
-		childOrNull?.PlaySfx();
-		float num = ((childOrNull != null) ? (childOrNull.Position.Y + childOrNull.Size.Y) : 0f);
+		float num = 0f;
+		if (childOrNull != null)
+		{
+			childOrNull.OnAnimInSetVisible();
+			childOrNull.PlaySfx();
+			num = childOrNull.Position.Y + childOrNull.Size.Y;
+		}
 		if (IsDialogueOnLastLine)
 		{
 			_fakeNextButtonContainer.Visible = false;

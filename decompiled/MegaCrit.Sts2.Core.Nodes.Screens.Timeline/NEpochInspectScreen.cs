@@ -13,6 +13,7 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
+using MegaCrit.Sts2.Core.Nodes.Vfx.Ui;
 using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.Core.Timeline;
 using MegaCrit.Sts2.addons.mega_text;
@@ -106,7 +107,7 @@ public class NEpochInspectScreen : NClickableControl, IScreenContext
 	{
 	}
 
-	private static readonly LocString placeholderLoc = new LocString("timeline", "PLACEHOLDER_PORTRAIT");
+	private static readonly LocString _placeholderLoc = new LocString("timeline", "PLACEHOLDER_PORTRAIT");
 
 	public static readonly string lockedImagePath = ImageHelper.GetImagePath("packed/timeline/epoch_slot_locked.png");
 
@@ -217,7 +218,7 @@ public class NEpochInspectScreen : NClickableControl, IScreenContext
 		if (_epoch.IsArtPlaceholder)
 		{
 			_placeholderLabel.Visible = true;
-			_placeholderLabel.Text = placeholderLoc.GetRawText();
+			_placeholderLabel.Text = _placeholderLoc.GetRawText();
 		}
 		else
 		{

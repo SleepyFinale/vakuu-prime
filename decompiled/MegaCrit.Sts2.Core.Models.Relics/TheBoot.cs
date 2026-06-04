@@ -29,6 +29,10 @@ public sealed class TheBoot : RelicModel
 		{
 			return amount;
 		}
+		if (target == base.Owner.Creature)
+		{
+			return amount;
+		}
 		if (!props.IsPoweredAttack())
 		{
 			return amount;

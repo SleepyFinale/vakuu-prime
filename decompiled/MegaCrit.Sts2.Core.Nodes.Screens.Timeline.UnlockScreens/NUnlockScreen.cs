@@ -8,11 +8,12 @@ using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.Timeline.UnlockScreens;
 
 [ScriptPath("res://src/Core/Nodes/Screens/Timeline/UnlockScreens/NUnlockScreen.cs")]
-public abstract class NUnlockScreen : Control
+public abstract class NUnlockScreen : Control, IScreenContext
 {
 	public new class MethodName : Control.MethodName
 	{
@@ -29,6 +30,8 @@ public abstract class NUnlockScreen : Control
 
 	public new class PropertyName : Control.PropertyName
 	{
+		public static readonly StringName DefaultFocusedControl = "DefaultFocusedControl";
+
 		public static readonly StringName _unlockConfirmButton = "_unlockConfirmButton";
 
 		public static readonly StringName _tween = "_tween";
@@ -41,6 +44,8 @@ public abstract class NUnlockScreen : Control
 	private NUnlockConfirmButton? _unlockConfirmButton;
 
 	private Tween? _tween;
+
+	public virtual Control? DefaultFocusedControl => null;
 
 	public override void _Ready()
 	{
@@ -64,6 +69,7 @@ public abstract class NUnlockScreen : Control
 	public virtual void Open()
 	{
 		NTimelineScreen.Instance.DisableInput();
+		NTimelineScreen.Instance.CurrentUnlockScreen = this;
 		_unlockConfirmButton?.Disable();
 		_tween?.FastForwardToCompletion();
 		_tween = CreateTween();
@@ -77,6 +83,10 @@ public abstract class NUnlockScreen : Control
 	protected async Task Close()
 	{
 		Log.Info($"Closing: {base.Name}");
+		if (NTimelineScreen.Instance.CurrentUnlockScreen == this)
+		{
+			NTimelineScreen.Instance.CurrentUnlockScreen = null;
+		}
 		_tween?.FastForwardToCompletion();
 		OnScreenPreClose();
 		_tween = CreateTween().SetParallel();
@@ -195,6 +205,11 @@ public abstract class NUnlockScreen : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
+		if (name == PropertyName.DefaultFocusedControl)
+		{
+			value = VariantUtils.CreateFrom<Control>(DefaultFocusedControl);
+			return true;
+		}
 		if (name == PropertyName._unlockConfirmButton)
 		{
 			value = VariantUtils.CreateFrom(in _unlockConfirmButton);
@@ -214,6 +229,7 @@ public abstract class NUnlockScreen : Control
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._unlockConfirmButton, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._tween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.DefaultFocusedControl, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 

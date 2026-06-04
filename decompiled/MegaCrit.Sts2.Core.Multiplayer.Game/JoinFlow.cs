@@ -79,7 +79,7 @@ public class JoinFlow
 				{
 					throw new ClientConnectionFailedException("Version mismatch. Host: " + initialMessage.version + " Ours: " + text, new NetErrorInfo(ConnectionFailureReason.VersionMismatch));
 				}
-				List<string> list = ModManager.GetModNameList() ?? new List<string>();
+				List<string> list = ModManager.GetGameplayRelevantModNameList() ?? new List<string>();
 				List<string> list2 = initialMessage.mods ?? new List<string>();
 				List<string> list3 = list2.Except(list).ToList();
 				List<string> list4 = list.Except(list2).ToList();

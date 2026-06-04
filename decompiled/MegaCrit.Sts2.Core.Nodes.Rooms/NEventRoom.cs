@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -30,6 +31,8 @@ public class NEventRoom : Control, IScreenContext
 	{
 		public new static readonly StringName _Ready = "_Ready";
 
+		public new static readonly StringName _EnterTree = "_EnterTree";
+
 		public new static readonly StringName _ExitTree = "_ExitTree";
 
 		public static readonly StringName SetPortrait = "SetPortrait";
@@ -37,6 +40,8 @@ public class NEventRoom : Control, IScreenContext
 		public static readonly StringName DisableOptionButtons = "DisableOptionButtons";
 
 		public static readonly StringName OnEnteringEventCombat = "OnEnteringEventCombat";
+
+		public static readonly StringName OnActiveScreenUpdated = "OnActiveScreenUpdated";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -57,6 +62,8 @@ public class NEventRoom : Control, IScreenContext
 	public new class SignalName : Control.SignalName
 	{
 	}
+
+	private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
 	private EventModel _event;
 
@@ -126,8 +133,14 @@ public class NEventRoom : Control, IScreenContext
 		TaskHelper.RunSafely(SetupLayout());
 	}
 
+	public override void _EnterTree()
+	{
+		ActiveScreenContext.Instance.Updated += OnActiveScreenUpdated;
+	}
+
 	public override void _ExitTree()
 	{
+		_cts.Cancel();
 		NGame.Instance.ClearScreenShakeTarget();
 		_event.StateChanged -= RefreshEventState;
 		_event.EnteringEventCombat -= OnEnteringEventCombat;
@@ -136,6 +149,7 @@ public class NEventRoom : Control, IScreenContext
 			connectedOption.BeforeChosen -= BeforeOptionChosen;
 		}
 		_connectedOptions.Clear();
+		ActiveScreenContext.Instance.Updated -= OnActiveScreenUpdated;
 	}
 
 	private async Task SetupLayout()
@@ -152,7 +166,7 @@ public class NEventRoom : Control, IScreenContext
 		SetTitle(_event.Title);
 		_event.StateChanged += RefreshEventState;
 		_event.EnteringEventCombat += OnEnteringEventCombat;
-		await Cmd.Wait(0.2f);
+		await Cmd.Wait(0.2f, _cts.Token);
 		SetDescription(GetDescriptionOrFallback());
 		if (_event is AncientEventModel ancientEventModel && !_isPreFinished)
 		{
@@ -277,11 +291,17 @@ public class NEventRoom : Control, IScreenContext
 		return _event.Description ?? new LocString("events", "ERROR.description");
 	}
 
+	private void OnActiveScreenUpdated()
+	{
+		this.UpdateControllerNavEnabled();
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(5);
+		List<MethodInfo> list = new List<MethodInfo>(7);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetPortrait, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -289,6 +309,7 @@ public class NEventRoom : Control, IScreenContext
 		}, null));
 		list.Add(new MethodInfo(MethodName.DisableOptionButtons, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnEnteringEventCombat, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnActiveScreenUpdated, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -298,6 +319,12 @@ public class NEventRoom : Control, IScreenContext
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName._EnterTree && args.Count == 0)
+		{
+			_EnterTree();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -325,6 +352,12 @@ public class NEventRoom : Control, IScreenContext
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.OnActiveScreenUpdated && args.Count == 0)
+		{
+			OnActiveScreenUpdated();
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -332,6 +365,10 @@ public class NEventRoom : Control, IScreenContext
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName._EnterTree)
 		{
 			return true;
 		}
@@ -348,6 +385,10 @@ public class NEventRoom : Control, IScreenContext
 			return true;
 		}
 		if (method == MethodName.OnEnteringEventCombat)
+		{
+			return true;
+		}
+		if (method == MethodName.OnActiveScreenUpdated)
 		{
 			return true;
 		}

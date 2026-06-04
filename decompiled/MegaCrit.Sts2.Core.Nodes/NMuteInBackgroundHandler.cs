@@ -50,6 +50,7 @@ public class NMuteInBackgroundHandler : Node
 		SettingsSave settingsSave = SaveManager.Instance.SettingsSave;
 		if (prefsSave != null && settingsSave != null && prefsSave.MuteInBackground)
 		{
+			_tween?.Kill();
 			_tween = CreateTween();
 			_tween.TweenMethod(Callable.From<float>(SetMasterVolume), settingsSave.VolumeMaster, 0f, 1.0);
 		}

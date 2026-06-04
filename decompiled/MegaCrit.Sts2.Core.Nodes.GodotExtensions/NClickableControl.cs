@@ -218,7 +218,7 @@ public class NClickableControl : Control
 		Connect(SignalName.MousePressed, Callable.From<InputEvent>(HandleMousePress));
 		Connect(SignalName.MouseReleased, Callable.From<InputEvent>(HandleMouseRelease));
 		Connect(CanvasItem.SignalName.VisibilityChanged, Callable.From(OnVisibilityChanged));
-		AddThemeStyleboxOverride(ThemeConstants.Control.focus, _blankFocusStyle);
+		AddThemeStyleboxOverride(ThemeConstants.Control.Focus, _blankFocusStyle);
 		_isControllerNavigable = base.FocusMode == FocusModeEnum.All;
 		if (HasFocus())
 		{

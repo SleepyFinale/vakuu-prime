@@ -14,17 +14,11 @@ namespace MegaCrit.Sts2.Core.Saves.Runs;
 [Serializable]
 public class SavedProperties : IPacketSerializable
 {
-	public struct SavedProperty<T>
+	public struct SavedProperty<T>(string name, T value)
 	{
-		public string name;
+		public string name = name;
 
-		public T value;
-
-		public SavedProperty(string name, T value)
-		{
-			this.name = name;
-			this.value = value;
-		}
+		public T value = value;
 	}
 
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -94,7 +88,7 @@ public class SavedProperties : IPacketSerializable
 										{
 											if (!(value is List<SerializableCard> list))
 											{
-												throw new JsonException($"Property {name} on {id} is not a valid type for [SavedProperty] (type {value?.GetType()}).");
+												throw new JsonException($"Property {name} on {id} is not a valid type for [SavedProperty] (type {value.GetType()}).");
 											}
 											SavedProperties savedProperties2 = savedProperties;
 											if (savedProperties2.cardArrays == null)

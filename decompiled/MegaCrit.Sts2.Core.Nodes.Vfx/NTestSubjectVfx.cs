@@ -30,6 +30,12 @@ public class NTestSubjectVfx : Node
 		public static readonly StringName StartFlames = "StartFlames";
 
 		public static readonly StringName EndFlames = "EndFlames";
+
+		public static readonly StringName StartBurnVfx = "StartBurnVfx";
+
+		public static readonly StringName EndBurnVfx = "EndBurnVfx";
+
+		public static readonly StringName StartCeilingSparks = "StartCeilingSparks";
 	}
 
 	public new class PropertyName : Node.PropertyName
@@ -41,6 +47,14 @@ public class NTestSubjectVfx : Node
 		public static readonly StringName _emberParticles = "_emberParticles";
 
 		public static readonly StringName _flameParticles = "_flameParticles";
+
+		public static readonly StringName _burnParticles = "_burnParticles";
+
+		public static readonly StringName _targetedBurnParticle = "_targetedBurnParticle";
+
+		public static readonly StringName _burnParticleFountain = "_burnParticleFountain";
+
+		public static readonly StringName _ceilingParticles = "_ceilingParticles";
 
 		public static readonly StringName _parent = "_parent";
 
@@ -61,9 +75,21 @@ public class NTestSubjectVfx : Node
 
 	private GpuParticles2D _flameParticles;
 
+	private GpuParticles2D _burnParticles;
+
+	private GpuParticles2D _targetedBurnParticle;
+
+	private GpuParticles2D _burnParticleFountain;
+
+	private GpuParticles2D _ceilingParticles;
+
 	private Node2D _parent;
 
 	private MegaSprite _animController;
+
+	private MegaSprite _frontBurnVfxController;
+
+	private MegaSprite _backBurnVfxController;
 
 	private bool _keyDown;
 
@@ -73,41 +99,106 @@ public class NTestSubjectVfx : Node
 	{
 		_parent = GetParent<Node2D>();
 		_animController = new MegaSprite(_parent);
+		_frontBurnVfxController = new MegaSprite(GetNode("../FrontBurnVfxSlot/FrontBurnVfx"));
+		_backBurnVfxController = new MegaSprite(GetNode("../BackBurnVfxSlot/BackBurnVfx"));
 		_animController.ConnectAnimationEvent(Callable.From<GodotObject, GodotObject, GodotObject, GodotObject>(OnAnimationEvent));
 		_neckParticles = _parent.GetNode<GpuParticles2D>("NeckParticlesSlot/NeckParticles");
 		_dizzyParticles = _parent.GetNode<GpuParticles2D>("NeckParticlesSlot/DizzyPaticles");
-		_emberParticles = _parent.GetNode<GpuParticles2D>("EmberParticles");
+		_emberParticles = _parent.GetNode<GpuParticles2D>("../../EmberParticles");
 		_flameParticles = _parent.GetNode<GpuParticles2D>("../../FlameParticles");
+		_burnParticles = _parent.GetNode<GpuParticles2D>("../../BurnParticles");
+		_targetedBurnParticle = _parent.GetNode<GpuParticles2D>("../../TargetedBurnParticle");
+		_burnParticleFountain = _parent.GetNode<GpuParticles2D>("../../BurnParticleFountain");
+		_ceilingParticles = _parent.GetNode<GpuParticles2D>("../../CeilingSparks");
 		_neckParticles.OneShot = true;
 		_neckParticles.Emitting = false;
 		_dizzyParticles.Emitting = false;
 		_emberParticles.OneShot = true;
 		_emberParticles.Emitting = false;
 		_flameParticles.Emitting = false;
+		_burnParticles.Emitting = false;
+		_targetedBurnParticle.Emitting = false;
+		_burnParticleFountain.Emitting = false;
+		_ceilingParticles.OneShot = true;
+		_ceilingParticles.Emitting = false;
 		_animController.GetAnimationState().SetAnimation("idle_loop3");
+		_frontBurnVfxController.GetAnimationState().SetAnimation("empty");
+		_backBurnVfxController.GetAnimationState().SetAnimation("empty");
 	}
 
 	private void OnAnimationEvent(GodotObject _, GodotObject __, GodotObject ___, GodotObject spineEvent)
 	{
-		switch (new MegaEvent(spineEvent).GetData().GetEventName())
+		string eventName = new MegaEvent(spineEvent).GetData().GetEventName();
+		if (eventName == null)
 		{
-		case "neck_explode":
-			SquirtNeck();
+			return;
+		}
+		switch (eventName.Length)
+		{
+		case 12:
+			switch (eventName[6])
+			{
+			case 'x':
+				if (eventName == "neck_explode")
+				{
+					SquirtNeck();
+				}
+				break;
+			case 'e':
+				if (eventName == "start_embers")
+				{
+					StartEmbers();
+				}
+				break;
+			case 'f':
+				if (eventName == "start_flames")
+				{
+					StartFlames();
+				}
+				break;
+			case 'r':
+				if (eventName == "end_burn_vfx")
+				{
+					EndBurnVfx();
+				}
+				break;
+			}
 			break;
-		case "start_dizzies":
-			StartDizzies();
+		case 13:
+			if (eventName == "start_dizzies")
+			{
+				StartDizzies();
+			}
 			break;
-		case "end_dizzies":
-			EndDizzies();
+		case 11:
+			if (eventName == "end_dizzies")
+			{
+				EndDizzies();
+			}
 			break;
-		case "start_embers":
-			StartEmbers();
+		case 10:
+			if (eventName == "end_flames")
+			{
+				EndFlames();
+			}
 			break;
-		case "start_flames":
-			StartFlames();
+		case 14:
+			if (eventName == "start_burn_vfx")
+			{
+				StartBurnVfx();
+			}
 			break;
-		case "end_flames":
-			EndFlames();
+		case 20:
+			if (eventName == "start_ceiling_sparks")
+			{
+				StartCeilingSparks();
+			}
+			break;
+		case 15:
+		case 16:
+		case 17:
+		case 18:
+		case 19:
 			break;
 		}
 	}
@@ -151,10 +242,31 @@ public class NTestSubjectVfx : Node
 		_flameParticles.Emitting = false;
 	}
 
+	private void StartBurnVfx()
+	{
+		_frontBurnVfxController.GetAnimationState().SetAnimation("burn", loop: false);
+		_backBurnVfxController.GetAnimationState().SetAnimation("burn", loop: false);
+		_burnParticles.Restart();
+		_targetedBurnParticle.Emitting = true;
+		_burnParticleFountain.Restart();
+	}
+
+	private void EndBurnVfx()
+	{
+		_burnParticles.Emitting = false;
+		_targetedBurnParticle.Emitting = false;
+		_burnParticleFountain.Emitting = false;
+	}
+
+	private void StartCeilingSparks()
+	{
+		_ceilingParticles.Restart();
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(9);
+		List<MethodInfo> list = new List<MethodInfo>(12);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnAnimationEvent, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -170,6 +282,9 @@ public class NTestSubjectVfx : Node
 		list.Add(new MethodInfo(MethodName.StartEmbers, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.StartFlames, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.EndFlames, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.StartBurnVfx, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.EndBurnVfx, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.StartCeilingSparks, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -230,6 +345,24 @@ public class NTestSubjectVfx : Node
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.StartBurnVfx && args.Count == 0)
+		{
+			StartBurnVfx();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.EndBurnVfx && args.Count == 0)
+		{
+			EndBurnVfx();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.StartCeilingSparks && args.Count == 0)
+		{
+			StartCeilingSparks();
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -272,6 +405,18 @@ public class NTestSubjectVfx : Node
 		{
 			return true;
 		}
+		if (method == MethodName.StartBurnVfx)
+		{
+			return true;
+		}
+		if (method == MethodName.EndBurnVfx)
+		{
+			return true;
+		}
+		if (method == MethodName.StartCeilingSparks)
+		{
+			return true;
+		}
 		return base.HasGodotClassMethod(in method);
 	}
 
@@ -296,6 +441,26 @@ public class NTestSubjectVfx : Node
 		if (name == PropertyName._flameParticles)
 		{
 			_flameParticles = VariantUtils.ConvertTo<GpuParticles2D>(in value);
+			return true;
+		}
+		if (name == PropertyName._burnParticles)
+		{
+			_burnParticles = VariantUtils.ConvertTo<GpuParticles2D>(in value);
+			return true;
+		}
+		if (name == PropertyName._targetedBurnParticle)
+		{
+			_targetedBurnParticle = VariantUtils.ConvertTo<GpuParticles2D>(in value);
+			return true;
+		}
+		if (name == PropertyName._burnParticleFountain)
+		{
+			_burnParticleFountain = VariantUtils.ConvertTo<GpuParticles2D>(in value);
+			return true;
+		}
+		if (name == PropertyName._ceilingParticles)
+		{
+			_ceilingParticles = VariantUtils.ConvertTo<GpuParticles2D>(in value);
 			return true;
 		}
 		if (name == PropertyName._parent)
@@ -339,6 +504,26 @@ public class NTestSubjectVfx : Node
 			value = VariantUtils.CreateFrom(in _flameParticles);
 			return true;
 		}
+		if (name == PropertyName._burnParticles)
+		{
+			value = VariantUtils.CreateFrom(in _burnParticles);
+			return true;
+		}
+		if (name == PropertyName._targetedBurnParticle)
+		{
+			value = VariantUtils.CreateFrom(in _targetedBurnParticle);
+			return true;
+		}
+		if (name == PropertyName._burnParticleFountain)
+		{
+			value = VariantUtils.CreateFrom(in _burnParticleFountain);
+			return true;
+		}
+		if (name == PropertyName._ceilingParticles)
+		{
+			value = VariantUtils.CreateFrom(in _ceilingParticles);
+			return true;
+		}
 		if (name == PropertyName._parent)
 		{
 			value = VariantUtils.CreateFrom(in _parent);
@@ -365,6 +550,10 @@ public class NTestSubjectVfx : Node
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._dizzyParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._emberParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._flameParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._burnParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._targetedBurnParticle, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._burnParticleFountain, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ceilingParticles, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._parent, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._keyDown, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._doingThing, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -379,6 +568,10 @@ public class NTestSubjectVfx : Node
 		info.AddProperty(PropertyName._dizzyParticles, Variant.From(in _dizzyParticles));
 		info.AddProperty(PropertyName._emberParticles, Variant.From(in _emberParticles));
 		info.AddProperty(PropertyName._flameParticles, Variant.From(in _flameParticles));
+		info.AddProperty(PropertyName._burnParticles, Variant.From(in _burnParticles));
+		info.AddProperty(PropertyName._targetedBurnParticle, Variant.From(in _targetedBurnParticle));
+		info.AddProperty(PropertyName._burnParticleFountain, Variant.From(in _burnParticleFountain));
+		info.AddProperty(PropertyName._ceilingParticles, Variant.From(in _ceilingParticles));
 		info.AddProperty(PropertyName._parent, Variant.From(in _parent));
 		info.AddProperty(PropertyName._keyDown, Variant.From(in _keyDown));
 		info.AddProperty(PropertyName._doingThing, Variant.From(in _doingThing));
@@ -404,17 +597,33 @@ public class NTestSubjectVfx : Node
 		{
 			_flameParticles = value4.As<GpuParticles2D>();
 		}
-		if (info.TryGetProperty(PropertyName._parent, out var value5))
+		if (info.TryGetProperty(PropertyName._burnParticles, out var value5))
 		{
-			_parent = value5.As<Node2D>();
+			_burnParticles = value5.As<GpuParticles2D>();
 		}
-		if (info.TryGetProperty(PropertyName._keyDown, out var value6))
+		if (info.TryGetProperty(PropertyName._targetedBurnParticle, out var value6))
 		{
-			_keyDown = value6.As<bool>();
+			_targetedBurnParticle = value6.As<GpuParticles2D>();
 		}
-		if (info.TryGetProperty(PropertyName._doingThing, out var value7))
+		if (info.TryGetProperty(PropertyName._burnParticleFountain, out var value7))
 		{
-			_doingThing = value7.As<bool>();
+			_burnParticleFountain = value7.As<GpuParticles2D>();
+		}
+		if (info.TryGetProperty(PropertyName._ceilingParticles, out var value8))
+		{
+			_ceilingParticles = value8.As<GpuParticles2D>();
+		}
+		if (info.TryGetProperty(PropertyName._parent, out var value9))
+		{
+			_parent = value9.As<Node2D>();
+		}
+		if (info.TryGetProperty(PropertyName._keyDown, out var value10))
+		{
+			_keyDown = value10.As<bool>();
+		}
+		if (info.TryGetProperty(PropertyName._doingThing, out var value11))
+		{
+			_doingThing = value11.As<bool>();
 		}
 	}
 }

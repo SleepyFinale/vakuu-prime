@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -8,6 +9,7 @@ using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.TestSupport;
@@ -20,6 +22,8 @@ public class NThinSliceVfx : Node2D
 	public new class MethodName : Node2D.MethodName
 	{
 		public new static readonly StringName _Ready = "_Ready";
+
+		public new static readonly StringName _ExitTree = "_ExitTree";
 
 		public static readonly StringName SetColor = "SetColor";
 
@@ -45,6 +49,8 @@ public class NThinSliceVfx : Node2D
 
 	private const string _scenePath = "res://scenes/vfx/thin_slice_vfx.tscn";
 
+	private CancellationTokenSource? _cts;
+
 	private GpuParticles2D _slash;
 
 	private GpuParticles2D _sparkle;
@@ -59,7 +65,12 @@ public class NThinSliceVfx : Node2D
 		{
 			return null;
 		}
-		Vector2 vfxSpawnPosition = NCombatRoom.Instance.GetCreatureNode(target).VfxSpawnPosition;
+		NCreature nCreature = NCombatRoom.Instance?.GetCreatureNode(target);
+		if (nCreature == null)
+		{
+			return null;
+		}
+		Vector2 vfxSpawnPosition = nCreature.VfxSpawnPosition;
 		NThinSliceVfx nThinSliceVfx = PreloadManager.Cache.GetScene("res://scenes/vfx/thin_slice_vfx.tscn").Instantiate<NThinSliceVfx>(PackedScene.GenEditState.Disabled);
 		nThinSliceVfx._vfxColor = vfxColor;
 		Vector2 vector = new Vector2(Rng.Chaotic.NextFloat(-50f, 50f), Rng.Chaotic.NextFloat(-50f, 50f));
@@ -78,6 +89,12 @@ public class NThinSliceVfx : Node2D
 		_sparkle.Emitting = true;
 		SetColor();
 		TaskHelper.RunSafely(SelfDestruct());
+	}
+
+	public override void _ExitTree()
+	{
+		_cts?.Cancel();
+		_cts?.Dispose();
 	}
 
 	private void SetColor()
@@ -119,15 +136,22 @@ public class NThinSliceVfx : Node2D
 
 	private async Task SelfDestruct()
 	{
-		await Task.Delay(1000);
-		this.QueueFreeSafely();
+		_cts?.Cancel();
+		_cts?.Dispose();
+		_cts = new CancellationTokenSource();
+		await Task.Delay(1000, _cts.Token);
+		if (!_cts.IsCancellationRequested)
+		{
+			this.QueueFreeSafely();
+		}
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(4);
+		List<MethodInfo> list = new List<MethodInfo>(5);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetColor, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.GenerateSpawnPosition, new PropertyInfo(Variant.Type.Vector2, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.GetAngle, new PropertyInfo(Variant.Type.Float, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -140,6 +164,12 @@ public class NThinSliceVfx : Node2D
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName._ExitTree && args.Count == 0)
+		{
+			_ExitTree();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -166,6 +196,10 @@ public class NThinSliceVfx : Node2D
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName._ExitTree)
 		{
 			return true;
 		}

@@ -208,7 +208,7 @@ public class NRestSiteButton : NButton
 			if (!success && this.IsValid())
 			{
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-				NRestSiteRoom.Instance?.EnableOptions();
+				NRestSiteRoom.Instance.EnableOptions();
 			}
 		}
 	}

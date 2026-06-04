@@ -2490,6 +2490,175 @@ class MusicBox(RelicInstance):
 
 
 @register_relic
+class HeftyTablet(RelicInstance):
+    """Choose 1 of 3 rare cards to add, then add Injury."""
+    relic_id = RelicId.HEFTY_TABLET
+    rarity = RelicRarity.ANCIENT
+    pool = RelicPool.EVENT
+    has_upon_pickup_effect = True
+    RARE_OPTIONS = 3
+
+    def after_obtained(self, owner: Creature) -> None:
+        if getattr(owner.run_state, "defer_followup_rewards", False):
+            owner.offer_custom_card_reward(
+                option_count=self.RARE_OPTIONS,
+                cards_to_pick=1,
+                skippable=True,
+                card_pool_rarity_filter=CardRarity.RARE,
+                use_uniform_noncombat_odds=True,
+                generation_context=None,
+                card_creation_source="other",
+            )
+            from sts2_env.cards.status import make_injury
+
+            owner.offer_add_cards_reward([make_injury()])
+            return
+        from sts2_env.cards.status import make_injury
+
+        owner.add_card_to_deck(make_injury())
+        owner.offer_custom_card_reward(
+            option_count=self.RARE_OPTIONS,
+            cards_to_pick=1,
+            skippable=True,
+            card_pool_rarity_filter=CardRarity.RARE,
+            use_uniform_noncombat_odds=True,
+            generation_context=None,
+            card_creation_source="other",
+        )
+
+
+@register_relic
+class NeowsBones(RelicInstance):
+    """Gain 2 random Neow-option relics and 1 curse."""
+    relic_id = RelicId.NEOWS_BONES
+    rarity = RelicRarity.ANCIENT
+    pool = RelicPool.EVENT
+    has_upon_pickup_effect = True
+    RELIC_COUNT = 2
+    CURSE_COUNT = 1
+
+    @staticmethod
+    def valid_neow_relic_ids() -> tuple[str, ...]:
+        from sts2_env.events.act3 import Neow
+
+        positive = tuple(Neow._POSITIVE_POOL)
+        cursed = tuple(Neow._CURSED_POOL)
+        extras = (
+            RelicId.NUTRITIOUS_OYSTER.name,
+            RelicId.STONE_HUMIDIFIER.name,
+            RelicId.LAVA_ROCK.name,
+            RelicId.SMALL_CAPSULE.name,
+            RelicId.SILVER_CRUCIBLE.name,
+            RelicId.SCROLL_BOXES.name,
+            RelicId.MASSIVE_SCROLL.name,
+            RelicId.HEFTY_TABLET.name,
+            RelicId.NEOWS_TALISMAN.name,
+            RelicId.PHIAL_HOLSTER.name,
+            RelicId.WINGED_BOOTS.name,
+        )
+        pool = {relic_id for relic_id in positive + cursed + extras if relic_id != RelicId.NEOWS_BONES.name}
+        return tuple(sorted(pool))
+
+    def after_obtained(self, owner: Creature) -> None:
+        pool = list(self.valid_neow_relic_ids())
+        rng = owner.run_state.rng.rewards
+        rng.shuffle(pool)
+        chosen = pool[: self.RELIC_COUNT]
+        if getattr(owner.run_state, "defer_followup_rewards", False):
+            owner.offer_specific_relic_rewards(chosen)
+            owner.add_random_curses(self.CURSE_COUNT, rng=owner.run_state.rng.niche)
+            return
+        for relic_id in chosen:
+            owner.obtain_relic(relic_id)
+        owner.add_random_curses(self.CURSE_COUNT, rng=owner.run_state.rng.niche)
+
+
+@register_relic
+class NeowsTalisman(RelicInstance):
+    """Upgrade the last Strike and Defend in the deck."""
+    relic_id = RelicId.NEOWS_TALISMAN
+    rarity = RelicRarity.ANCIENT
+    pool = RelicPool.EVENT
+    has_upon_pickup_effect = True
+
+    def after_obtained(self, owner: Creature) -> None:
+        basics = [card for card in owner.deck if card.rarity == CardRarity.BASIC]
+        last_strike = next((card for card in reversed(basics) if CardTag.STRIKE in card.tags), None)
+        last_defend = next((card for card in reversed(basics) if CardTag.DEFEND in card.tags), None)
+        for card in (last_strike, last_defend):
+            if card is not None:
+                owner.upgrade_card_instance(card)
+
+
+@register_relic
+class PhialHolster(RelicInstance):
+    """Gain 1 potion slot and 2 random potions."""
+    relic_id = RelicId.PHIAL_HOLSTER
+    rarity = RelicRarity.ANCIENT
+    pool = RelicPool.EVENT
+    has_upon_pickup_effect = True
+    POTION_SLOTS = 1
+    POTION_COUNT = 2
+
+    def after_obtained(self, owner: Creature) -> None:
+        owner.gain_potion_slots(self.POTION_SLOTS)
+        for _ in range(self.POTION_COUNT):
+            owner.procure_potion("random")
+
+
+@register_relic
+class WingedBoots(RelicInstance):
+    """Backtrack up to 3 times on the map (single-player only)."""
+    relic_id = RelicId.WINGED_BOOTS
+    rarity = RelicRarity.ANCIENT
+    pool = RelicPool.EVENT
+    MAX_USES = 3
+
+    def __init__(self, relic_id: RelicId):
+        super().__init__(relic_id)
+        self._times_used = 0
+
+    @property
+    def is_used_up(self) -> bool:
+        return self._times_used >= self.MAX_USES
+
+    @property
+    def display_amount(self) -> int:
+        return max(0, self.MAX_USES - self._times_used)
+
+    def is_allowed(self, run_state: RunState) -> bool:
+        return len(run_state.players) == 1
+
+    def should_allow_free_travel(self, owner: Creature, run_state: RunState) -> bool | None:
+        if self.is_used_up:
+            return None
+        return True
+
+    def after_room_entered(self, owner: Creature, room_type: object) -> None:
+        if self.is_used_up:
+            return
+        run_state = owner.run_state
+        if run_state is None or run_state.map is None:
+            return
+        if len(run_state.map_point_history) <= 1:
+            return
+        visited = run_state.visited_map_coords
+        if len(visited) <= 1:
+            return
+        previous_coord = visited[-2]
+        current_coord = visited[-1]
+        previous_point = run_state.map.get_point(previous_coord)
+        current_point = run_state.map.get_point(current_coord)
+        if previous_point is None or current_point is None:
+            return
+        if current_point in previous_point.children:
+            return
+        self._times_used += 1
+        if self.is_used_up:
+            self.enabled = False
+
+
+@register_relic
 class NeowsTorment(RelicInstance):
     """Add NeowsFury card to deck."""
     relic_id = RelicId.NEOWS_TORMENT

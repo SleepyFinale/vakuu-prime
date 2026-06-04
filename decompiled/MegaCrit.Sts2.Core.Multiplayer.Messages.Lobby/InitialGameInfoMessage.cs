@@ -35,7 +35,7 @@ public struct InitialGameInfoMessage : INetMessage, IPacketSerializable
 		{
 			version = (ReleaseInfoManager.Instance.ReleaseInfo?.Version ?? GitHelper.ShortCommitId ?? "UNKNOWN"),
 			idDatabaseHash = ModelIdSerializationCache.Hash,
-			mods = ModManager.GetModNameList()
+			mods = ModManager.GetGameplayRelevantModNameList()
 		};
 	}
 

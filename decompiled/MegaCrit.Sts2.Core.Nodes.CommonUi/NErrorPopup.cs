@@ -185,6 +185,9 @@ public class NErrorPopup : NVerticalPopup, IScreenContext
 		case NetError.UnknownNetworkError:
 			text = "NETWORK_ERROR.UNKNOWN_ERROR.body";
 			break;
+		case NetError.RateLimited:
+			text = "NETWORK_ERROR.RATE_LIMITED.body";
+			break;
 		case NetError.TryAgainLater:
 			text = "NETWORK_ERROR.TRY_AGAIN_LATER.body";
 			break;
@@ -206,7 +209,7 @@ public class NErrorPopup : NVerticalPopup, IScreenContext
 		showReportBugButton = flag;
 		if (text2 == null)
 		{
-			Log.Error($"Invalid net error passed to NNetworkErrorPopup: {info}!");
+			Log.Error($"Invalid net error passed to {"NErrorPopup"}: {info}!");
 			text2 = "NETWORK_ERROR.INTERNAL_ERROR.body";
 			showReportBugButton = true;
 		}

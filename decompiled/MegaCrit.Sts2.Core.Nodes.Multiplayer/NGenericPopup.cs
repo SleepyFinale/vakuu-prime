@@ -21,8 +21,6 @@ public class NGenericPopup : Control, IScreenContext
 	{
 		public static readonly StringName Create = "Create";
 
-		public new static readonly StringName _Ready = "_Ready";
-
 		public static readonly StringName OnYesButtonPressed = "OnYesButtonPressed";
 
 		public static readonly StringName OnNoButtonPressed = "OnNoButtonPressed";
@@ -62,14 +60,10 @@ public class NGenericPopup : Control, IScreenContext
 		return PreloadManager.Cache.GetScene(_scenePath).Instantiate<NGenericPopup>(PackedScene.GenEditState.Disabled);
 	}
 
-	public override void _Ready()
+	public Task<bool> WaitForConfirmation(LocString body, LocString header, LocString? noButton, LocString yesButton)
 	{
 		_verticalPopup = GetNode<NVerticalPopup>("VerticalPopup");
 		_confirmationCompletionSource = new TaskCompletionSource<bool>();
-	}
-
-	public Task<bool> WaitForConfirmation(LocString body, LocString header, LocString? noButton, LocString yesButton)
-	{
 		_verticalPopup.SetText(header, body);
 		_verticalPopup.InitYesButton(yesButton, OnYesButtonPressed);
 		if (noButton != null)
@@ -98,9 +92,8 @@ public class NGenericPopup : Control, IScreenContext
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(4);
+		List<MethodInfo> list = new List<MethodInfo>(3);
 		list.Add(new MethodInfo(MethodName.Create, new PropertyInfo(Variant.Type.Object, "", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false), MethodFlags.Normal | MethodFlags.Static, null, null));
-		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnYesButtonPressed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "_", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -118,12 +111,6 @@ public class NGenericPopup : Control, IScreenContext
 		if (method == MethodName.Create && args.Count == 0)
 		{
 			ret = VariantUtils.CreateFrom<NGenericPopup>(Create());
-			return true;
-		}
-		if (method == MethodName._Ready && args.Count == 0)
-		{
-			_Ready();
-			ret = default(godot_variant);
 			return true;
 		}
 		if (method == MethodName.OnYesButtonPressed && args.Count == 1)
@@ -157,10 +144,6 @@ public class NGenericPopup : Control, IScreenContext
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName.Create)
-		{
-			return true;
-		}
-		if (method == MethodName._Ready)
 		{
 			return true;
 		}

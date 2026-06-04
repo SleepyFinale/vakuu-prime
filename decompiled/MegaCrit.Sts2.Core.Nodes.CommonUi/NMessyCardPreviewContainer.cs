@@ -13,17 +13,11 @@ public class NMessyCardPreviewContainer : Control
 {
 	public class PoissonDiscSampler
 	{
-		private struct GridPos
+		private struct GridPos(Vector2 sample, float cellSize)
 		{
-			public readonly int x;
+			public readonly int x = (int)(sample.X / cellSize);
 
-			public readonly int y;
-
-			public GridPos(Vector2 sample, float cellSize)
-			{
-				x = (int)(sample.X / cellSize);
-				y = (int)(sample.Y / cellSize);
-			}
+			public readonly int y = (int)(sample.Y / cellSize);
 		}
 
 		private const int _maxAttempts = 30;

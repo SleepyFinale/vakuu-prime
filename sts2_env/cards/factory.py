@@ -179,15 +179,56 @@ class ReferenceCardDefinition:
     upgrade_text: str
 
 
-def _apply_decompiled_static_metadata(card: CardInstance) -> CardInstance:
-    static_metadata = _static_metadata_override(card.card_id)
-    if static_metadata is not None:
-        card.can_be_generated_in_combat = static_metadata.can_be_generated_in_combat
-        card.can_be_generated_by_modifiers = static_metadata.can_be_generated_by_modifiers
-        card.has_turn_end_in_hand_effect = static_metadata.has_turn_end_in_hand_effect
+def _apply_decompiled_static_metadata(
+    card: CardInstance,
+    *,
+    requested_upgraded: bool | None = None,
+) -> CardInstance:
+    """Align runtime card fields with decompiled CanonicalVars / CardModel metadata."""
+    from sts2_env.cards.reference_static_metadata import (
+        reference_dynamic_vars_by_card_id,
+        reference_metadata_by_card_id,
+        upgraded_reference_dynamic_vars_by_card_id,
+        upgraded_reference_metadata_by_card_id,
+    )
+
+    base_metadata = _static_metadata_override(card.card_id)
+    if base_metadata is None:
+        card.can_be_generated_in_combat = card.card_id not in _COMBAT_GENERATION_EXCLUDED
+        card.can_be_generated_by_modifiers = card.card_id not in _MODIFIER_GENERATION_EXCLUDED
         return card
-    card.can_be_generated_in_combat = card.card_id not in _COMBAT_GENERATION_EXCLUDED
-    card.can_be_generated_by_modifiers = card.card_id not in _MODIFIER_GENERATION_EXCLUDED
+
+    wants_upgraded = card.upgraded if requested_upgraded is None else requested_upgraded
+    can_upgrade = base_metadata.max_upgrade_level > 0
+    is_upgraded = wants_upgraded and can_upgrade
+    card.upgraded = is_upgraded
+
+    metadata = base_metadata
+    if is_upgraded:
+        metadata = upgraded_reference_metadata_by_card_id().get(card.card_id, base_metadata)
+
+    if not metadata.has_custom_card_type:
+        card.card_type = metadata.card_type
+    if not metadata.has_custom_target_type:
+        card.target_type = metadata.target_type
+    card.cost = metadata.cost
+    card.original_cost = metadata.cost
+    card.rarity = metadata.rarity
+    card.keywords = frozenset(metadata.keywords)
+    card.tags = frozenset(metadata.tags)
+    card.star_cost = metadata.star_cost
+    card.has_energy_cost_x = metadata.has_energy_cost_x
+    card.has_star_cost_x = metadata.has_star_cost_x
+    card.can_be_generated_in_combat = metadata.can_be_generated_in_combat
+    card.can_be_generated_by_modifiers = metadata.can_be_generated_by_modifiers
+    card.has_turn_end_in_hand_effect = metadata.has_turn_end_in_hand_effect
+
+    dynamic_vars = reference_dynamic_vars_by_card_id().get(card.card_id, {})
+    if is_upgraded:
+        dynamic_vars = upgraded_reference_dynamic_vars_by_card_id().get(card.card_id, dynamic_vars)
+    card.effect_vars = dict(dynamic_vars)
+    card.base_damage = dynamic_vars.get("damage", card.base_damage)
+    card.base_block = dynamic_vars.get("block", card.base_block)
     return card
 
 
@@ -384,9 +425,9 @@ def _build_reference_card(
             static_metadata.has_turn_end_in_hand_effect if static_metadata is not None else False
         ),
     )
-    if upgraded and can_upgrade:
+    if upgraded and can_upgrade and static_metadata is None:
         _apply_upgrade_text(card, effect_vars, definition.upgrade_text)
-    card = _apply_decompiled_static_metadata(card)
+    card = _apply_decompiled_static_metadata(card, requested_upgraded=upgraded)
     if not allow_generation:
         card.can_be_generated_in_combat = False
         card.can_be_generated_by_modifiers = False
@@ -429,7 +470,7 @@ def _probe_factory(factory: CardFactory) -> CardInstance:
     """Call a card factory without consuming the global instance counter."""
     saved_counter = card_base._next_instance_id
     try:
-        return _apply_decompiled_static_metadata(factory())
+        return _apply_decompiled_static_metadata(factory(), requested_upgraded=False)
     finally:
         card_base._next_instance_id = saved_counter
 
@@ -471,18 +512,19 @@ def create_card(card_id: CardId, upgraded: bool = False) -> CardInstance:
     factory, supports_upgraded, _ = entry
 
     if supports_upgraded:
-        return _apply_decompiled_static_metadata(factory(upgraded=upgraded))
-    card = factory()
-    if upgraded:
-        definition = _reference_definition(card_id)
-        if definition is not None and definition.upgrade_text not in {
-            "",
-            "No upgrade changes",
-            "Cannot be upgraded",
-        }:
-            card.upgraded = True
-            _apply_upgrade_text(card, card.effect_vars, definition.upgrade_text)
-    return _apply_decompiled_static_metadata(card)
+        card = factory(upgraded=upgraded)
+    else:
+        card = factory()
+        if upgraded and _static_metadata_override(card_id) is None:
+            definition = _reference_definition(card_id)
+            if definition is not None and definition.upgrade_text not in {
+                "",
+                "No upgrade changes",
+                "Cannot be upgraded",
+            }:
+                card.upgraded = True
+                _apply_upgrade_text(card, card.effect_vars, definition.upgrade_text)
+    return _apply_decompiled_static_metadata(card, requested_upgraded=upgraded)
 
 
 @lru_cache(maxsize=None)

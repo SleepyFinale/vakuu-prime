@@ -139,4 +139,9 @@ public static class StringHelper
 	{
 		return Regex.Replace(text, "\\[(.*?)\\]", "");
 	}
+
+	public static string EscapeBbcodeTags(this string text)
+	{
+		return text.Replace("[", "[lb]");
+	}
 }

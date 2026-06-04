@@ -15,8 +15,8 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
-using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Runs;
@@ -34,6 +34,8 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		public new static readonly StringName _ExitTree = "_ExitTree";
 
 		public static readonly StringName InitializeRelics = "InitializeRelics";
+
+		public static readonly StringName SpawnEmptyChestVfx = "SpawnEmptyChestVfx";
 
 		public static readonly StringName SetSelectionEnabled = "SetSelectionEnabled";
 
@@ -54,11 +56,13 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 
 		public static readonly StringName _fightBackstop = "_fightBackstop";
 
+		public static readonly StringName _fightLabel = "_fightLabel";
+
+		public static readonly StringName _emptyVfxTween = "_emptyVfxTween";
+
 		public static readonly StringName _hands = "_hands";
 
 		public static readonly StringName _openedTicks = "_openedTicks";
-
-		public static readonly StringName _emptyLabel = "_emptyLabel";
 
 		public static readonly StringName _isEmptyChest = "_isEmptyChest";
 	}
@@ -71,34 +75,25 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 
 	private Control _fightBackstop;
 
+	private MegaLabel _fightLabel;
+
+	private Tween? _emptyVfxTween;
+
 	private NHandImageCollection _hands;
 
 	private readonly List<NTreasureRoomRelicHolder> _multiplayerHolders = new List<NTreasureRoomRelicHolder>();
 
 	private List<NTreasureRoomRelicHolder> _holdersInUse = new List<NTreasureRoomRelicHolder>();
 
-	private TaskCompletionSource? _relicPickingTaskCompletionSource;
+	private readonly TaskCompletionSource _relicPickingBeganTaskCompletionSource = new TaskCompletionSource();
+
+	private readonly TaskCompletionSource _relicPickingCompleteTaskCompletionSource = new TaskCompletionSource();
 
 	private ulong _openedTicks;
 
 	private IRunState _runState;
 
-	private Label? _emptyLabel;
-
 	private bool _isEmptyChest;
-
-	private static string ScenePath => SceneHelper.GetScenePath("screens/shared_relic_picking_screen");
-
-	public static IEnumerable<string> AssetPaths
-	{
-		get
-		{
-			List<string> list = new List<string>();
-			list.Add(ScenePath);
-			list.AddRange(NCardRewardAlternativeButton.AssetPaths);
-			return new _003C_003Ez__ReadOnlyList<string>(list);
-		}
-	}
 
 	public NTreasureRoomRelicHolder SingleplayerRelicHolder { get; private set; }
 
@@ -132,6 +127,8 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		modulate.A = 0f;
 		fightBackstop.Modulate = modulate;
 		_fightBackstop.Visible = false;
+		_fightLabel = GetNode<MegaLabel>("%FightLabel");
+		_fightLabel.Text = new LocString("gameplay_ui", "TREASURE_FIGHT_TEXT").GetFormattedText();
 		RunManager.Instance.TreasureRoomRelicSynchronizer.VotesChanged += RefreshVotes;
 		RunManager.Instance.TreasureRoomRelicSynchronizer.RelicsAwarded += OnRelicsAwarded;
 	}
@@ -159,17 +156,7 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 			{
 				multiplayerHolder.Visible = false;
 			}
-			_emptyLabel = new MegaLabel
-			{
-				Text = new LocString("gameplay_ui", "TREASURE_EMPTY").GetFormattedText(),
-				HorizontalAlignment = HorizontalAlignment.Center,
-				VerticalAlignment = VerticalAlignment.Center,
-				CustomMinimumSize = new Vector2(400f, 100f),
-				LayoutMode = 1,
-				AnchorsPreset = 8
-			};
-			_emptyLabel.AddThemeFontSizeOverride(ThemeConstants.Label.fontSize, 48);
-			this.AddChildSafely(_emptyLabel);
+			SpawnEmptyChestVfx();
 			return;
 		}
 		if (currentRelics.Count == 1)
@@ -243,6 +230,22 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		}
 	}
 
+	private void SpawnEmptyChestVfx()
+	{
+		MegaLabel node = GetNode<MegaLabel>("%EmptyLabel");
+		node.Text = new LocString("gameplay_ui", "TREASURE_EMPTY").GetFormattedText();
+		node.Visible = true;
+		_emptyVfxTween = CreateTween().SetParallel();
+		_emptyVfxTween.TweenProperty(node, "self_modulate:a", 1f, 0.25);
+		_emptyVfxTween.TweenProperty(node, "position:y", node.Position.Y, 1.0).From(node.Position.Y + 64f).SetEase(Tween.EaseType.Out)
+			.SetTrans(Tween.TransitionType.Spring);
+		_emptyVfxTween.Chain().TweenInterval(1.0);
+		_emptyVfxTween.Chain();
+		_emptyVfxTween.TweenProperty(node, "self_modulate:a", 0f, 1.0);
+		GpuParticles2D node2 = GetNode<GpuParticles2D>("%SmokePuffVfx");
+		node2.Emitting = true;
+	}
+
 	public void SetSelectionEnabled(bool isEnabled)
 	{
 		if (isEnabled)
@@ -263,10 +266,14 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		}
 	}
 
+	public Task RelicPickingBegan()
+	{
+		return _relicPickingBeganTaskCompletionSource.Task;
+	}
+
 	public Task RelicPickingFinished()
 	{
-		_relicPickingTaskCompletionSource = new TaskCompletionSource();
-		return _relicPickingTaskCompletionSource.Task;
+		return _relicPickingCompleteTaskCompletionSource.Task;
 	}
 
 	public void AnimIn(Node chestVisual)
@@ -299,7 +306,7 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 			tween2.TweenProperty(holder, "modulate", Colors.White, 0.2).SetDelay(num2);
 			tween2.TweenProperty(holder, "position:y", holder.Position.Y - num, 0.6).SetDelay(num2).SetEase(Tween.EaseType.Out)
 				.SetTrans(Tween.TransitionType.Back);
-			tween2.TweenCallback(Callable.From(() => holder.MouseFilter = MouseFilterEnum.Stop)).SetDelay(num2 + 0.6f);
+			tween2.TweenCallback(Callable.From(() => holder.MouseFilter = MouseFilterEnum.Stop)).SetDelay((double)num2 + 0.6);
 		}
 		NRun.Instance.ScreenStateTracker.SetIsInSharedRelicPickingScreen(isInSharedRelicPicking: true);
 		_hands.AnimateHandsIn();
@@ -330,9 +337,18 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 
 	private async Task AnimateRelicAwards(List<RelicPickingResult> results)
 	{
-		for (int i = 0; i < _holdersInUse.Count; i++)
+		foreach (NTreasureRoomRelicHolder item in _holdersInUse)
 		{
-			_holdersInUse[i].SetFocusMode(FocusModeEnum.None);
+			item.SetFocusMode(FocusModeEnum.None);
+		}
+		_relicPickingBeganTaskCompletionSource.SetResult();
+		foreach (Player player in _runState.Players)
+		{
+			TreasureRoomRelicSynchronizer.PlayerVote playerVote = RunManager.Instance.TreasureRoomRelicSynchronizer.GetPlayerVote(player);
+			if (playerVote.voteReceived && !playerVote.index.HasValue)
+			{
+				_hands.GetHand(player.NetId)?.SetSkipped();
+			}
 		}
 		_hands.BeforeRelicsAwarded();
 		List<Task> tasksToWait = new List<Task>();
@@ -363,7 +379,7 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 				_fightBackstop.Visible = false;
 				holder.ZIndex = 0;
 			}
-			else
+			else if (result.type != RelicPickingResultType.Skipped)
 			{
 				NHandImage hand = _hands.GetHand(result.player.NetId);
 				if (hand != null)
@@ -375,29 +391,36 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 			relicPickingResultType = result.type;
 		}
 		await Task.WhenAll(tasksToWait);
-		_hands.AnimateHandsAway();
+		if (tasksToWait.Count == 0 && _runState.Players.Count > 1)
+		{
+			await Cmd.Wait(0.7f);
+		}
 		foreach (RelicPickingResult result2 in results)
 		{
 			NTreasureRoomRelicHolder nTreasureRoomRelicHolder = _holdersInUse.First((NTreasureRoomRelicHolder h) => h.Relic.Model == result2.relic);
 			RelicModel relic = result2.relic.ToMutable();
-			TaskHelper.RunSafely(RelicCmd.Obtain(relic, result2.player));
-			if (LocalContext.IsMe(result2.player))
+			nTreasureRoomRelicHolder.Disable();
+			if (result2.type != RelicPickingResultType.Skipped)
 			{
-				NRun.Instance.GlobalUi.RelicInventory.AnimateRelic(relic, nTreasureRoomRelicHolder.GlobalPosition, nTreasureRoomRelicHolder.Scale);
-			}
-			if (_runState.Players.Count == 1)
-			{
-				nTreasureRoomRelicHolder.Visible = false;
-			}
-			foreach (Player player in result2.player.RunState.Players)
-			{
-				if (player != result2.player)
+				TaskHelper.RunSafely(RelicCmd.Obtain(relic, result2.player));
+				if (LocalContext.IsMe(result2.player))
 				{
-					player.RelicGrabBag.MoveToFallback(result2.relic);
+					NRun.Instance.GlobalUi.RelicInventory.AnimateRelic(relic, nTreasureRoomRelicHolder.GlobalPosition, nTreasureRoomRelicHolder.Scale);
+				}
+				if (_runState.Players.Count == 1)
+				{
+					nTreasureRoomRelicHolder.Visible = false;
+				}
+			}
+			foreach (Player player2 in _runState.Players)
+			{
+				if (player2 != result2.player)
+				{
+					player2.RelicGrabBag.MoveToFallback(result2.relic);
 				}
 			}
 		}
-		_relicPickingTaskCompletionSource.SetResult();
+		_relicPickingCompleteTaskCompletionSource.SetResult();
 	}
 
 	private void RefreshVotes()
@@ -411,10 +434,11 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(8);
+		List<MethodInfo> list = new List<MethodInfo>(9);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.InitializeRelics, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.SpawnEmptyChestVfx, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetSelectionEnabled, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Bool, "isEnabled", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
@@ -453,6 +477,12 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		if (method == MethodName.InitializeRelics && args.Count == 0)
 		{
 			InitializeRelics();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.SpawnEmptyChestVfx && args.Count == 0)
+		{
+			SpawnEmptyChestVfx();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -504,6 +534,10 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		{
 			return true;
 		}
+		if (method == MethodName.SpawnEmptyChestVfx)
+		{
+			return true;
+		}
 		if (method == MethodName.SetSelectionEnabled)
 		{
 			return true;
@@ -540,6 +574,16 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 			_fightBackstop = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
+		if (name == PropertyName._fightLabel)
+		{
+			_fightLabel = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
+		if (name == PropertyName._emptyVfxTween)
+		{
+			_emptyVfxTween = VariantUtils.ConvertTo<Tween>(in value);
+			return true;
+		}
 		if (name == PropertyName._hands)
 		{
 			_hands = VariantUtils.ConvertTo<NHandImageCollection>(in value);
@@ -548,11 +592,6 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		if (name == PropertyName._openedTicks)
 		{
 			_openedTicks = VariantUtils.ConvertTo<ulong>(in value);
-			return true;
-		}
-		if (name == PropertyName._emptyLabel)
-		{
-			_emptyLabel = VariantUtils.ConvertTo<Label>(in value);
 			return true;
 		}
 		if (name == PropertyName._isEmptyChest)
@@ -581,6 +620,16 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 			value = VariantUtils.CreateFrom(in _fightBackstop);
 			return true;
 		}
+		if (name == PropertyName._fightLabel)
+		{
+			value = VariantUtils.CreateFrom(in _fightLabel);
+			return true;
+		}
+		if (name == PropertyName._emptyVfxTween)
+		{
+			value = VariantUtils.CreateFrom(in _emptyVfxTween);
+			return true;
+		}
 		if (name == PropertyName._hands)
 		{
 			value = VariantUtils.CreateFrom(in _hands);
@@ -589,11 +638,6 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		if (name == PropertyName._openedTicks)
 		{
 			value = VariantUtils.CreateFrom(in _openedTicks);
-			return true;
-		}
-		if (name == PropertyName._emptyLabel)
-		{
-			value = VariantUtils.CreateFrom(in _emptyLabel);
 			return true;
 		}
 		if (name == PropertyName._isEmptyChest)
@@ -609,9 +653,10 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._fightBackstop, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._fightLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._emptyVfxTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._hands, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Int, PropertyName._openedTicks, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._emptyLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._isEmptyChest, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.SingleplayerRelicHolder, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.DefaultFocusedControl, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -624,9 +669,10 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName.SingleplayerRelicHolder, Variant.From<NTreasureRoomRelicHolder>(SingleplayerRelicHolder));
 		info.AddProperty(PropertyName._fightBackstop, Variant.From(in _fightBackstop));
+		info.AddProperty(PropertyName._fightLabel, Variant.From(in _fightLabel));
+		info.AddProperty(PropertyName._emptyVfxTween, Variant.From(in _emptyVfxTween));
 		info.AddProperty(PropertyName._hands, Variant.From(in _hands));
 		info.AddProperty(PropertyName._openedTicks, Variant.From(in _openedTicks));
-		info.AddProperty(PropertyName._emptyLabel, Variant.From(in _emptyLabel));
 		info.AddProperty(PropertyName._isEmptyChest, Variant.From(in _isEmptyChest));
 	}
 
@@ -642,21 +688,25 @@ public class NTreasureRoomRelicCollection : Control, IScreenContext
 		{
 			_fightBackstop = value2.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._hands, out var value3))
+		if (info.TryGetProperty(PropertyName._fightLabel, out var value3))
 		{
-			_hands = value3.As<NHandImageCollection>();
+			_fightLabel = value3.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._openedTicks, out var value4))
+		if (info.TryGetProperty(PropertyName._emptyVfxTween, out var value4))
 		{
-			_openedTicks = value4.As<ulong>();
+			_emptyVfxTween = value4.As<Tween>();
 		}
-		if (info.TryGetProperty(PropertyName._emptyLabel, out var value5))
+		if (info.TryGetProperty(PropertyName._hands, out var value5))
 		{
-			_emptyLabel = value5.As<Label>();
+			_hands = value5.As<NHandImageCollection>();
 		}
-		if (info.TryGetProperty(PropertyName._isEmptyChest, out var value6))
+		if (info.TryGetProperty(PropertyName._openedTicks, out var value6))
 		{
-			_isEmptyChest = value6.As<bool>();
+			_openedTicks = value6.As<ulong>();
+		}
+		if (info.TryGetProperty(PropertyName._isEmptyChest, out var value7))
+		{
+			_isEmptyChest = value7.As<bool>();
 		}
 	}
 }

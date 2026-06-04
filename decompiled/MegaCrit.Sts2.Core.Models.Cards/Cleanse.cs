@@ -29,10 +29,10 @@ public sealed class Cleanse : CardModel
 	{
 		await CreatureCmd.TriggerAnim(base.Owner.Creature, "Cast", base.Owner.Character.CastAnimDelay);
 		await OstyCmd.Summon(choiceContext, base.Owner, base.DynamicVars.Summon.BaseValue, this);
-		List<CardModel> cards = (from c in PileType.Draw.GetPile(base.Owner).Cards
+		List<CardModel> cardsIn = (from c in PileType.Draw.GetPile(base.Owner).Cards
 			orderby c.Rarity, c.Id
 			select c).ToList();
-		CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, cards, base.Owner, new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 1))).FirstOrDefault();
+		CardModel cardModel = (await CardSelectCmd.FromSimpleGrid(choiceContext, cardsIn, base.Owner, new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 1))).FirstOrDefault();
 		if (cardModel != null)
 		{
 			await CardCmd.Exhaust(choiceContext, cardModel);

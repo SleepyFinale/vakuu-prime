@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Debug;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Debug;
+using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.Core.Saves;
 
 namespace MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -43,8 +44,6 @@ public class NInputManager : Node
 		public static readonly StringName ModifyControllerButton = "ModifyControllerButton";
 
 		public static readonly StringName ResetToDefaults = "ResetToDefaults";
-
-		public static readonly StringName ResetToDefaultControllerMapping = "ResetToDefaultControllerMapping";
 
 		public static readonly StringName OnControllerTypeChanged = "OnControllerTypeChanged";
 
@@ -350,10 +349,14 @@ public class NInputManager : Node
 		SettingsSave settingsSave = SaveManager.Instance.SettingsSave;
 		if (settingsSave.KeyboardMapping.Count > 0)
 		{
-			_keyboardInputMap = new Dictionary<StringName, Key>();
+			Dictionary<StringName, Key> defaultKeyboardInputMap = DefaultKeyboardInputMap;
+			_keyboardInputMap = new Dictionary<StringName, Key>(defaultKeyboardInputMap);
 			foreach (KeyValuePair<string, string> item in settingsSave.KeyboardMapping)
 			{
-				_keyboardInputMap.Add(item.Key, Enum.Parse<Key>(item.Value));
+				if (Enum.TryParse<Key>(item.Value, out var result))
+				{
+					_keyboardInputMap[item.Key] = result;
+				}
 			}
 		}
 		else
@@ -384,7 +387,7 @@ public class NInputManager : Node
 
 	private void ProcessDebugKeyInput(InputEvent inputEvent)
 	{
-		if (!(inputEvent is InputEventKey inputEventKey) || NDevConsole.Instance.Visible || !NGame.IsTrailerMode)
+		if (!(inputEvent is InputEventKey inputEventKey) || PlatformUtil.IsPlatformOverlayOpen() || NDevConsole.Instance.Visible || !NGame.IsTrailerMode)
 		{
 			return;
 		}
@@ -404,7 +407,7 @@ public class NInputManager : Node
 
 	private void ProcessShortcutKeyInput(InputEvent inputEvent)
 	{
-		if (NGame.Instance.Transition.InTransition || !(inputEvent is InputEventKey inputEventKey))
+		if (NGame.Instance.Transition.InTransition || PlatformUtil.IsPlatformOverlayOpen() || !(inputEvent is InputEventKey inputEventKey))
 		{
 			return;
 		}
@@ -424,7 +427,7 @@ public class NInputManager : Node
 
 	public override void _UnhandledInput(InputEvent inputEvent)
 	{
-		if (NGame.Instance.Transition.InTransition)
+		if (NGame.Instance.Transition.InTransition || PlatformUtil.IsPlatformOverlayOpen())
 		{
 			return;
 		}
@@ -453,7 +456,11 @@ public class NInputManager : Node
 
 	public Key GetShortcutKey(StringName input)
 	{
-		return _keyboardInputMap[input];
+		if (!_keyboardInputMap.TryGetValue(input, out var value))
+		{
+			return Key.None;
+		}
+		return value;
 	}
 
 	public Texture2D? GetHotkeyIcon(string hotkey)
@@ -500,13 +507,6 @@ public class NInputManager : Node
 		EmitSignalInputRebound();
 	}
 
-	public void ResetToDefaultControllerMapping()
-	{
-		_controllerInputMap = ControllerManager.GetDefaultControllerInputMap;
-		SaveControllerInputMapping();
-		EmitSignalInputRebound();
-	}
-
 	private void OnControllerTypeChanged()
 	{
 		if (ControllerManager.ControllerMappingType != SaveManager.Instance.SettingsSave.ControllerMappingType)
@@ -543,7 +543,7 @@ public class NInputManager : Node
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(15);
+		List<MethodInfo> list = new List<MethodInfo>(14);
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._UnhandledKeyInput, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
@@ -581,7 +581,6 @@ public class NInputManager : Node
 			new PropertyInfo(Variant.Type.StringName, "controllerInput", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.ResetToDefaults, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.ResetToDefaultControllerMapping, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnControllerTypeChanged, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SaveControllerInputMapping, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SaveKeyboardInputMapping, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -655,12 +654,6 @@ public class NInputManager : Node
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.ResetToDefaultControllerMapping && args.Count == 0)
-		{
-			ResetToDefaultControllerMapping();
-			ret = default(godot_variant);
-			return true;
-		}
 		if (method == MethodName.OnControllerTypeChanged && args.Count == 0)
 		{
 			OnControllerTypeChanged();
@@ -726,10 +719,6 @@ public class NInputManager : Node
 			return true;
 		}
 		if (method == MethodName.ResetToDefaults)
-		{
-			return true;
-		}
-		if (method == MethodName.ResetToDefaultControllerMapping)
 		{
 			return true;
 		}

@@ -1016,7 +1016,7 @@ class TestUntargetableReviveStates:
         assert any(creature.monster_id == "DOORMAKER" for creature in combat.enemies if creature is not enemy)
         assert combat.enemy_ais[enemy.combat_id].current_move.state_id == "DEAD_MOVE"
 
-    def test_doormaker_get_back_in_revives_door_and_then_escapes(self):
+    def test_doormaker_revive_door_restores_door_combat_state(self):
         combat = CombatState(
             player_hp=80,
             player_max_hp=80,
@@ -1032,14 +1032,14 @@ class TestUntargetableReviveStates:
 
         assert combat.kill_creature(door)
         starting_max_hp = door.max_hp
-        doormaker_ai._current_state_id = "GET_BACK_IN_MOVE"  # noqa: SLF001
-        doormaker_ai.current_move.perform(combat)
+        revived = combat.revive_door()
+        assert revived is door
 
         assert door.current_hp == starting_max_hp + 20
         assert door.max_hp == starting_max_hp + 20
         assert door.get_power_amount(PowerId.STRENGTH) == 3
         assert combat.enemy_ais[door.combat_id].current_move.state_id == "DRAMATIC_OPEN_MOVE"
-        assert doormaker.escaped is True
+        assert doormaker.escaped is False
 
     def test_door_only_blocks_combat_end_while_doormaker_is_alive(self):
         combat = CombatState(

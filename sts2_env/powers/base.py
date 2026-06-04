@@ -199,7 +199,22 @@ class PowerInstance:
     def after_energy_spent(self, owner: Creature, card: object, amount: int, combat: CombatState) -> None:
         pass
 
+    def modify_energy_gain(self, owner: Creature, amount: int) -> int:
+        """Modify energy gained by the owner. Default: unchanged."""
+        return amount
+
+    def after_modifying_energy_gain(self, owner: Creature, combat: CombatState) -> None:
+        pass
+
+    def modify_card_cost(self, owner: Creature, card: object) -> int | None:
+        """Return modified energy cost for owner's cards, or None for no change."""
+        return None
+
     def should_draw(self, owner: Creature, from_hand_draw: bool) -> bool | None:
+        return None
+
+    def should_block_player_draw(self, player: Creature, from_hand_draw: bool) -> bool | None:
+        """Return False to block a player-side draw (e.g. ScrutinyPower on enemies)."""
         return None
 
     def after_preventing_draw(self, owner: Creature, combat: CombatState) -> None:

@@ -7,9 +7,9 @@ using Godot.Bridge;
 using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Localization;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
 
@@ -63,7 +63,7 @@ public class NMapPointHistory : Control
 		int num = 1;
 		for (int i = 0; i < history.MapPointHistory.Count; i++)
 		{
-			LocString title = ModelDb.GetById<ActModel>(history.Acts[i]).Title;
+			LocString title = SaveUtil.ActOrDeprecated(history.Acts[i]).Title;
 			NActHistoryEntry nActHistoryEntry = NActHistoryEntry.Create(title, history, history.MapPointHistory[i], num);
 			_actContainer.AddChildSafely(nActHistoryEntry);
 			_actHistories.Add(nActHistoryEntry);

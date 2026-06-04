@@ -70,7 +70,7 @@ public class NMegaTextEdit : TextEdit
 
 	public void RefreshFont()
 	{
-		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.TextEdit.font);
+		this.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.TextEdit.Font);
 	}
 
 	private void OnFocus()

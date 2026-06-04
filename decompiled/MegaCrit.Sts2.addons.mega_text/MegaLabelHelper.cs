@@ -71,27 +71,46 @@ public static class MegaLabelHelper
 				if (bbcodeParsingState != BbcodeParsingState.InTagEnvironment)
 				{
 					string text2 = stringBuilder.ToString();
-					if (bbcodeParsingState == BbcodeParsingState.InEndTag)
+					if (text2 == "lb")
 					{
-						if (stack.Count == 0)
+						_cachedBbcodeObjects.Add(new BbcodeObject
 						{
-							throw new InvalidOperationException($"Found end tag {text2} with no tag on the stack. ({bbcode})");
-						}
-						if (stack.Peek() != text2)
+							text = "[",
+							type = BbcodeObjectType.Text
+						});
+					}
+					else if (text2 == "rb")
+					{
+						_cachedBbcodeObjects.Add(new BbcodeObject
 						{
-							throw new InvalidOperationException($"Found end tag {text2}, expected {stack.Peek()}. ({bbcode})");
-						}
-						stack.Pop();
+							text = "]",
+							type = BbcodeObjectType.Text
+						});
 					}
 					else
 					{
-						stack.Push(text2);
+						if (bbcodeParsingState == BbcodeParsingState.InEndTag)
+						{
+							if (stack.Count == 0)
+							{
+								throw new InvalidOperationException($"Found end tag {text2} with no tag on the stack. ({bbcode})");
+							}
+							if (stack.Peek() != text2)
+							{
+								throw new InvalidOperationException($"Found end tag {text2}, expected {stack.Peek()}. ({bbcode})");
+							}
+							stack.Pop();
+						}
+						else
+						{
+							stack.Push(text2);
+						}
+						_cachedBbcodeObjects.Add(new BbcodeObject
+						{
+							tag = text2,
+							type = ((bbcodeParsingState == BbcodeParsingState.InTag) ? BbcodeObjectType.BeginTag : BbcodeObjectType.EndTag)
+						});
 					}
-					_cachedBbcodeObjects.Add(new BbcodeObject
-					{
-						tag = text2,
-						type = ((bbcodeParsingState == BbcodeParsingState.InTag) ? BbcodeObjectType.BeginTag : BbcodeObjectType.EndTag)
-					});
 				}
 				bbcodeParsingState = BbcodeParsingState.NotInTag;
 				stringBuilder.Clear();

@@ -50,7 +50,7 @@ public class RemoveCardConsoleCmd : AbstractConsoleCmd
 			{
 				if (card.Id == id)
 				{
-					task = CardPileCmd.RemoveFromCombat(card, isBeingPlayed: false);
+					task = CardPileCmd.RemoveFromCombat(card);
 					break;
 				}
 			}

@@ -334,13 +334,17 @@ public class AttackCommand
 		{
 			throw new InvalidOperationException("No attacker set.");
 		}
-		if (!IsSingleTargeted && !IsMultiTargeted)
-		{
-			throw new InvalidOperationException("No targets set.");
-		}
 		if (CombatManager.Instance.IsOverOrEnding)
 		{
 			return this;
+		}
+		if (Attacker.IsDead)
+		{
+			return this;
+		}
+		if (!IsSingleTargeted && !IsMultiTargeted)
+		{
+			throw new InvalidOperationException("No targets set.");
 		}
 		CombatState combatState = Attacker.CombatState;
 		await Hook.BeforeAttack(combatState, this);

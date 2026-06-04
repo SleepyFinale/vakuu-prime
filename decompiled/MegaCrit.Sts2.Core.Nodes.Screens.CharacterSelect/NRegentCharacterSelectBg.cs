@@ -31,7 +31,7 @@ public class NRegentCharacterSelectBg : Control
 
 		public static readonly StringName _shapesHover = "_shapesHover";
 
-		public static readonly StringName _amongusHover = "_amongusHover";
+		public static readonly StringName _amogusHover = "_amogusHover";
 	}
 
 	public new class SignalName : Control.SignalName
@@ -52,7 +52,7 @@ public class NRegentCharacterSelectBg : Control
 
 	private Control _shapesHover;
 
-	private Control _amongusHover;
+	private Control _amogusHover;
 
 	public override void _Ready()
 	{
@@ -111,12 +111,12 @@ public class NRegentCharacterSelectBg : Control
 		{
 			SetSkin("normal");
 		}));
-		_amongusHover = GetNode<Control>("AmongusHover");
-		_amongusHover.Connect(Control.SignalName.MouseEntered, Callable.From(delegate
+		_amogusHover = GetNode<Control>("AmogusHover");
+		_amogusHover.Connect(Control.SignalName.MouseEntered, Callable.From(delegate
 		{
-			SetSkin("amongus constellation");
+			SetSkin("amogus constellation");
 		}));
-		_amongusHover.Connect(Control.SignalName.MouseExited, Callable.From(delegate
+		_amogusHover.Connect(Control.SignalName.MouseExited, Callable.From(delegate
 		{
 			SetSkin("normal");
 		}));
@@ -125,8 +125,11 @@ public class NRegentCharacterSelectBg : Control
 	private void SetSkin(string skinName)
 	{
 		MegaSkeleton skeleton = _spineController.GetSkeleton();
-		skeleton.SetSkin(skeleton.GetData().FindSkin(skinName));
-		skeleton.SetSlotsToSetupPose();
+		if (skeleton != null)
+		{
+			skeleton.SetSkin(skeleton.GetData().FindSkin(skinName));
+			skeleton.SetSlotsToSetupPose();
+		}
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -206,9 +209,9 @@ public class NRegentCharacterSelectBg : Control
 			_shapesHover = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
-		if (name == PropertyName._amongusHover)
+		if (name == PropertyName._amogusHover)
 		{
-			_amongusHover = VariantUtils.ConvertTo<Control>(in value);
+			_amogusHover = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
 		return base.SetGodotClassPropertyValue(in name, in value);
@@ -247,9 +250,9 @@ public class NRegentCharacterSelectBg : Control
 			value = VariantUtils.CreateFrom(in _shapesHover);
 			return true;
 		}
-		if (name == PropertyName._amongusHover)
+		if (name == PropertyName._amogusHover)
 		{
-			value = VariantUtils.CreateFrom(in _amongusHover);
+			value = VariantUtils.CreateFrom(in _amogusHover);
 			return true;
 		}
 		return base.GetGodotClassPropertyValue(in name, out value);
@@ -265,7 +268,7 @@ public class NRegentCharacterSelectBg : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._sneckoHover, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._cultistHover, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._shapesHover, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._amongusHover, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._amogusHover, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 
@@ -279,7 +282,7 @@ public class NRegentCharacterSelectBg : Control
 		info.AddProperty(PropertyName._sneckoHover, Variant.From(in _sneckoHover));
 		info.AddProperty(PropertyName._cultistHover, Variant.From(in _cultistHover));
 		info.AddProperty(PropertyName._shapesHover, Variant.From(in _shapesHover));
-		info.AddProperty(PropertyName._amongusHover, Variant.From(in _amongusHover));
+		info.AddProperty(PropertyName._amogusHover, Variant.From(in _amogusHover));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
@@ -310,9 +313,9 @@ public class NRegentCharacterSelectBg : Control
 		{
 			_shapesHover = value6.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._amongusHover, out var value7))
+		if (info.TryGetProperty(PropertyName._amogusHover, out var value7))
 		{
-			_amongusHover = value7.As<Control>();
+			_amogusHover = value7.As<Control>();
 		}
 	}
 }

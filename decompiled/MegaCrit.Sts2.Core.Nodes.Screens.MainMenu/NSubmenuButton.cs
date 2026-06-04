@@ -123,7 +123,7 @@ public class NSubmenuButton : NButton
 	{
 		LocString locString = new LocString("main_menu_ui", _locKeyPrefix + ".title");
 		_title.SetTextAutoSize(locString.GetFormattedText());
-		_title.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.font);
+		_title.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.Label.Font);
 		LocString locString2;
 		if (base.IsEnabled)
 		{
@@ -139,9 +139,9 @@ public class NSubmenuButton : NButton
 			}
 		}
 		_description.Text = locString2.GetFormattedText();
-		_description.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.RichTextLabel.normalFont);
-		_description.ApplyLocaleFontSubstitution(FontType.Bold, ThemeConstants.RichTextLabel.boldFont);
-		_description.ApplyLocaleFontSubstitution(FontType.Italic, ThemeConstants.RichTextLabel.italicsFont);
+		_description.ApplyLocaleFontSubstitution(FontType.Regular, ThemeConstants.RichTextLabel.NormalFont);
+		_description.ApplyLocaleFontSubstitution(FontType.Bold, ThemeConstants.RichTextLabel.BoldFont);
+		_description.ApplyLocaleFontSubstitution(FontType.Italic, ThemeConstants.RichTextLabel.ItalicsFont);
 	}
 
 	protected override void OnEnable()

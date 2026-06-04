@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
 using MegaCrit.Sts2.addons.mega_text;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
@@ -34,6 +35,8 @@ public class NRunHistoryPlayerIcon : NClickableControl
 
 	public new class PropertyName : NClickableControl.PropertyName
 	{
+		public static readonly StringName _achievementLock = "_achievementLock";
+
 		public static readonly StringName _ascensionIcon = "_ascensionIcon";
 
 		public static readonly StringName _ascensionLabel = "_ascensionLabel";
@@ -51,6 +54,8 @@ public class NRunHistoryPlayerIcon : NClickableControl
 
 	private readonly List<IHoverTip> _hoverTips = new List<IHoverTip>();
 
+	private Control _achievementLock;
+
 	private Control _ascensionIcon;
 
 	private MegaLabel _ascensionLabel;
@@ -63,6 +68,7 @@ public class NRunHistoryPlayerIcon : NClickableControl
 
 	public override void _Ready()
 	{
+		_achievementLock = GetNode<Control>("%AchievementLock");
 		_ascensionIcon = GetNode<Control>("%AscensionIcon");
 		_ascensionLabel = GetNode<MegaLabel>("%AscensionLabel");
 		_selectionReticle = GetNode<NSelectionReticle>("%SelectionReticle");
@@ -72,13 +78,13 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	public void LoadRun(RunHistoryPlayer player, RunHistory history)
 	{
 		Player = player;
-		CharacterModel byId = ModelDb.GetById<CharacterModel>(player.Character);
+		CharacterModel characterModel = SaveUtil.CharacterOrDeprecated(player.Character);
 		_currentIcon?.QueueFreeSafely();
-		_currentIcon = byId.Icon;
+		_currentIcon = characterModel.Icon;
 		this.AddChildSafely(_currentIcon);
 		MoveChild(_currentIcon, 0);
 		LocString locString = new LocString("ascension", "PORTRAIT_TITLE");
-		locString.Add("character", byId.Title);
+		locString.Add("character", characterModel.Title);
 		locString.Add("ascension", history.Ascension);
 		LocString locString2 = new LocString("ascension", "PORTRAIT_DESCRIPTION");
 		List<string> list = new List<string>();
@@ -88,23 +94,27 @@ public class NRunHistoryPlayerIcon : NClickableControl
 		}
 		locString2.Add("ascensions", list);
 		_selectionReticle.Visible = history.Players.Count > 1;
+		_achievementLock.Visible = history.GameMode.AreAchievementsAndEpochsLocked();
 		_ascensionIcon.Visible = false;
 		_ascensionLabel.SetTextAutoSize((history.Ascension > 0) ? history.Ascension.ToString() : string.Empty);
 		LocString locString3 = new LocString("run_history", "PLAYER_HOVER");
 		if (history.Players.Count > 1)
 		{
 			locString3.Add("PlayerName", PlatformUtil.GetPlayerName(history.PlatformType, player.Id));
-			locString3.Add("CharacterName", byId.Title.GetFormattedText());
+			locString3.Add("CharacterName", characterModel.Title.GetFormattedText());
 		}
 		else
 		{
-			locString3.Add("PlayerName", byId.Title.GetFormattedText());
+			locString3.Add("PlayerName", characterModel.Title.GetFormattedText());
 			locString3.Add("CharacterName", string.Empty);
 		}
-		_hoverTips.Add(new HoverTip(locString3));
-		if (history.Ascension > 0)
+		if (history.Ascension > 0 || history.GameMode.AreAchievementsAndEpochsLocked())
 		{
-			_hoverTips.Add(AscensionHelper.GetHoverTip(byId, history.Ascension));
+			_hoverTips.Add(AscensionHelper.GetHoverTip(characterModel, history.Ascension, history.GameMode.AreAchievementsAndEpochsLocked()));
+		}
+		else
+		{
+			_hoverTips.Add(new HoverTip(locString3));
 		}
 	}
 
@@ -208,6 +218,11 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool SetGodotClassPropertyValue(in godot_string_name name, in godot_variant value)
 	{
+		if (name == PropertyName._achievementLock)
+		{
+			_achievementLock = VariantUtils.ConvertTo<Control>(in value);
+			return true;
+		}
 		if (name == PropertyName._ascensionIcon)
 		{
 			_ascensionIcon = VariantUtils.ConvertTo<Control>(in value);
@@ -234,6 +249,11 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
+		if (name == PropertyName._achievementLock)
+		{
+			value = VariantUtils.CreateFrom(in _achievementLock);
+			return true;
+		}
 		if (name == PropertyName._ascensionIcon)
 		{
 			value = VariantUtils.CreateFrom(in _ascensionIcon);
@@ -261,6 +281,7 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	internal new static List<PropertyInfo> GetGodotPropertyList()
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._achievementLock, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ascensionIcon, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ascensionLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._selectionReticle, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -272,6 +293,7 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	protected override void SaveGodotObjectData(GodotSerializationInfo info)
 	{
 		base.SaveGodotObjectData(info);
+		info.AddProperty(PropertyName._achievementLock, Variant.From(in _achievementLock));
 		info.AddProperty(PropertyName._ascensionIcon, Variant.From(in _ascensionIcon));
 		info.AddProperty(PropertyName._ascensionLabel, Variant.From(in _ascensionLabel));
 		info.AddProperty(PropertyName._selectionReticle, Variant.From(in _selectionReticle));
@@ -282,21 +304,25 @@ public class NRunHistoryPlayerIcon : NClickableControl
 	protected override void RestoreGodotObjectData(GodotSerializationInfo info)
 	{
 		base.RestoreGodotObjectData(info);
-		if (info.TryGetProperty(PropertyName._ascensionIcon, out var value))
+		if (info.TryGetProperty(PropertyName._achievementLock, out var value))
 		{
-			_ascensionIcon = value.As<Control>();
+			_achievementLock = value.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._ascensionLabel, out var value2))
+		if (info.TryGetProperty(PropertyName._ascensionIcon, out var value2))
 		{
-			_ascensionLabel = value2.As<MegaLabel>();
+			_ascensionIcon = value2.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._selectionReticle, out var value3))
+		if (info.TryGetProperty(PropertyName._ascensionLabel, out var value3))
 		{
-			_selectionReticle = value3.As<NSelectionReticle>();
+			_ascensionLabel = value3.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._currentIcon, out var value4))
+		if (info.TryGetProperty(PropertyName._selectionReticle, out var value4))
 		{
-			_currentIcon = value4.As<Control>();
+			_selectionReticle = value4.As<NSelectionReticle>();
+		}
+		if (info.TryGetProperty(PropertyName._currentIcon, out var value5))
+		{
+			_currentIcon = value5.As<Control>();
 		}
 	}
 }

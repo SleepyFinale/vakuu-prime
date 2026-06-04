@@ -193,6 +193,13 @@ def snake_case(name: str) -> str:
 
 
 def card_id_for_reference_class(name: str) -> CardId:
+    card_id = try_card_id_for_reference_class(name)
+    if card_id is None:
+        raise KeyError(f"No CardId alias for reference card class {name}")
+    return card_id
+
+
+def try_card_id_for_reference_class(name: str) -> CardId | None:
     snake_name = snake_case(name).upper()
     aliases = {snake_name, f"{snake_name}_CARD", f"{snake_name}_STATUS"}
     aliases.update(REFERENCE_CLASS_ALIASES.get(name, ()))
@@ -203,7 +210,22 @@ def card_id_for_reference_class(name: str) -> CardId:
     for alias in aliases:
         if alias in CardId.__members__:
             return CardId[alias]
-    raise KeyError(f"No CardId alias for reference card class {name}")
+    return None
+
+
+def clear_reference_metadata_caches() -> None:
+    reference_metadata_by_card_id.cache_clear()
+    upgraded_reference_metadata_by_card_id.cache_clear()
+    reference_dynamic_vars_by_card_id.cache_clear()
+    upgraded_reference_dynamic_vars_by_card_id.cache_clear()
+
+
+def unmapped_reference_card_classes() -> tuple[str, ...]:
+    unmapped: list[str] = []
+    for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs")):
+        if try_card_id_for_reference_class(path.stem) is None:
+            unmapped.append(path.stem)
+    return tuple(unmapped)
 
 
 def _property_expression(source: str, property_name: str) -> str:
@@ -534,39 +556,47 @@ def _integer_literal(value_text: str) -> int | None:
     return int(normalized)
 
 
+def _reference_metadata_entries() -> list[ReferenceCardStaticMetadata]:
+    entries: list[ReferenceCardStaticMetadata] = []
+    for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs")):
+        if try_card_id_for_reference_class(path.stem) is None:
+            continue
+        entries.append(reference_metadata_from_source(path))
+    return entries
+
+
 @lru_cache(maxsize=1)
 def reference_metadata_by_card_id() -> dict[CardId, ReferenceCardStaticMetadata]:
-    return {
-        metadata.card_id: metadata
-        for metadata in (
-            reference_metadata_from_source(path)
-            for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs"))
-        )
-    }
+    return {metadata.card_id: metadata for metadata in _reference_metadata_entries()}
 
 
 @lru_cache(maxsize=1)
 def upgraded_reference_metadata_by_card_id() -> dict[CardId, ReferenceCardStaticMetadata]:
     return {
         metadata.card_id: metadata
-        for metadata in (
-            upgraded_reference_metadata_from_source(path)
-            for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs"))
-        )
+        for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs"))
+        if try_card_id_for_reference_class(path.stem) is not None
+        for metadata in (upgraded_reference_metadata_from_source(path),)
     }
 
 
 @lru_cache(maxsize=1)
 def reference_dynamic_vars_by_card_id() -> dict[CardId, dict[str, int]]:
-    return {
-        card_id_for_reference_class(path.stem): reference_dynamic_vars_from_source(path)
-        for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs"))
-    }
+    result: dict[CardId, dict[str, int]] = {}
+    for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs")):
+        card_id = try_card_id_for_reference_class(path.stem)
+        if card_id is None:
+            continue
+        result[card_id] = reference_dynamic_vars_from_source(path)
+    return result
 
 
 @lru_cache(maxsize=1)
 def upgraded_reference_dynamic_vars_by_card_id() -> dict[CardId, dict[str, int]]:
-    return {
-        card_id_for_reference_class(path.stem): upgraded_reference_dynamic_vars_from_source(path)
-        for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs"))
-    }
+    result: dict[CardId, dict[str, int]] = {}
+    for path in sorted((REPO_ROOT / REFERENCE_CARD_DIR).glob("*.cs")):
+        card_id = try_card_id_for_reference_class(path.stem)
+        if card_id is None:
+            continue
+        result[card_id] = upgraded_reference_dynamic_vars_from_source(path)
+    return result

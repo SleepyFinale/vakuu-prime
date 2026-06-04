@@ -27,7 +27,7 @@ public sealed class InfestedAutomaton : EventModel
 
 	private async Task Study()
 	{
-		CardCreationOptions options = CardCreationOptions.ForNonCombatWithDefaultOdds(new global::_003C_003Ez__ReadOnlySingleElementList<CardPoolModel>(base.Owner.Character.CardPool), (CardModel c) => c.Type == CardType.Power);
+		CardCreationOptions options = CardCreationOptions.ForNonCombatWithDefaultOdds(new global::_003C_003Ez__ReadOnlySingleElementList<CardPoolModel>(base.Owner.Character.CardPool), (CardModel c) => c.Type == CardType.Power).WithFlags(CardCreationFlags.NoCardPoolModifications);
 		CardModel cardModel = CardFactory.CreateForReward(base.Owner, 1, options).FirstOrDefault()?.Card;
 		if (cardModel != null)
 		{
@@ -42,7 +42,7 @@ public sealed class InfestedAutomaton : EventModel
 		{
 			CardEnergyCost energyCost = c.EnergyCost;
 			return energyCost != null && energyCost.Canonical == 0 && !energyCost.CostsX;
-		});
+		}).WithFlags(CardCreationFlags.NoCardPoolModifications);
 		CardModel cardModel = CardFactory.CreateForReward(base.Owner, 1, options).FirstOrDefault()?.Card;
 		if (cardModel != null)
 		{

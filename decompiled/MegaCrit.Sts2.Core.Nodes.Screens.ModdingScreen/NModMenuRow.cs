@@ -85,15 +85,37 @@ public class NModMenuRow : NClickableControl
 			MegaRichTextLabel node2 = GetNode<MegaRichTextLabel>("Title");
 			TextureRect node3 = GetNode<TextureRect>("PlatformIcon");
 			Panel selectionHighlight = _selectionHighlight;
-			Color modulate = _selectionHighlight.Modulate;
-			modulate.A = 0f;
-			selectionHighlight.Modulate = modulate;
+			Color color = _selectionHighlight.Modulate;
+			color.A = 0f;
+			selectionHighlight.Modulate = color;
 			node.IsTicked = !(SaveManager.Instance.SettingsSave.ModSettings?.IsModDisabled(Mod) ?? false);
 			node.Connect(NTickbox.SignalName.Toggled, Callable.From<NTickbox>(OnTickboxToggled));
-			node2.Text = Mod.manifest?.name ?? Mod.pckName;
+			node2.Text = Mod.manifest?.name ?? Mod.manifest?.id ?? "<null>";
 			node3.Texture = GetPlatformIcon(Mod.modSource);
-			node2.Modulate = (Mod.wasLoaded ? Colors.White : StsColors.gray);
-			node3.Modulate = (Mod.wasLoaded ? Colors.White : StsColors.gray);
+			ModLoadState state = Mod.state;
+			switch (state)
+			{
+			case ModLoadState.Loaded:
+				color = Colors.White;
+				break;
+			case ModLoadState.Failed:
+				color = StsColors.red;
+				break;
+			case ModLoadState.Disabled:
+				color = StsColors.gray;
+				break;
+			case ModLoadState.AddedAtRuntime:
+				color = StsColors.gray;
+				break;
+			case ModLoadState.None:
+				color = StsColors.purple;
+				break;
+			default:
+				global::_003CPrivateImplementationDetails_003E.ThrowSwitchExpressionException(state);
+				break;
+			}
+			Color modulate = (node2.Modulate = color);
+			node3.Modulate = modulate;
 			ConnectSignals();
 		}
 	}
@@ -155,13 +177,12 @@ public class NModMenuRow : NClickableControl
 		{
 			ModSettings modSettings = (settingsSave.ModSettings = new ModSettings());
 		}
-		if (tickbox.IsTicked)
+		foreach (SettingsSaveMod mod in SaveManager.Instance.SettingsSave.ModSettings.ModList)
 		{
-			SaveManager.Instance.SettingsSave.ModSettings.DisabledMods.RemoveAll((DisabledMod m) => m.Name == Mod.pckName && m.Source == Mod.modSource);
-		}
-		else
-		{
-			SaveManager.Instance.SettingsSave.ModSettings.DisabledMods.Add(new DisabledMod(Mod));
+			if (mod.Id == Mod?.manifest?.id)
+			{
+				mod.IsEnabled = tickbox.IsTicked;
+			}
 		}
 		_screen.OnModEnabledOrDisabled();
 	}

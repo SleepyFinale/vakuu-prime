@@ -195,23 +195,30 @@ public sealed class ThievingHopper : MonsterModel
 		List<CardModel> cardsToSteal = new List<CardModel>();
 		foreach (Creature target in targets)
 		{
+			if (target.IsDead)
+			{
+				continue;
+			}
 			List<CardModel> list = (from c in CardPile.GetCards(target.Player ?? target.PetOwner, PileType.Draw, PileType.Discard)
 				where c.DeckVersion != null
 				select c).ToList();
-			IEnumerable<CardModel> items = list;
+			IEnumerable<CardModel> enumerable = list;
 			Func<CardModel, bool>[] stealPriorities = _stealPriorities;
 			foreach (Func<CardModel, bool> predicate in stealPriorities)
 			{
-				IEnumerable<CardModel> enumerable = list.Where(predicate);
-				if (enumerable.Any())
+				IEnumerable<CardModel> enumerable2 = list.Where(predicate);
+				if (enumerable2.Any())
 				{
-					items = enumerable;
+					enumerable = enumerable2;
 					break;
 				}
 			}
-			CardModel cardToSteal = base.RunRng.CombatCardGeneration.NextItem(items);
-			await CardPileCmd.RemoveFromCombat(cardToSteal, isBeingPlayed: false);
-			cardsToSteal.Add(cardToSteal);
+			if (enumerable.Any())
+			{
+				CardModel cardToSteal = base.RunRng.CombatCardGeneration.NextItem(enumerable);
+				await CardPileCmd.RemoveFromCombat(cardToSteal);
+				cardsToSteal.Add(cardToSteal);
+			}
 		}
 		await Cmd.Wait(0.6f);
 		foreach (CardModel item in cardsToSteal)

@@ -5,19 +5,13 @@ using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 namespace MegaCrit.Sts2.Core.Map;
 
 [Serializable]
-public struct MapCoord : IEquatable<MapCoord>, IComparable<MapCoord>, IPacketSerializable
+public struct MapCoord(int col, int row) : IEquatable<MapCoord>, IComparable<MapCoord>, IPacketSerializable
 {
 	[JsonInclude]
-	public int col;
+	public int col = col;
 
 	[JsonInclude]
-	public int row;
-
-	public MapCoord(int col, int row)
-	{
-		this.col = col;
-		this.row = row;
-	}
+	public int row = row;
 
 	public void Serialize(PacketWriter writer)
 	{

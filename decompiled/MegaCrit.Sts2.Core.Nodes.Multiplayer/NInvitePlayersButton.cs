@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Godot;
 using Godot.Bridge;
 using Godot.NativeInterop;
+using MegaCrit.Sts2.Core.ControllerInput;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
@@ -32,6 +33,8 @@ public class NInvitePlayersButton : NButton
 
 	public new class PropertyName : NButton.PropertyName
 	{
+		public new static readonly StringName Hotkeys = "Hotkeys";
+
 		public static readonly StringName _shaderMaterial = "_shaderMaterial";
 
 		public static readonly StringName _container = "_container";
@@ -50,6 +53,8 @@ public class NInvitePlayersButton : NButton
 	private Control _container;
 
 	private StartRunLobby? _startRunLobby;
+
+	protected override string[] Hotkeys => new string[1] { MegaInput.viewMap };
 
 	public override void _Ready()
 	{
@@ -218,6 +223,11 @@ public class NInvitePlayersButton : NButton
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
+		if (name == PropertyName.Hotkeys)
+		{
+			value = VariantUtils.CreateFrom<string[]>(Hotkeys);
+			return true;
+		}
 		if (name == PropertyName._shaderMaterial)
 		{
 			value = VariantUtils.CreateFrom(in _shaderMaterial);
@@ -237,6 +247,7 @@ public class NInvitePlayersButton : NButton
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._shaderMaterial, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._container, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.PackedStringArray, PropertyName.Hotkeys, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 

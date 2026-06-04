@@ -33,6 +33,8 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 
 		public new static readonly StringName ConnectSignals = "ConnectSignals";
 
+		public new static readonly StringName OnInspectCardHidden = "OnInspectCardHidden";
+
 		public new static readonly StringName AfterCapstoneOpened = "AfterCapstoneOpened";
 	}
 
@@ -79,6 +81,10 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 		_backButton.Disable();
 		_confirmButton.Connect(NClickableControl.SignalName.Released, Callable.From<NButton>(base.OnReturnButtonPressed));
 		_confirmButton.Enable();
+		_grid.Connect(NCardGrid.SignalName.HolderPressed, Callable.From(delegate(NCardHolder h)
+		{
+			ShowCardDetail(h.CardModel);
+		}));
 	}
 
 	public static NCardsViewScreen? ShowScreen(List<CardPileAddResult> cards, LocString infoText)
@@ -94,6 +100,10 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 		NDebugAudioManager.Instance?.Play("map_open.mp3");
 		NCapstoneContainer.Instance.Open(nSimpleCardsViewScreen);
 		return nSimpleCardsViewScreen;
+	}
+
+	protected override void OnInspectCardHidden()
+	{
 	}
 
 	public override void AfterCapstoneOpened()
@@ -123,9 +133,10 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal new static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(3);
+		List<MethodInfo> list = new List<MethodInfo>(4);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ConnectSignals, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnInspectCardHidden, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AfterCapstoneOpened, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
@@ -142,6 +153,12 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 		if (method == MethodName.ConnectSignals && args.Count == 0)
 		{
 			ConnectSignals();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.OnInspectCardHidden && args.Count == 0)
+		{
+			OnInspectCardHidden();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -162,6 +179,10 @@ public class NSimpleCardsViewScreen : NCardsViewScreen
 			return true;
 		}
 		if (method == MethodName.ConnectSignals)
+		{
+			return true;
+		}
+		if (method == MethodName.OnInspectCardHidden)
 		{
 			return true;
 		}

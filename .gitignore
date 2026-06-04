@@ -45,6 +45,10 @@ bridge_mod_minimal/obj/
 # Extracted PCK resources (2.5GB, too large for git)
 extracted_pck/
 
+# Game sync pipeline artifacts
+decompiled_prev/
+sync_report.md
+
 # Temp
 *.log
 .pytest_cache/

@@ -4,7 +4,7 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 
 ## Architecture
 
-```
+```text
 +-----------------------------------------------------------------------+
 |  Headless Python Simulator (sts2_env/)                                |
 |                                                                       |
@@ -31,7 +31,6 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 
 ## Project Stats
 
-
 | Metric                        | Value                                             |
 | ----------------------------- | ------------------------------------------------- |
 | Source files                  | 133 Python + C#                                   |
@@ -45,7 +44,6 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 | Playable characters           | 5 (Ironclad, Silent, Defect, Necrobinder, Regent) |
 | Simulation speed              | ~1,200 combats/sec, ~28,000 steps/sec             |
 | Combat win rate (trained PPO) | ~92% (Act 1 Ironclad)                             |
-
 
 ## Quick Start
 
@@ -82,7 +80,7 @@ python scripts/benchmark.py
 
 Expected output on a modern CPU:
 
-```
+```text
 Episodes:       1000
 Total steps:    28101
 Time:           0.78s
@@ -134,7 +132,6 @@ python scripts/train_combat.py \
 
 Key flags:
 
-
 | Flag                | Default           | Description                           |
 | ------------------- | ----------------- | ------------------------------------- |
 | `--total-timesteps` | 500,000           | Total environment steps               |
@@ -143,7 +140,6 @@ Key flags:
 | `--batch-size`      | 256               | Minibatch size                        |
 | `--n-steps`         | 2048              | Steps per rollout per env             |
 | `--output-dir`      | output/combat_ppo | Where to save models and logs         |
-
 
 ### Train a Full-Run Agent
 
@@ -177,7 +173,7 @@ See [docs/AGENT_USAGE_GUIDE.md](docs/AGENT_USAGE_GUIDE.md) for details.
 
 ## Project Structure
 
-```
+```text
 sts2-rl-agent/
 |-- pyproject.toml                 # Package config, dependencies
 |-- scripts/
@@ -281,7 +277,6 @@ sts2-rl-agent/
 
 ## Game Content Coverage
 
-
 | Content Type            | Game Total | Implemented | Coverage        |
 | ----------------------- | ---------- | ----------- | --------------- |
 | Cards                   | 577        | 577         | 100%            |
@@ -293,7 +288,6 @@ sts2-rl-agent/
 | Events                  | 68         | 68          | 100%            |
 | Characters              | 5 + 2      | 5           | 100% (playable) |
 | Acts                    | 4          | 4           | 100%            |
-
 
 ## How It Works
 
@@ -327,13 +321,14 @@ Following lessons from the STS1 RL community, this project uses a two-phase stra
 
 ## Documentation
 
-
 | Document                                                         | Description                                     |
 | ---------------------------------------------------------------- | ----------------------------------------------- |
 | [README.md](README.md)                                           | This file                                       |
 | [RESEARCH.md](RESEARCH.md)                                       | Research notes, prior work, algorithm selection |
 | [DECOMPILED_ARCHITECTURE.md](DECOMPILED_ARCHITECTURE.md)         | Decompiled C# analysis for simulator            |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                               | Contribution guide, dev setup, adding content   |
+| [docs/PATCH_SYNC.md](docs/PATCH_SYNC.md)                         | Sync simulator from Steam install after patches |
+| [docs/DECOMPILATION_GUIDE.md](docs/DECOMPILATION_GUIDE.md)       | Decompile STS2 DLL and PCK resources            |
 | [docs/SIMULATOR_ARCHITECTURE.md](docs/SIMULATOR_ARCHITECTURE.md) | Python simulator internal architecture          |
 | [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md)                 | Comprehensive RL training guide                 |
 | [docs/PROTOCOL.md](docs/PROTOCOL.md)                             | TCP bridge communication protocol               |
@@ -343,7 +338,6 @@ Following lessons from the STS1 RL community, this project uses a two-phase stra
 | [docs/GAME_BRIDGE_REFERENCE.md](docs/GAME_BRIDGE_REFERENCE.md)   | Bridge architecture and design notes            |
 | [docs/AUTOSLAY_BRIDGE.md](docs/AUTOSLAY_BRIDGE.md)               | AutoSlay-based bridge design                    |
 | [docs/GAME_SYSTEMS_REFERENCE.md](docs/GAME_SYSTEMS_REFERENCE.md) | Game mechanics reference                        |
-
 
 ## License
 
@@ -356,4 +350,3 @@ This project is for research and educational purposes. Slay the Spire 2 is the p
 - [CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod) -- STS1 game bridge protocol design
 - [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) -- STS2 mod framework
 - [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) -- RL training framework
-

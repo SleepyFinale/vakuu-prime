@@ -268,7 +268,13 @@ Focus on changes in:
 
 ### 5. Update reference docs
 
-Regenerate `docs/CARDS_REFERENCE.md`, `docs/POWERS_REFERENCE.md`, etc. from the new decompiled source.
+```bash
+python scripts/sync_from_game.py docs
+# Or as part of a full sync after decompile:
+python scripts/sync_from_game.py all --apply
+```
+
+See [docs/PATCH_SYNC.md](docs/PATCH_SYNC.md) for the full patch sync runbook.
 
 ### 6. Run tests
 

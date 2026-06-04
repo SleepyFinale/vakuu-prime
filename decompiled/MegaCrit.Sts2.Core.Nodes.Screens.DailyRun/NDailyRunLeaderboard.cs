@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Bridge;
@@ -9,6 +10,7 @@ using MegaCrit.Sts2.Core.Daily;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Leaderboard;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.addons.mega_text;
 
 namespace MegaCrit.Sts2.Core.Nodes.Screens.DailyRun;
@@ -29,12 +31,12 @@ public class NDailyRunLeaderboard : Control
 		public static readonly StringName SetPage = "SetPage";
 
 		public static readonly StringName ClearEntries = "ClearEntries";
+
+		public new static readonly StringName _ExitTree = "_ExitTree";
 	}
 
 	public new class PropertyName : Control.PropertyName
 	{
-		public static readonly StringName _titleLabel = "_titleLabel";
-
 		public static readonly StringName _paginator = "_paginator";
 
 		public static readonly StringName _scoreContainer = "_scoreContainer";
@@ -51,6 +53,8 @@ public class NDailyRunLeaderboard : Control
 
 		public static readonly StringName _noScoreUploadIndicator = "_noScoreUploadIndicator";
 
+		public static readonly StringName _separators = "_separators";
+
 		public static readonly StringName _currentPage = "_currentPage";
 
 		public static readonly StringName _hasNegativeScore = "_hasNegativeScore";
@@ -63,8 +67,6 @@ public class NDailyRunLeaderboard : Control
 	private static readonly string _scenePath = SceneHelper.GetScenePath("screens/daily_run/daily_run_leaderboard");
 
 	private const int _maxEntries = 10;
-
-	private MegaLabel _titleLabel;
 
 	private NLeaderboardDayPaginator _paginator;
 
@@ -82,6 +84,8 @@ public class NDailyRunLeaderboard : Control
 
 	private Control? _noScoreUploadIndicator;
 
+	private Control _separators;
+
 	private int _currentPage;
 
 	private DateTimeOffset _todaysDailyTime;
@@ -91,6 +95,8 @@ public class NDailyRunLeaderboard : Control
 	private readonly List<ulong> _playersInRun = new List<ulong>();
 
 	private bool _hasNegativeScore;
+
+	private CancellationTokenSource? _loadCts;
 
 	private static readonly LocString _titleLoc = new LocString("main_menu_ui", "DAILY_RUN_MENU.LEADERBOARDS.title");
 
@@ -104,7 +110,6 @@ public class NDailyRunLeaderboard : Control
 
 	public override void _Ready()
 	{
-		_titleLabel = GetNode<MegaLabel>("%Title");
 		_paginator = GetNode<NLeaderboardDayPaginator>("Paginator");
 		_scoreContainer = GetNodeOrNull<VBoxContainer>("%ScoreContainer") ?? GetNodeOrNull<VBoxContainer>("%LeaderboardScoreContainer") ?? throw new InvalidOperationException("Couldn't find score container");
 		_leftArrow = GetNode<NLeaderboardPageArrow>("%LeftArrow");
@@ -113,6 +118,7 @@ public class NDailyRunLeaderboard : Control
 		_noScoresIndicator = GetNode<MegaLabel>("%NoScoresIndicator");
 		_noFriendsIndicator = GetNode<MegaLabel>("%NoFriendsIndicator");
 		_noScoreUploadIndicator = GetNodeOrNull<Control>("%ScoreWarning");
+		_separators = GetNode<Control>("%Separators");
 		CallDeferred(MethodName.SetLocalizedText);
 		_loadingIndicator.SetTextAutoSize(_fetchingScoreLoc.GetFormattedText());
 		_rightArrow.Connect(delegate
@@ -127,13 +133,16 @@ public class NDailyRunLeaderboard : Control
 
 	private void SetLocalizedText()
 	{
-		_titleLabel.SetTextAutoSize(_titleLoc.GetFormattedText());
-		_noScoresIndicator.SetTextAutoSize(_scoreLoc.GetFormattedText());
-		_noFriendsIndicator.SetTextAutoSize(_friendsLoc.GetFormattedText());
+		GetNodeOrNull<MegaLabel>("%Title")?.SetTextAutoSize(_titleLoc.GetRawText());
+		_noScoresIndicator.SetTextAutoSize(_scoreLoc.GetRawText());
+		_noFriendsIndicator.SetTextAutoSize(_friendsLoc.GetRawText());
 	}
 
 	public void Cleanup()
 	{
+		_loadCts?.Cancel();
+		_loadCts?.Dispose();
+		_loadCts = null;
 		_leftArrow.Visible = false;
 		_rightArrow.Visible = false;
 		_loadingIndicator.Visible = false;
@@ -171,11 +180,18 @@ public class NDailyRunLeaderboard : Control
 	private void SetPage(int page)
 	{
 		_currentPage = page;
-		TaskHelper.RunSafely(LoadLeaderboard(_leaderboardTime, _currentPage));
+		TaskHelper.RunSafely(LoadLeaderboard(_leaderboardTime, _currentPage, LeaderboardQueryType.FriendsOnly));
 	}
 
-	private async Task LoadLeaderboard(DateTimeOffset dateTime, int page)
+	private async Task LoadLeaderboard(DateTimeOffset dateTime, int page, LeaderboardQueryType queryType)
 	{
+		if (_loadCts != null)
+		{
+			await _loadCts.CancelAsync();
+			_loadCts.Dispose();
+		}
+		_loadCts = new CancellationTokenSource();
+		CancellationToken ct = _loadCts.Token;
 		ClearEntries();
 		_rightArrow.Disable();
 		_leftArrow.Disable();
@@ -183,57 +199,75 @@ public class NDailyRunLeaderboard : Control
 		_noFriendsIndicator.Visible = false;
 		_noScoresIndicator.Visible = false;
 		_loadingIndicator.Visible = true;
-		string leaderboardName = DailyRunUtility.GetLeaderboardName(dateTime, _playersInRun.Count);
-		DateTimeOffset dateTime2 = dateTime - TimeSpan.FromDays(1);
-		DateTimeOffset rightLeaderboardTime = dateTime + TimeSpan.FromDays(1);
-		Task<ILeaderboardHandle?> mainTask = LeaderboardManager.GetLeaderboard(leaderboardName);
-		Task<ILeaderboardHandle?> leftTask = LeaderboardManager.GetLeaderboard(DailyRunUtility.GetLeaderboardName(dateTime2, _playersInRun.Count));
-		Task<ILeaderboardHandle?> rightTask = LeaderboardManager.GetLeaderboard(DailyRunUtility.GetLeaderboardName(rightLeaderboardTime, _playersInRun.Count));
-		global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>> buffer = default(global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>);
-		global::_003CPrivateImplementationDetails_003E.InlineArrayElementRef<global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>, Task<ILeaderboardHandle>>(ref buffer, 0) = mainTask;
-		global::_003CPrivateImplementationDetails_003E.InlineArrayElementRef<global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>, Task<ILeaderboardHandle>>(ref buffer, 1) = leftTask;
-		global::_003CPrivateImplementationDetails_003E.InlineArrayElementRef<global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>, Task<ILeaderboardHandle>>(ref buffer, 2) = rightTask;
-		await Task.WhenAll(global::_003CPrivateImplementationDetails_003E.InlineArrayAsReadOnlySpan<global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>, Task<ILeaderboardHandle>>(in buffer, 3));
-		ILeaderboardHandle handle = await mainTask;
-		if (handle != null)
+		try
 		{
-			List<LeaderboardEntry> list = await LeaderboardManager.QueryLeaderboard(handle, LeaderboardQueryType.Global, page * 10, 10);
-			_noScoresIndicator.Visible = list.Count <= 0;
-			FillEntries(list);
-			_leftArrow.Visible = true;
-			_rightArrow.Visible = true;
-			if (page > 0)
+			string leaderboardName = DailyRunUtility.GetLeaderboardName(dateTime, _playersInRun.Count);
+			DateTimeOffset dateTime2 = dateTime - TimeSpan.FromDays(1);
+			DateTimeOffset rightLeaderboardTime = dateTime + TimeSpan.FromDays(1);
+			Task<ILeaderboardHandle?> mainTask = LeaderboardManager.GetLeaderboard(leaderboardName, ct);
+			Task<ILeaderboardHandle?> leftTask = LeaderboardManager.GetLeaderboard(DailyRunUtility.GetLeaderboardName(dateTime2, _playersInRun.Count), ct);
+			Task<ILeaderboardHandle?> rightTask = LeaderboardManager.GetLeaderboard(DailyRunUtility.GetLeaderboardName(rightLeaderboardTime, _playersInRun.Count), ct);
+			global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>> buffer = default(global::_003C_003Ey__InlineArray3<Task<ILeaderboardHandle>>);
+			buffer[0] = mainTask;
+			buffer[1] = leftTask;
+			buffer[2] = rightTask;
+			await Task.WhenAll<ILeaderboardHandle>(buffer);
+			ILeaderboardHandle handle = await mainTask;
+			if (ct.IsCancellationRequested)
 			{
-				_leftArrow.Enable();
+				return;
+			}
+			if (handle != null)
+			{
+				List<LeaderboardEntry> list = await LeaderboardManager.QueryLeaderboard(handle, queryType, page * 10, 10, ct);
+				if (ct.IsCancellationRequested)
+				{
+					return;
+				}
+				_noScoresIndicator.Visible = list.Count <= 0;
+				_separators.Visible = !_noScoresIndicator.Visible;
+				FillEntries(list);
+				_leftArrow.Visible = true;
+				_rightArrow.Visible = true;
+				if (page > 0)
+				{
+					_leftArrow.Enable();
+				}
+				else
+				{
+					_leftArrow.Disable();
+				}
+				if (page * 10 + 10 < LeaderboardManager.GetLeaderboardEntryCount(handle) && !_hasNegativeScore)
+				{
+					_rightArrow.Enable();
+				}
+				else
+				{
+					_rightArrow.Disable();
+				}
 			}
 			else
 			{
-				_leftArrow.Disable();
+				_noScoresIndicator.Visible = true;
+				_leftArrow.Visible = false;
+				_rightArrow.Visible = false;
 			}
-			if (page * 10 + 10 < LeaderboardManager.GetLeaderboardEntryCount(handle) && !_hasNegativeScore)
+			bool hasLeftLeaderboard = await leftTask != null;
+			bool rightArrowEnabled = await rightTask != null || rightLeaderboardTime == _todaysDailyTime;
+			_currentPage = page;
+			_paginator.Enable(hasLeftLeaderboard, rightArrowEnabled);
+			_loadingIndicator.Visible = false;
+			if (_noScoreUploadIndicator != null && _todaysDailyTime == dateTime)
 			{
-				_rightArrow.Enable();
-			}
-			else
-			{
-				_rightArrow.Disable();
+				bool flag = await DailyRunUtility.ShouldUploadScore(handle, _playersInRun, ct);
+				if (!ct.IsCancellationRequested)
+				{
+					_noScoreUploadIndicator.Visible = !flag;
+				}
 			}
 		}
-		else
+		catch (OperationCanceledException)
 		{
-			_noScoresIndicator.Visible = true;
-			_leftArrow.Visible = false;
-			_rightArrow.Visible = false;
-		}
-		bool hasLeftLeaderboard = await leftTask != null;
-		bool rightArrowEnabled = await rightTask != null || rightLeaderboardTime == _todaysDailyTime;
-		_currentPage = page;
-		_paginator.Enable(hasLeftLeaderboard, rightArrowEnabled);
-		_loadingIndicator.Visible = false;
-		if (_noScoreUploadIndicator != null && _todaysDailyTime == dateTime)
-		{
-			bool flag = await DailyRunUtility.ShouldUploadScore(handle, _playersInRun);
-			_noScoreUploadIndicator.Visible = !flag;
 		}
 	}
 
@@ -244,10 +278,11 @@ public class NDailyRunLeaderboard : Control
 			return;
 		}
 		_hasNegativeScore = false;
-		NDailyRunLeaderboardRow child = NDailyRunLeaderboardRow.CreateHeader();
+		NDailyRunLeaderboardHeader child = NDailyRunLeaderboardHeader.Create();
 		_scoreContainer.AddChildSafely(child);
 		NDailyRunLeaderboardSeparator child2 = NDailyRunLeaderboardSeparator.Create();
 		_scoreContainer.AddChildSafely(child2);
+		ulong localPlayerId = PlatformUtil.GetLocalPlayerId(LeaderboardManager.CurrentPlatform);
 		foreach (LeaderboardEntry entry in entries)
 		{
 			if (entry.score < 0)
@@ -255,7 +290,7 @@ public class NDailyRunLeaderboard : Control
 				_hasNegativeScore = true;
 				continue;
 			}
-			_scoreContainer.AddChildSafely(NDailyRunLeaderboardRow.Create(entry));
+			_scoreContainer.AddChildSafely(NDailyRunLeaderboardRow.Create(entry, entry.userIds.Contains(localPlayerId)));
 			_scoreContainer.AddChildSafely(NDailyRunLeaderboardSeparator.Create());
 		}
 	}
@@ -270,10 +305,17 @@ public class NDailyRunLeaderboard : Control
 		}
 	}
 
+	public override void _ExitTree()
+	{
+		_loadCts?.Cancel();
+		_loadCts?.Dispose();
+		_loadCts = null;
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(6);
+		List<MethodInfo> list = new List<MethodInfo>(7);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetLocalizedText, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Cleanup, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -286,6 +328,7 @@ public class NDailyRunLeaderboard : Control
 			new PropertyInfo(Variant.Type.Int, "page", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.ClearEntries, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -328,6 +371,12 @@ public class NDailyRunLeaderboard : Control
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName._ExitTree && args.Count == 0)
+		{
+			_ExitTree();
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -358,17 +407,16 @@ public class NDailyRunLeaderboard : Control
 		{
 			return true;
 		}
+		if (method == MethodName._ExitTree)
+		{
+			return true;
+		}
 		return base.HasGodotClassMethod(in method);
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool SetGodotClassPropertyValue(in godot_string_name name, in godot_variant value)
 	{
-		if (name == PropertyName._titleLabel)
-		{
-			_titleLabel = VariantUtils.ConvertTo<MegaLabel>(in value);
-			return true;
-		}
 		if (name == PropertyName._paginator)
 		{
 			_paginator = VariantUtils.ConvertTo<NLeaderboardDayPaginator>(in value);
@@ -409,6 +457,11 @@ public class NDailyRunLeaderboard : Control
 			_noScoreUploadIndicator = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
+		if (name == PropertyName._separators)
+		{
+			_separators = VariantUtils.ConvertTo<Control>(in value);
+			return true;
+		}
 		if (name == PropertyName._currentPage)
 		{
 			_currentPage = VariantUtils.ConvertTo<int>(in value);
@@ -425,11 +478,6 @@ public class NDailyRunLeaderboard : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
-		if (name == PropertyName._titleLabel)
-		{
-			value = VariantUtils.CreateFrom(in _titleLabel);
-			return true;
-		}
 		if (name == PropertyName._paginator)
 		{
 			value = VariantUtils.CreateFrom(in _paginator);
@@ -470,6 +518,11 @@ public class NDailyRunLeaderboard : Control
 			value = VariantUtils.CreateFrom(in _noScoreUploadIndicator);
 			return true;
 		}
+		if (name == PropertyName._separators)
+		{
+			value = VariantUtils.CreateFrom(in _separators);
+			return true;
+		}
 		if (name == PropertyName._currentPage)
 		{
 			value = VariantUtils.CreateFrom(in _currentPage);
@@ -487,7 +540,6 @@ public class NDailyRunLeaderboard : Control
 	internal static List<PropertyInfo> GetGodotPropertyList()
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
-		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._titleLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._paginator, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._scoreContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._leftArrow, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -496,6 +548,7 @@ public class NDailyRunLeaderboard : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._noScoresIndicator, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._noFriendsIndicator, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._noScoreUploadIndicator, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._separators, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Int, PropertyName._currentPage, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._hasNegativeScore, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
@@ -505,7 +558,6 @@ public class NDailyRunLeaderboard : Control
 	protected override void SaveGodotObjectData(GodotSerializationInfo info)
 	{
 		base.SaveGodotObjectData(info);
-		info.AddProperty(PropertyName._titleLabel, Variant.From(in _titleLabel));
 		info.AddProperty(PropertyName._paginator, Variant.From(in _paginator));
 		info.AddProperty(PropertyName._scoreContainer, Variant.From(in _scoreContainer));
 		info.AddProperty(PropertyName._leftArrow, Variant.From(in _leftArrow));
@@ -514,6 +566,7 @@ public class NDailyRunLeaderboard : Control
 		info.AddProperty(PropertyName._noScoresIndicator, Variant.From(in _noScoresIndicator));
 		info.AddProperty(PropertyName._noFriendsIndicator, Variant.From(in _noFriendsIndicator));
 		info.AddProperty(PropertyName._noScoreUploadIndicator, Variant.From(in _noScoreUploadIndicator));
+		info.AddProperty(PropertyName._separators, Variant.From(in _separators));
 		info.AddProperty(PropertyName._currentPage, Variant.From(in _currentPage));
 		info.AddProperty(PropertyName._hasNegativeScore, Variant.From(in _hasNegativeScore));
 	}
@@ -522,41 +575,41 @@ public class NDailyRunLeaderboard : Control
 	protected override void RestoreGodotObjectData(GodotSerializationInfo info)
 	{
 		base.RestoreGodotObjectData(info);
-		if (info.TryGetProperty(PropertyName._titleLabel, out var value))
+		if (info.TryGetProperty(PropertyName._paginator, out var value))
 		{
-			_titleLabel = value.As<MegaLabel>();
+			_paginator = value.As<NLeaderboardDayPaginator>();
 		}
-		if (info.TryGetProperty(PropertyName._paginator, out var value2))
+		if (info.TryGetProperty(PropertyName._scoreContainer, out var value2))
 		{
-			_paginator = value2.As<NLeaderboardDayPaginator>();
+			_scoreContainer = value2.As<VBoxContainer>();
 		}
-		if (info.TryGetProperty(PropertyName._scoreContainer, out var value3))
+		if (info.TryGetProperty(PropertyName._leftArrow, out var value3))
 		{
-			_scoreContainer = value3.As<VBoxContainer>();
+			_leftArrow = value3.As<NLeaderboardPageArrow>();
 		}
-		if (info.TryGetProperty(PropertyName._leftArrow, out var value4))
+		if (info.TryGetProperty(PropertyName._rightArrow, out var value4))
 		{
-			_leftArrow = value4.As<NLeaderboardPageArrow>();
+			_rightArrow = value4.As<NLeaderboardPageArrow>();
 		}
-		if (info.TryGetProperty(PropertyName._rightArrow, out var value5))
+		if (info.TryGetProperty(PropertyName._loadingIndicator, out var value5))
 		{
-			_rightArrow = value5.As<NLeaderboardPageArrow>();
+			_loadingIndicator = value5.As<MegaRichTextLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._loadingIndicator, out var value6))
+		if (info.TryGetProperty(PropertyName._noScoresIndicator, out var value6))
 		{
-			_loadingIndicator = value6.As<MegaRichTextLabel>();
+			_noScoresIndicator = value6.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._noScoresIndicator, out var value7))
+		if (info.TryGetProperty(PropertyName._noFriendsIndicator, out var value7))
 		{
-			_noScoresIndicator = value7.As<MegaLabel>();
+			_noFriendsIndicator = value7.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._noFriendsIndicator, out var value8))
+		if (info.TryGetProperty(PropertyName._noScoreUploadIndicator, out var value8))
 		{
-			_noFriendsIndicator = value8.As<MegaLabel>();
+			_noScoreUploadIndicator = value8.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._noScoreUploadIndicator, out var value9))
+		if (info.TryGetProperty(PropertyName._separators, out var value9))
 		{
-			_noScoreUploadIndicator = value9.As<Control>();
+			_separators = value9.As<Control>();
 		}
 		if (info.TryGetProperty(PropertyName._currentPage, out var value10))
 		{

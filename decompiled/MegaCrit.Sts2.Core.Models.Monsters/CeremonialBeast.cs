@@ -45,6 +45,8 @@ public sealed class CeremonialBeast : MonsterModel
 
 	private bool _isStunnedByPlowRemoval;
 
+	private bool _isInSecondPhase;
+
 	private bool _inMidCharge;
 
 	private MoveState _beastCryState;
@@ -83,6 +85,19 @@ public sealed class CeremonialBeast : MonsterModel
 		{
 			AssertMutable();
 			_isStunnedByPlowRemoval = value;
+		}
+	}
+
+	public bool IsInSecondPhase
+	{
+		get
+		{
+			return _isInSecondPhase;
+		}
+		private set
+		{
+			AssertMutable();
+			_isInSecondPhase = value;
 		}
 	}
 
@@ -192,6 +207,7 @@ public sealed class CeremonialBeast : MonsterModel
 	public async Task SetStunned()
 	{
 		IsStunnedByPlowRemoval = true;
+		IsInSecondPhase = true;
 		SfxCmd.Play("event:/sfx/enemy/enemy_attacks/ceremonial_beast/ceremonial_beast_stun");
 		await CreatureCmd.TriggerAnim(base.Creature, "Stun", 0.6f);
 	}

@@ -51,6 +51,7 @@ public class EventOption
 		IsLocked = OnChosen == null;
 		DisableOnChosen = true;
 		HistoryName = title;
+		AddLocVars(eventModel);
 	}
 
 	public EventOption(EventModel eventModel, Func<Task>? onChosen, string textKey, IEnumerable<IHoverTip> hoverTips)
@@ -63,6 +64,7 @@ public class EventOption
 		IsLocked = OnChosen == null;
 		DisableOnChosen = true;
 		HistoryName = Title;
+		AddLocVars(eventModel);
 	}
 
 	public EventOption(EventModel eventModel, Func<Task>? onChosen, string textKey, params IHoverTip[] hoverTips)
@@ -125,6 +127,11 @@ public class EventOption
 		return ThatWillKillPlayerIf((Player p) => (decimal)p.Creature.CurrentHp <= damage);
 	}
 
+	public EventOption ThatDecreasesMaxHp(decimal value)
+	{
+		return ThatWillKillPlayerIf((Player p) => (decimal)p.Creature.MaxHp <= value);
+	}
+
 	public EventOption ThatWillKillPlayerIf(Func<Player, bool> willKillPlayer)
 	{
 		WillKillPlayer = willKillPlayer;
@@ -141,6 +148,14 @@ public class EventOption
 	{
 		ShouldSaveChoiceToHistory = false;
 		return this;
+	}
+
+	private void AddLocVars(EventModel eventModel)
+	{
+		eventModel.Owner?.Character.AddDetailsTo(Description);
+		LocString description = Description;
+		Player? owner = eventModel.Owner;
+		description.Add("IsMultiplayer", owner != null && owner.RunState.Players.Count > 1);
 	}
 
 	public override string ToString()

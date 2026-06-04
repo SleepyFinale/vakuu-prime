@@ -46,6 +46,8 @@ public class NRelicInventory : FlowContainer
 
 		public static readonly StringName HideImmediately = "HideImmediately";
 
+		public static readonly StringName GetDefaultPosition = "GetDefaultPosition";
+
 		public new static readonly StringName _Input = "_Input";
 
 		public static readonly StringName DebugHideTopBar = "DebugHideTopBar";
@@ -269,6 +271,11 @@ public class NRelicInventory : FlowContainer
 		base.Position = position;
 	}
 
+	public Vector2 GetDefaultPosition()
+	{
+		return _originalPos;
+	}
+
 	public override void _Input(InputEvent inputEvent)
 	{
 		if (inputEvent.IsActionReleased(DebugHotkey.hideTopBar))
@@ -295,20 +302,30 @@ public class NRelicInventory : FlowContainer
 		for (int i = 0; i < RelicNodes.Count; i++)
 		{
 			NRelicInventoryHolder nRelicInventoryHolder = RelicNodes[i];
-			nRelicInventoryHolder.FocusNeighborLeft = ((i > 0) ? RelicNodes[i - 1].GetPath() : RelicNodes[i].GetPath());
-			nRelicInventoryHolder.FocusNeighborRight = ((i < RelicNodes.Count - 1) ? RelicNodes[i + 1].GetPath() : RelicNodes[i].GetPath());
+			NodePath path;
+			if (i <= 0)
+			{
+				IReadOnlyList<NRelicInventoryHolder> relicNodes = RelicNodes;
+				path = relicNodes[relicNodes.Count - 1].GetPath();
+			}
+			else
+			{
+				path = RelicNodes[i - 1].GetPath();
+			}
+			nRelicInventoryHolder.FocusNeighborLeft = path;
+			nRelicInventoryHolder.FocusNeighborRight = ((i < RelicNodes.Count - 1) ? RelicNodes[i + 1].GetPath() : RelicNodes[0].GetPath());
 			Control firstPotionControl = NRun.Instance.GlobalUi.TopBar.PotionContainer.FirstPotionControl;
-			nRelicInventoryHolder.FocusNeighborTop = ((firstPotionControl != null && GodotObject.IsInstanceValid(firstPotionControl)) ? firstPotionControl.GetPath() : null);
+			nRelicInventoryHolder.FocusNeighborTop = ((firstPotionControl != null && GodotObject.IsInstanceValid(firstPotionControl)) ? firstPotionControl.GetPath() : nRelicInventoryHolder.GetPath());
 			NMultiplayerPlayerStateContainer multiplayerPlayerContainer = NRun.Instance.GlobalUi.MultiplayerPlayerContainer;
 			if (multiplayerPlayerContainer.GetChildCount() > 0)
 			{
 				Control control = multiplayerPlayerContainer.FirstPlayerState?.Hitbox;
-				nRelicInventoryHolder.FocusNeighborBottom = ((control != null && GodotObject.IsInstanceValid(control)) ? control.GetPath() : null);
+				nRelicInventoryHolder.FocusNeighborBottom = ((control != null && GodotObject.IsInstanceValid(control)) ? control.GetPath() : nRelicInventoryHolder.GetPath());
 			}
 			else
 			{
 				Control control2 = ActiveScreenContext.Instance.GetCurrentScreen()?.FocusedControlFromTopBar;
-				nRelicInventoryHolder.FocusNeighborBottom = ((control2 != null && GodotObject.IsInstanceValid(control2)) ? control2.GetPath() : null);
+				nRelicInventoryHolder.FocusNeighborBottom = ((control2 != null && GodotObject.IsInstanceValid(control2)) ? control2.GetPath() : nRelicInventoryHolder.GetPath());
 			}
 		}
 	}
@@ -316,7 +333,7 @@ public class NRelicInventory : FlowContainer
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(13);
+		List<MethodInfo> list = new List<MethodInfo>(14);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -327,6 +344,7 @@ public class NRelicInventory : FlowContainer
 		list.Add(new MethodInfo(MethodName.AnimHide, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ShowImmediately, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.HideImmediately, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.GetDefaultPosition, new PropertyInfo(Variant.Type.Vector2, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._Input, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "inputEvent", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("InputEvent"), exported: false)
@@ -397,6 +415,11 @@ public class NRelicInventory : FlowContainer
 		{
 			HideImmediately();
 			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.GetDefaultPosition && args.Count == 0)
+		{
+			ret = VariantUtils.CreateFrom<Vector2>(GetDefaultPosition());
 			return true;
 		}
 		if (method == MethodName._Input && args.Count == 1)
@@ -473,6 +496,10 @@ public class NRelicInventory : FlowContainer
 			return true;
 		}
 		if (method == MethodName.HideImmediately)
+		{
+			return true;
+		}
+		if (method == MethodName.GetDefaultPosition)
 		{
 			return true;
 		}

@@ -34,7 +34,7 @@ public sealed class PunchOff : EventModel
 
 	protected override IEnumerable<DynamicVar> CanonicalVars => new global::_003C_003Ez__ReadOnlySingleElementList<DynamicVar>(new GoldVar(0));
 
-	public override bool IsAllowed(RunState runState)
+	public override bool IsAllowed(IRunState runState)
 	{
 		return runState.TotalFloor >= 6;
 	}
@@ -51,7 +51,6 @@ public sealed class PunchOff : EventModel
 	public override Task AfterEventStarted()
 	{
 		RunManager.Instance.RoomExited += OnRoomExited;
-		base.Owner.CanRemovePotions = false;
 		_punchCts = new CancellationTokenSource();
 		TaskHelper.RunSafely(PunchEachOther());
 		return Task.CompletedTask;
@@ -100,11 +99,6 @@ public sealed class PunchOff : EventModel
 		base.DynamicVars.Gold.BaseValue = base.Rng.NextInt(91, 99);
 	}
 
-	protected override void OnEventFinished()
-	{
-		base.Owner.CanRemovePotions = true;
-	}
-
 	private async Task Nab()
 	{
 		await CardPileCmd.AddCurseToDeck<Injury>(base.Owner);
@@ -127,7 +121,6 @@ public sealed class PunchOff : EventModel
 
 	private Task Fight()
 	{
-		base.Owner.CanRemovePotions = true;
 		EnterCombatWithoutExitingEvent<PunchOffEventEncounter>(new global::_003C_003Ez__ReadOnlyArray<Reward>(new Reward[2]
 		{
 			new RelicReward(base.Owner),

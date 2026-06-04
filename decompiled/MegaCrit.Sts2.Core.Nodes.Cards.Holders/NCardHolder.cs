@@ -36,6 +36,10 @@ public abstract class NCardHolder : Control
 
 		public new static readonly StringName _GuiInput = "_GuiInput";
 
+		public static readonly StringName EmitPressed = "EmitPressed";
+
+		public static readonly StringName EmitAltPressed = "EmitAltPressed";
+
 		public static readonly StringName SetCard = "SetCard";
 
 		public static readonly StringName OnCardReassigned = "OnCardReassigned";
@@ -196,14 +200,24 @@ public abstract class NCardHolder : Control
 			if (inputEvent.IsActionPressed(MegaInput.select))
 			{
 				SfxCmd.Play("event:/sfx/ui/clicks/ui_click");
-				EmitSignal(SignalName.Pressed, this);
+				CallDeferred(MethodName.EmitPressed);
 			}
 			else if (inputEvent.IsActionPressed(MegaInput.accept))
 			{
 				SfxCmd.Play("event:/sfx/ui/clicks/ui_click");
-				EmitSignal(SignalName.AltPressed, this);
+				CallDeferred(MethodName.EmitAltPressed);
 			}
 		}
+	}
+
+	private void EmitPressed()
+	{
+		EmitSignal(SignalName.Pressed, this);
+	}
+
+	private void EmitAltPressed()
+	{
+		EmitSignal(SignalName.AltPressed, this);
 	}
 
 	protected virtual void SetCard(NCard node)
@@ -353,7 +367,7 @@ public abstract class NCardHolder : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(16);
+		List<MethodInfo> list = new List<MethodInfo>(18);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetClickable, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
@@ -364,6 +378,8 @@ public abstract class NCardHolder : Control
 		{
 			new PropertyInfo(Variant.Type.Object, "inputEvent", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("InputEvent"), exported: false)
 		}, null));
+		list.Add(new MethodInfo(MethodName.EmitPressed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.EmitAltPressed, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.SetCard, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
 		{
 			new PropertyInfo(Variant.Type.Object, "node", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
@@ -418,6 +434,18 @@ public abstract class NCardHolder : Control
 		if (method == MethodName._GuiInput && args.Count == 1)
 		{
 			_GuiInput(VariantUtils.ConvertTo<InputEvent>(in args[0]));
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.EmitPressed && args.Count == 0)
+		{
+			EmitPressed();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName.EmitAltPressed && args.Count == 0)
+		{
+			EmitAltPressed();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -512,6 +540,14 @@ public abstract class NCardHolder : Control
 			return true;
 		}
 		if (method == MethodName._GuiInput)
+		{
+			return true;
+		}
+		if (method == MethodName.EmitPressed)
+		{
+			return true;
+		}
+		if (method == MethodName.EmitAltPressed)
 		{
 			return true;
 		}

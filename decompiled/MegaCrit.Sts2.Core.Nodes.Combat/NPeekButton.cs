@@ -125,7 +125,7 @@ public class NPeekButton : NButton
 		}
 		if (!CombatManager.Instance.IsInProgress)
 		{
-			base.Visible = false;
+			Disable();
 		}
 		for (Node parent = GetParent(); parent != null; parent = parent.GetParent())
 		{

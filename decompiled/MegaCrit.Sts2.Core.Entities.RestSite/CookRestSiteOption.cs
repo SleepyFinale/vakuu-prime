@@ -41,10 +41,11 @@ public sealed class CookRestSiteOption : RestSiteOption
 
 	public override async Task<bool> OnSelect()
 	{
-		CardSelectorPrefs cardSelectorPrefs = new CardSelectorPrefs(CardSelectorPrefs.RemoveSelectionPrompt, 2);
-		cardSelectorPrefs.Cancelable = true;
-		cardSelectorPrefs.RequireManualConfirmation = true;
-		CardSelectorPrefs prefs = cardSelectorPrefs;
+		CardSelectorPrefs prefs = new CardSelectorPrefs(CardSelectorPrefs.RemoveSelectionPrompt, 2)
+		{
+			Cancelable = true,
+			RequireManualConfirmation = true
+		};
 		IEnumerable<CardModel> enumerable = await CardSelectCmd.FromDeckForRemoval(base.Owner, prefs);
 		if (!enumerable.Any())
 		{

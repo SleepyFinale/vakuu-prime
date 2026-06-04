@@ -75,6 +75,8 @@ public class NTopBar : Control
 
 		public static readonly StringName _modifiersContainer = "_modifiersContainer";
 
+		public static readonly StringName _achievementLock = "_achievementLock";
+
 		public static readonly StringName _ascensionIcon = "_ascensionIcon";
 
 		public static readonly StringName _ascensionLabel = "_ascensionLabel";
@@ -103,6 +105,8 @@ public class NTopBar : Control
 	private static readonly Color _blueLabelOutline = new Color("004759");
 
 	private Control _modifiersContainer;
+
+	private Control _achievementLock;
 
 	private Control _ascensionIcon;
 
@@ -157,6 +161,7 @@ public class NTopBar : Control
 		Portrait = GetNode<NTopBarPortrait>("%TopBarPortrait");
 		PortraitTip = GetNode<NTopBarPortraitTip>("%TopBarPortraitTip");
 		Timer = GetNode<NRunTimer>("%TimerContainer");
+		_achievementLock = GetNode<Control>("%AchievementLock");
 		_ascensionIcon = GetNode<Control>("%AscensionIcon");
 		_ascensionLabel = GetNode<MegaLabel>("%AscensionLabel");
 		_ascensionHsv = (ShaderMaterial)_ascensionIcon.Material;
@@ -185,6 +190,7 @@ public class NTopBar : Control
 			_ascensionIcon.Visible = true;
 			_ascensionLabel.SetTextAutoSize(runState.AscensionLevel.ToString());
 		}
+		_achievementLock.Visible = runState.GameMode.AreAchievementsAndEpochsLocked();
 		_modifiersContainer.Visible = runState.Modifiers.Count > 0;
 		foreach (ModifierModel modifier in runState.Modifiers)
 		{
@@ -298,6 +304,14 @@ public class NTopBar : Control
 			FloorIcon.FocusNeighborRight = BossIcon.GetPath();
 			BossIcon.FocusNeighborLeft = FloorIcon.GetPath();
 			BossIcon.FocusNeighborRight = BossIcon.GetPath();
+			if (PortraitTip.ShowTip)
+			{
+				PortraitTip.FocusNeighborRight = Hp.GetPath();
+				PortraitTip.FocusNeighborLeft = PortraitTip.GetPath();
+				PortraitTip.FocusNeighborTop = PortraitTip.GetPath();
+				PortraitTip.FocusNeighborBottom = PortraitTip.GetPath();
+				Hp.FocusNeighborLeft = PortraitTip.GetPath();
+			}
 		}
 	}
 
@@ -506,6 +520,11 @@ public class NTopBar : Control
 			_modifiersContainer = VariantUtils.ConvertTo<Control>(in value);
 			return true;
 		}
+		if (name == PropertyName._achievementLock)
+		{
+			_achievementLock = VariantUtils.ConvertTo<Control>(in value);
+			return true;
+		}
 		if (name == PropertyName._ascensionIcon)
 		{
 			_ascensionIcon = VariantUtils.ConvertTo<Control>(in value);
@@ -612,6 +631,11 @@ public class NTopBar : Control
 			value = VariantUtils.CreateFrom(in _modifiersContainer);
 			return true;
 		}
+		if (name == PropertyName._achievementLock)
+		{
+			value = VariantUtils.CreateFrom(in _achievementLock);
+			return true;
+		}
 		if (name == PropertyName._ascensionIcon)
 		{
 			value = VariantUtils.CreateFrom(in _ascensionIcon);
@@ -659,6 +683,7 @@ public class NTopBar : Control
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.Timer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.TrailContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._modifiersContainer, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._achievementLock, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ascensionIcon, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ascensionLabel, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._ascensionHsv, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -686,6 +711,7 @@ public class NTopBar : Control
 		info.AddProperty(PropertyName.TrailContainer, Variant.From<Node>(TrailContainer));
 		info.AddProperty(PropertyName._capstoneContainer, Variant.From(in _capstoneContainer));
 		info.AddProperty(PropertyName._modifiersContainer, Variant.From(in _modifiersContainer));
+		info.AddProperty(PropertyName._achievementLock, Variant.From(in _achievementLock));
 		info.AddProperty(PropertyName._ascensionIcon, Variant.From(in _ascensionIcon));
 		info.AddProperty(PropertyName._ascensionLabel, Variant.From(in _ascensionLabel));
 		info.AddProperty(PropertyName._ascensionHsv, Variant.From(in _ascensionHsv));
@@ -757,25 +783,29 @@ public class NTopBar : Control
 		{
 			_modifiersContainer = value15.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._ascensionIcon, out var value16))
+		if (info.TryGetProperty(PropertyName._achievementLock, out var value16))
 		{
-			_ascensionIcon = value16.As<Control>();
+			_achievementLock = value16.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._ascensionLabel, out var value17))
+		if (info.TryGetProperty(PropertyName._ascensionIcon, out var value17))
 		{
-			_ascensionLabel = value17.As<MegaLabel>();
+			_ascensionIcon = value17.As<Control>();
 		}
-		if (info.TryGetProperty(PropertyName._ascensionHsv, out var value18))
+		if (info.TryGetProperty(PropertyName._ascensionLabel, out var value18))
 		{
-			_ascensionHsv = value18.As<ShaderMaterial>();
+			_ascensionLabel = value18.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._hideTween, out var value19))
+		if (info.TryGetProperty(PropertyName._ascensionHsv, out var value19))
 		{
-			_hideTween = value19.As<Tween>();
+			_ascensionHsv = value19.As<ShaderMaterial>();
 		}
-		if (info.TryGetProperty(PropertyName._isDebugHidden, out var value20))
+		if (info.TryGetProperty(PropertyName._hideTween, out var value20))
 		{
-			_isDebugHidden = value20.As<bool>();
+			_hideTween = value20.As<Tween>();
+		}
+		if (info.TryGetProperty(PropertyName._isDebugHidden, out var value21))
+		{
+			_isDebugHidden = value21.As<bool>();
 		}
 	}
 }

@@ -6,73 +6,75 @@ using Godot.NativeInterop;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Runs;
 
 namespace MegaCrit.sts2.Core.Nodes.TopBar;
 
 [ScriptPath("res://src/Core/Nodes/TopBar/NTopBarPortraitTip.cs")]
-public class NTopBarPortraitTip : TextureRect
+public class NTopBarPortraitTip : NClickableControl
 {
-	public new class MethodName : TextureRect.MethodName
+	public new class MethodName : NClickableControl.MethodName
 	{
 		public new static readonly StringName _Ready = "_Ready";
 
-		public static readonly StringName OnHovered = "OnHovered";
+		public new static readonly StringName OnFocus = "OnFocus";
 
-		public static readonly StringName OnUnhovered = "OnUnhovered";
+		public new static readonly StringName OnUnfocus = "OnUnfocus";
 	}
 
-	public new class PropertyName : TextureRect.PropertyName
+	public new class PropertyName : NClickableControl.PropertyName
 	{
-		public static readonly StringName _showTip = "_showTip";
+		public static readonly StringName ShowTip = "ShowTip";
 	}
 
-	public new class SignalName : TextureRect.SignalName
+	public new class SignalName : NClickableControl.SignalName
 	{
 	}
 
 	private IHoverTip _hoverTip;
 
-	private bool _showTip;
+	public bool ShowTip { get; private set; }
 
 	public override void _Ready()
 	{
-		Connect(Control.SignalName.MouseEntered, Callable.From(OnHovered));
-		Connect(Control.SignalName.MouseExited, Callable.From(OnUnhovered));
+		ConnectSignals();
 	}
 
 	public void Initialize(IRunState runState)
 	{
 		int ascensionLevel = runState.AscensionLevel;
-		_showTip = ascensionLevel > 0;
-		if (_showTip)
+		bool flag = runState.GameMode.AreAchievementsAndEpochsLocked();
+		ShowTip = ascensionLevel > 0 || flag;
+		if (ShowTip)
 		{
-			_hoverTip = AscensionHelper.GetHoverTip(LocalContext.GetMe(runState).Character, ascensionLevel);
+			_hoverTip = AscensionHelper.GetHoverTip(LocalContext.GetMe(runState).Character, ascensionLevel, flag);
 		}
+		base.FocusMode = (FocusModeEnum)(ShowTip ? 2 : 0);
 	}
 
-	private void OnHovered()
+	protected override void OnFocus()
 	{
-		if (_showTip)
+		if (ShowTip)
 		{
 			NHoverTipSet nHoverTipSet = NHoverTipSet.CreateAndShow(this, _hoverTip);
 			nHoverTipSet.GlobalPosition = base.GlobalPosition + new Vector2(0f, base.Size.Y + 20f);
 		}
 	}
 
-	private void OnUnhovered()
+	protected override void OnUnfocus()
 	{
 		NHoverTipSet.Remove(this);
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	internal static List<MethodInfo> GetGodotMethodList()
+	internal new static List<MethodInfo> GetGodotMethodList()
 	{
 		List<MethodInfo> list = new List<MethodInfo>(3);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.OnHovered, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.OnUnhovered, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnFocus, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.OnUnfocus, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -85,15 +87,15 @@ public class NTopBarPortraitTip : TextureRect
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.OnHovered && args.Count == 0)
+		if (method == MethodName.OnFocus && args.Count == 0)
 		{
-			OnHovered();
+			OnFocus();
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.OnUnhovered && args.Count == 0)
+		if (method == MethodName.OnUnfocus && args.Count == 0)
 		{
-			OnUnhovered();
+			OnUnfocus();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -107,11 +109,11 @@ public class NTopBarPortraitTip : TextureRect
 		{
 			return true;
 		}
-		if (method == MethodName.OnHovered)
+		if (method == MethodName.OnFocus)
 		{
 			return true;
 		}
-		if (method == MethodName.OnUnhovered)
+		if (method == MethodName.OnUnfocus)
 		{
 			return true;
 		}
@@ -121,9 +123,9 @@ public class NTopBarPortraitTip : TextureRect
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool SetGodotClassPropertyValue(in godot_string_name name, in godot_variant value)
 	{
-		if (name == PropertyName._showTip)
+		if (name == PropertyName.ShowTip)
 		{
-			_showTip = VariantUtils.ConvertTo<bool>(in value);
+			ShowTip = VariantUtils.ConvertTo<bool>(in value);
 			return true;
 		}
 		return base.SetGodotClassPropertyValue(in name, in value);
@@ -132,19 +134,19 @@ public class NTopBarPortraitTip : TextureRect
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override bool GetGodotClassPropertyValue(in godot_string_name name, out godot_variant value)
 	{
-		if (name == PropertyName._showTip)
+		if (name == PropertyName.ShowTip)
 		{
-			value = VariantUtils.CreateFrom(in _showTip);
+			value = VariantUtils.CreateFrom<bool>(ShowTip);
 			return true;
 		}
 		return base.GetGodotClassPropertyValue(in name, out value);
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	internal static List<PropertyInfo> GetGodotPropertyList()
+	internal new static List<PropertyInfo> GetGodotPropertyList()
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
-		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName._showTip, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Bool, PropertyName.ShowTip, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		return list;
 	}
 
@@ -152,16 +154,16 @@ public class NTopBarPortraitTip : TextureRect
 	protected override void SaveGodotObjectData(GodotSerializationInfo info)
 	{
 		base.SaveGodotObjectData(info);
-		info.AddProperty(PropertyName._showTip, Variant.From(in _showTip));
+		info.AddProperty(PropertyName.ShowTip, Variant.From<bool>(ShowTip));
 	}
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	protected override void RestoreGodotObjectData(GodotSerializationInfo info)
 	{
 		base.RestoreGodotObjectData(info);
-		if (info.TryGetProperty(PropertyName._showTip, out var value))
+		if (info.TryGetProperty(PropertyName.ShowTip, out var value))
 		{
-			_showTip = value.As<bool>();
+			ShowTip = value.As<bool>();
 		}
 	}
 }

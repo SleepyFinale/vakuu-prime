@@ -1707,7 +1707,17 @@ class RunState:
             return []
         if any(getattr(modifier, "modifier_id", None) == "flight" for modifier in self.modifiers):
             return [point.coord for point in self.map.get_row(last_coord.row + 1)]
-        return [c.coord for c in last_point.children]
+        coords = [c.coord for c in last_point.children]
+        for relic in self.player.get_relic_objects():
+            allow_free_travel = getattr(relic, "should_allow_free_travel", None)
+            if not callable(allow_free_travel):
+                continue
+            if allow_free_travel(self.player, self) is not True:
+                continue
+            for prior_coord in self.visited_map_coords[:-1]:
+                if prior_coord not in coords:
+                    coords.append(prior_coord)
+        return coords
 
     def resolve_room_type(self, point_type: MapPointType, blacklist: set[RoomType] | None = None) -> RoomType:
         """Convert a MapPointType to a RoomType, rolling for Unknown rooms."""

@@ -119,7 +119,11 @@ public sealed class SpoilsMap : CardModel
 	{
 		await PlayerCmd.GainGold(base.DynamicVars.Gold.BaseValue, base.Owner);
 		PlayerCmd.CompleteQuest(this);
-		await CardPileCmd.RemoveFromDeck(this);
+		List<CardModel> list = base.Owner.Deck.Cards.Where((CardModel c) => c is SpoilsMap).ToList();
+		foreach (CardModel item in list)
+		{
+			await CardPileCmd.RemoveFromDeck(item);
+		}
 		return base.DynamicVars.Gold.IntValue;
 	}
 }

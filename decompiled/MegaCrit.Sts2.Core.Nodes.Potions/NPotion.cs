@@ -21,6 +21,8 @@ public class NPotion : Control
 	{
 		public new static readonly StringName _Ready = "_Ready";
 
+		public new static readonly StringName _ExitTree = "_ExitTree";
+
 		public static readonly StringName Reload = "Reload";
 
 		public static readonly StringName DoFlash = "DoFlash";
@@ -81,7 +83,6 @@ public class NPotion : Control
 		}
 		set
 		{
-			value.AssertMutable();
 			_model = value;
 			Reload();
 		}
@@ -104,6 +105,11 @@ public class NPotion : Control
 		Outline = GetNode<TextureRect>("%Outline");
 		_container = GetNode<Control>("Container");
 		Reload();
+	}
+
+	public override void _ExitTree()
+	{
+		_cancellationTokenSource?.Cancel();
 	}
 
 	private void Reload()
@@ -176,8 +182,9 @@ public class NPotion : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(4);
+		List<MethodInfo> list = new List<MethodInfo>(5);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.Reload, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.DoFlash, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.DoBounce, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -190,6 +197,12 @@ public class NPotion : Control
 		if (method == MethodName._Ready && args.Count == 0)
 		{
 			_Ready();
+			ret = default(godot_variant);
+			return true;
+		}
+		if (method == MethodName._ExitTree && args.Count == 0)
+		{
+			_ExitTree();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -218,6 +231,10 @@ public class NPotion : Control
 	protected override bool HasGodotClassMethod(in godot_string_name method)
 	{
 		if (method == MethodName._Ready)
+		{
+			return true;
+		}
+		if (method == MethodName._ExitTree)
 		{
 			return true;
 		}

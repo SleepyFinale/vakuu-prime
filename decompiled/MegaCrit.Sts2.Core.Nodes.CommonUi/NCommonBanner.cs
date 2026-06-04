@@ -20,11 +20,15 @@ public class NCommonBanner : Control
 		public static readonly StringName AnimateIn = "AnimateIn";
 
 		public static readonly StringName AnimateOut = "AnimateOut";
+
+		public static readonly StringName ChangeText = "ChangeText";
 	}
 
 	public new class PropertyName : Control.PropertyName
 	{
 		public static readonly StringName label = "label";
+
+		public static readonly StringName _labelTween = "_labelTween";
 
 		public static readonly StringName _tween = "_tween";
 
@@ -41,6 +45,8 @@ public class NCommonBanner : Control
 
 	public MegaLabel label;
 
+	private Tween? _labelTween;
+
 	private Tween? _tween;
 
 	private Vector2 _showPos;
@@ -53,7 +59,7 @@ public class NCommonBanner : Control
 
 	public override void _Ready()
 	{
-		label = GetNode<MegaLabel>("MegaLabel");
+		label = GetNode<MegaLabel>("%Label");
 		base.Modulate = StsColors.transparentWhite;
 		_imgOffset = new Vector2(GetViewportRect().Size.X * 0.5f, GetViewportRect().Size.Y * 0.5f) - base.GlobalPosition;
 		GetTree().Root.Connect(Viewport.SignalName.SizeChanged, Callable.From(OnWindowChange));
@@ -83,14 +89,27 @@ public class NCommonBanner : Control
 		_tween.TweenProperty(this, "modulate:a", 0f, 0.4).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Expo);
 	}
 
+	public void ChangeText(string text)
+	{
+		label.SetTextAutoSize(text);
+		label.Modulate = StsColors.transparentWhite;
+		_labelTween?.Kill();
+		_labelTween = CreateTween();
+		_labelTween.TweenProperty(label, "modulate:a", 1f, 0.25);
+	}
+
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(4);
+		List<MethodInfo> list = new List<MethodInfo>(5);
 		list.Add(new MethodInfo(MethodName._Ready, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnWindowChange, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AnimateIn, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AnimateOut, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.ChangeText, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
+		{
+			new PropertyInfo(Variant.Type.String, "text", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false)
+		}, null));
 		return list;
 	}
 
@@ -121,6 +140,12 @@ public class NCommonBanner : Control
 			ret = default(godot_variant);
 			return true;
 		}
+		if (method == MethodName.ChangeText && args.Count == 1)
+		{
+			ChangeText(VariantUtils.ConvertTo<string>(in args[0]));
+			ret = default(godot_variant);
+			return true;
+		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -143,6 +168,10 @@ public class NCommonBanner : Control
 		{
 			return true;
 		}
+		if (method == MethodName.ChangeText)
+		{
+			return true;
+		}
 		return base.HasGodotClassMethod(in method);
 	}
 
@@ -152,6 +181,11 @@ public class NCommonBanner : Control
 		if (name == PropertyName.label)
 		{
 			label = VariantUtils.ConvertTo<MegaLabel>(in value);
+			return true;
+		}
+		if (name == PropertyName._labelTween)
+		{
+			_labelTween = VariantUtils.ConvertTo<Tween>(in value);
 			return true;
 		}
 		if (name == PropertyName._tween)
@@ -185,6 +219,11 @@ public class NCommonBanner : Control
 			value = VariantUtils.CreateFrom(in label);
 			return true;
 		}
+		if (name == PropertyName._labelTween)
+		{
+			value = VariantUtils.CreateFrom(in _labelTween);
+			return true;
+		}
 		if (name == PropertyName._tween)
 		{
 			value = VariantUtils.CreateFrom(in _tween);
@@ -213,6 +252,7 @@ public class NCommonBanner : Control
 	{
 		List<PropertyInfo> list = new List<PropertyInfo>();
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName.label, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
+		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._labelTween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Object, PropertyName._tween, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._showPos, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
 		list.Add(new PropertyInfo(Variant.Type.Vector2, PropertyName._hidePos, PropertyHint.None, "", PropertyUsageFlags.ScriptVariable, exported: false));
@@ -225,6 +265,7 @@ public class NCommonBanner : Control
 	{
 		base.SaveGodotObjectData(info);
 		info.AddProperty(PropertyName.label, Variant.From(in label));
+		info.AddProperty(PropertyName._labelTween, Variant.From(in _labelTween));
 		info.AddProperty(PropertyName._tween, Variant.From(in _tween));
 		info.AddProperty(PropertyName._showPos, Variant.From(in _showPos));
 		info.AddProperty(PropertyName._hidePos, Variant.From(in _hidePos));
@@ -239,21 +280,25 @@ public class NCommonBanner : Control
 		{
 			label = value.As<MegaLabel>();
 		}
-		if (info.TryGetProperty(PropertyName._tween, out var value2))
+		if (info.TryGetProperty(PropertyName._labelTween, out var value2))
 		{
-			_tween = value2.As<Tween>();
+			_labelTween = value2.As<Tween>();
 		}
-		if (info.TryGetProperty(PropertyName._showPos, out var value3))
+		if (info.TryGetProperty(PropertyName._tween, out var value3))
 		{
-			_showPos = value3.As<Vector2>();
+			_tween = value3.As<Tween>();
 		}
-		if (info.TryGetProperty(PropertyName._hidePos, out var value4))
+		if (info.TryGetProperty(PropertyName._showPos, out var value4))
 		{
-			_hidePos = value4.As<Vector2>();
+			_showPos = value4.As<Vector2>();
 		}
-		if (info.TryGetProperty(PropertyName._imgOffset, out var value5))
+		if (info.TryGetProperty(PropertyName._hidePos, out var value5))
 		{
-			_imgOffset = value5.As<Vector2>();
+			_hidePos = value5.As<Vector2>();
+		}
+		if (info.TryGetProperty(PropertyName._imgOffset, out var value6))
+		{
+			_imgOffset = value6.As<Vector2>();
 		}
 	}
 }

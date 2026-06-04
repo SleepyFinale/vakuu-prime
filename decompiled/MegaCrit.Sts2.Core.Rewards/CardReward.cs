@@ -32,6 +32,8 @@ public class CardReward : Reward
 
 	private bool _cardsWereManuallySet;
 
+	private bool _hasBeenRerolled;
+
 	private NCardRewardSelectionScreen? _currentlyShownScreen;
 
 	private static string RareRewardIcon => ImageHelper.GetImagePath("ui/reward_screen/reward_icon_rare.png");
@@ -76,6 +78,8 @@ public class CardReward : Reward
 
 	private CardCreationOptions Options { get; }
 
+	private CardCreationOptions RerollOptions { get; }
+
 	public bool CanReroll { get; set; }
 
 	public bool CanSkip { get; init; } = true;
@@ -89,13 +93,15 @@ public class CardReward : Reward
 	{
 		OptionCount = cardCount;
 		Options = options;
+		RerollOptions = options;
 		player.RelicObtained += OnRelicObtained;
 	}
 
-	public CardReward(IEnumerable<CardModel> cardsToOffer, CardCreationSource source, Player player)
+	public CardReward(IEnumerable<CardModel> cardsToOffer, CardCreationSource source, Player player, CardCreationOptions rerollOptions)
 		: base(player)
 	{
 		Options = new CardCreationOptions(Array.Empty<CardModel>(), source, CardRarityOddsType.Uniform).WithFlags(CardCreationFlags.NoCardPoolModifications | CardCreationFlags.NoCardModelModifications);
+		RerollOptions = rerollOptions;
 		_cardsWereManuallySet = true;
 		_cards = cardsToOffer.Select((CardModel c) => new CardCreationResult(c)).ToList();
 		OptionCount = _cards.Count;
@@ -103,9 +109,10 @@ public class CardReward : Reward
 
 	public override Task Populate()
 	{
-		if (_cardsWereManuallySet)
+		CardCreationOptions cardCreationOptions = (_hasBeenRerolled ? RerollOptions : Options);
+		if (_cardsWereManuallySet && !_hasBeenRerolled)
 		{
-			if (Hook.TryModifyCardRewardOptions(base.Player.RunState, base.Player, _cards, Options, out List<AbstractModel> modifiers))
+			if (Hook.TryModifyCardRewardOptions(base.Player.RunState, base.Player, _cards, cardCreationOptions, out List<AbstractModel> modifiers))
 			{
 				TaskHelper.RunSafely(Hook.AfterModifyingCardRewardOptions(base.Player.RunState, modifiers));
 			}
@@ -115,7 +122,7 @@ public class CardReward : Reward
 		{
 			return Task.CompletedTask;
 		}
-		IEnumerable<CardCreationResult> collection = CardFactory.CreateForReward(base.Player, OptionCount, Options);
+		IEnumerable<CardCreationResult> collection = CardFactory.CreateForReward(base.Player, OptionCount, cardCreationOptions);
 		_cards.Clear();
 		_cards.AddRange(collection);
 		IReadOnlyList<CardRewardAlternative> extraOptions = CardRewardAlternative.Generate(this);
@@ -232,6 +239,7 @@ public class CardReward : Reward
 			base.Player.RunState.CurrentMapPointHistoryEntry.GetEntry(LocalContext.NetId.Value).CardChoices.Add(new CardChoiceHistoryEntry(card.Card, wasPicked: false));
 			RunManager.Instance.RewardSynchronizer.SyncLocalSkippedCard(card.Card);
 		}
+		_hasBeenRerolled = true;
 		_cards.Clear();
 		await Populate();
 	}

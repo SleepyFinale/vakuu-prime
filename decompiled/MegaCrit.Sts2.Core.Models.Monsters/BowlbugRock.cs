@@ -10,7 +10,6 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
-using MegaCrit.Sts2.Core.Nodes.Combat;
 
 namespace MegaCrit.Sts2.Core.Models.Monsters;
 
@@ -51,9 +50,8 @@ public sealed class BowlbugRock : MonsterModel
 
 	public override DamageSfxType TakeDamageSfxType => DamageSfxType.Insect;
 
-	public override void SetupSkins(NCreatureVisuals visuals)
+	public override void SetupSkins(MegaSprite spine, MegaSkeleton skeleton)
 	{
-		MegaSkeleton skeleton = visuals.SpineBody.GetSkeleton();
 		skeleton.SetSkin(skeleton.GetData().FindSkin("rock"));
 		skeleton.SetSlotsToSetupPose();
 	}
@@ -89,6 +87,7 @@ public sealed class BowlbugRock : MonsterModel
 		{
 			SfxCmd.Play("event:/sfx/enemy/enemy_attacks/workbug_rock/workbug_rock_stun");
 			await CreatureCmd.TriggerAnim(base.Creature, "Stun", 0.6f);
+			await CreatureCmd.Stun(base.Creature, DizzyMove);
 		}
 	}
 

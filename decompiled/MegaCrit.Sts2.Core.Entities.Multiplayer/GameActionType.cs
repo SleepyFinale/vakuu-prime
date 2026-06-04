@@ -5,5 +5,6 @@ public enum GameActionType
 	None,
 	Combat,
 	CombatPlayPhaseOnly,
-	NonCombat
+	NonCombat,
+	Any
 }

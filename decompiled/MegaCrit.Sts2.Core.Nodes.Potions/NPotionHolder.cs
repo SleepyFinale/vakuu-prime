@@ -17,9 +17,12 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models.Potions;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.Events.Custom;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
@@ -55,7 +58,7 @@ public class NPotionHolder : NClickableControl
 
 		public static readonly StringName DisableUntilPotionRemoved = "DisableUntilPotionRemoved";
 
-		public static readonly StringName CancelPotionUse = "CancelPotionUse";
+		public static readonly StringName CancelPotionUseOrDiscard = "CancelPotionUseOrDiscard";
 
 		public static readonly StringName RemoveUsedPotion = "RemoveUsedPotion";
 
@@ -174,23 +177,24 @@ public class NPotionHolder : NClickableControl
 		_isFocused = false;
 		NHoverTipSet.Remove(this);
 		_hoverTween?.Kill();
-		_hoverTween = CreateTween().SetParallel();
 		if (Potion != null)
 		{
 			if (!_disabledUntilPotionRemoved)
 			{
+				_hoverTween = CreateTween().SetParallel();
 				_hoverTween.TweenProperty(Potion, "scale", _potionScale, 0.5).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Expo);
 			}
 		}
 		else
 		{
+			_hoverTween = CreateTween().SetParallel();
 			_hoverTween.TweenProperty(_emptyIcon, "scale", _potionScale, 0.5).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Expo);
 		}
 	}
 
 	protected override void OnPress()
 	{
-		if (Potion != null)
+		if (Potion != null && _isUsable)
 		{
 			GetViewport().SetInputAsHandled();
 		}
@@ -202,7 +206,7 @@ public class NPotionHolder : NClickableControl
 		{
 			OpenPotionPopup();
 		}
-		if (Potion != null)
+		if (Potion != null && _isUsable)
 		{
 			GetViewport().SetInputAsHandled();
 		}
@@ -253,7 +257,7 @@ public class NPotionHolder : NClickableControl
 		}
 	}
 
-	public void CancelPotionUse()
+	public void CancelPotionUseOrDiscard()
 	{
 		_cancelGrayOutPotionSource?.Cancel();
 		_disabledUntilPotionRemoved = false;
@@ -371,12 +375,38 @@ public class NPotionHolder : NClickableControl
 		}
 		bool flag = Potion.Model is FoulPotion;
 		bool flag2 = creature.Player.RunState.CurrentRoom.RoomType == RoomType.Shop;
-		bool isFoulPotionInShop = isUsingController && flag && flag2;
+		int num;
+		if (creature.Player.RunState.CurrentRoom is EventRoom eventRoom && eventRoom.CanonicalEvent is FakeMerchant)
+		{
+			EventModel localMutableEvent = eventRoom.LocalMutableEvent;
+			if (localMutableEvent != null)
+			{
+				NFakeMerchant nFakeMerchant = localMutableEvent.Node as NFakeMerchant;
+				num = ((nFakeMerchant != null) ? 1 : 0);
+				goto IL_0239;
+			}
+		}
+		num = 0;
+		goto IL_0239;
+		IL_0239:
+		bool flag3 = (byte)num != 0;
+		bool isFoulPotionInShop = isUsingController && flag && (flag2 || flag3);
 		if (isFoulPotionInShop)
 		{
-			NMerchantButton merchantButton = NMerchantRoom.Instance.MerchantButton;
-			merchantButton.SetFocusMode(FocusModeEnum.All);
-			merchantButton.TryGrabFocus();
+			if (flag2)
+			{
+				NMerchantButton merchantButton = NMerchantRoom.Instance.MerchantButton;
+				merchantButton.SetFocusMode(FocusModeEnum.All);
+				merchantButton.TryGrabFocus();
+			}
+			else if (flag3)
+			{
+				EventRoom eventRoom2 = (EventRoom)creature.Player.RunState.CurrentRoom;
+				NFakeMerchant nFakeMerchant2 = (NFakeMerchant)eventRoom2.LocalMutableEvent.Node;
+				NMerchantButton merchantButton2 = nFakeMerchant2.MerchantButton;
+				merchantButton2.SetFocusMode(FocusModeEnum.All);
+				merchantButton2.TryGrabFocus();
+			}
 		}
 		try
 		{
@@ -413,8 +443,8 @@ public class NPotionHolder : NClickableControl
 		{
 			if (isFoulPotionInShop)
 			{
-				NMerchantButton merchantButton2 = NMerchantRoom.Instance.MerchantButton;
-				merchantButton2.SetFocusMode(FocusModeEnum.None);
+				NMerchantButton merchantButton3 = NMerchantRoom.Instance.MerchantButton;
+				merchantButton3.SetFocusMode(FocusModeEnum.None);
 			}
 		}
 		this.TryGrabFocus();
@@ -439,7 +469,7 @@ public class NPotionHolder : NClickableControl
 
 	public async Task ShineOnStartOfCombat()
 	{
-		if (HasPotion)
+		if (HasPotion && Potion.IsValid())
 		{
 			Potion.DoBounce();
 			await Cmd.Wait(0.25f);
@@ -466,7 +496,7 @@ public class NPotionHolder : NClickableControl
 			new PropertyInfo(Variant.Type.Object, "potion", PropertyHint.None, "", PropertyUsageFlags.Default, new StringName("Control"), exported: false)
 		}, null));
 		list.Add(new MethodInfo(MethodName.DisableUntilPotionRemoved, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.CancelPotionUse, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
+		list.Add(new MethodInfo(MethodName.CancelPotionUseOrDiscard, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.RemoveUsedPotion, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.DiscardPotion, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.ShouldCancelTargeting, new PropertyInfo(Variant.Type.Bool, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
@@ -529,9 +559,9 @@ public class NPotionHolder : NClickableControl
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.CancelPotionUse && args.Count == 0)
+		if (method == MethodName.CancelPotionUseOrDiscard && args.Count == 0)
 		{
-			CancelPotionUse();
+			CancelPotionUseOrDiscard();
 			ret = default(godot_variant);
 			return true;
 		}
@@ -606,7 +636,7 @@ public class NPotionHolder : NClickableControl
 		{
 			return true;
 		}
-		if (method == MethodName.CancelPotionUse)
+		if (method == MethodName.CancelPotionUseOrDiscard)
 		{
 			return true;
 		}

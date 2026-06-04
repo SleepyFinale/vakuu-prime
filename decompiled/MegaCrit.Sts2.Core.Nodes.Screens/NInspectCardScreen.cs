@@ -170,8 +170,6 @@ public class NInspectCardScreen : Control, IScreenContext
 		_card.Modulate = StsColors.transparentBlack;
 		_leftButton.Modulate = StsColors.transparentBlack;
 		_rightButton.Modulate = StsColors.transparentBlack;
-		_rightButton.Enable();
-		_leftButton.Enable();
 		_openTween?.Kill();
 		_openTween = CreateTween().SetParallel();
 		_openTween.TweenProperty(_backstop, "modulate:a", 0.9f, 0.25);
@@ -190,9 +188,11 @@ public class NInspectCardScreen : Control, IScreenContext
 		_cardTween.TweenProperty(_card, "modulate", Colors.White, 0.25);
 		_cardTween.TweenProperty(_card, "scale", Vector2.One * 2f, 0.15).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Spring)
 			.SetDelay(0.1);
-		_upgradeTickbox.Enable();
 		ActiveScreenContext.Instance.Update();
 		NHotkeyManager.Instance.AddBlockingScreen(this);
+		_rightButton.Enable();
+		_leftButton.Enable();
+		_upgradeTickbox.Enable();
 		NHotkeyManager.Instance.PushHotkeyPressedBinding(MegaInput.cancel, Close);
 		NHotkeyManager.Instance.PushHotkeyPressedBinding(MegaInput.pauseAndBack, Close);
 		NHotkeyManager.Instance.PushHotkeyPressedBinding(MegaInput.left, OnLeftButtonReleased);

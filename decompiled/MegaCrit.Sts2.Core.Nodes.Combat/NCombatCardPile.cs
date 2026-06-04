@@ -183,6 +183,10 @@ public abstract class NCombatCardPile : NButton
 		{
 			return;
 		}
+		if (NTargetManager.Instance.IsInSelection)
+		{
+			NTargetManager.Instance.CancelTargeting();
+		}
 		if (_pile.IsEmpty)
 		{
 			NCapstoneContainer? instance = NCapstoneContainer.Instance;

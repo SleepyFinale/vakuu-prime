@@ -105,7 +105,7 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 
 	public static readonly string dateFormat = LocManager.Instance.GetTable("main_menu_ui").GetRawText("DAILY_RUN_MENU.DATE_FORMAT");
 
-	private MegaLabel _dateLabel;
+	private MegaRichTextLabel _dateLabel;
 
 	private NConfirmButton _embarkButton;
 
@@ -148,11 +148,11 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 		_embarkButton = GetNode<NConfirmButton>("%ConfirmButton");
 		_backButton = GetNode<NBackButton>("%BackButton");
 		_unreadyButton = GetNode<NBackButton>("%UnreadyButton");
-		_dateLabel = GetNode<MegaLabel>("%Date");
+		_dateLabel = GetNode<MegaRichTextLabel>("%Date");
 		_leaderboard = GetNode<NDailyRunLeaderboard>("%Leaderboards");
 		_modifiersTitleLabel = GetNode<MegaLabel>("%ModifiersLabel");
 		_modifiersContainer = GetNode<Control>("%ModifiersContainer");
-		_characterContainer = GetNode<NDailyRunCharacterContainer>("%CharacterContainer");
+		_characterContainer = GetNode<NDailyRunCharacterContainer>("ChallengeContainer/CenterContainer/HBoxContainer/CharacterContainer");
 		_remotePlayerContainer = GetNode<NRemoteLoadLobbyPlayerContainer>("%RemotePlayerLoadContainer");
 		_readyAndWaitingContainer = GetNode<Control>("%ReadyAndWaitingPanel");
 		foreach (NDailyRunScreenModifier item in _modifiersContainer.GetChildren().OfType<NDailyRunScreenModifier>())
@@ -252,7 +252,7 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 		_embarkButton.Disable();
 		_backButton.Disable();
 		_lobby.SetReady(ready: true);
-		if (_lobby.NetService.Type.IsMultiplayer() && _lobby.Run.Players.Any((SerializablePlayer p) => !_lobby.IsPlayerReady(p.NetId)))
+		if (!_lobby.IsAboutToBeginGame())
 		{
 			_readyAndWaitingContainer.Visible = true;
 			_unreadyButton.Enable();
@@ -349,6 +349,8 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 	public void BeginRun()
 	{
 		NAudioManager.Instance?.StopMusic();
+		_embarkButton.Disable();
+		_unreadyButton.Disable();
 		TaskHelper.RunSafely(StartRun());
 	}
 
@@ -358,7 +360,10 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 		{
 			return;
 		}
-		_stack.Pop();
+		if (_stack != null && _stack.Peek() == this)
+		{
+			_stack.Pop();
+		}
 		if (TestMode.IsOff)
 		{
 			NErrorPopup nErrorPopup = NErrorPopup.Create(info);
@@ -623,7 +628,7 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 	{
 		if (name == PropertyName._dateLabel)
 		{
-			_dateLabel = VariantUtils.ConvertTo<MegaLabel>(in value);
+			_dateLabel = VariantUtils.ConvertTo<MegaRichTextLabel>(in value);
 			return true;
 		}
 		if (name == PropertyName._embarkButton)
@@ -775,7 +780,7 @@ public class NDailyRunLoadScreen : NSubmenu, ILoadRunLobbyListener
 		base.RestoreGodotObjectData(info);
 		if (info.TryGetProperty(PropertyName._dateLabel, out var value))
 		{
-			_dateLabel = value.As<MegaLabel>();
+			_dateLabel = value.As<MegaRichTextLabel>();
 		}
 		if (info.TryGetProperty(PropertyName._embarkButton, out var value2))
 		{

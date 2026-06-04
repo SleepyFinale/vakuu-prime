@@ -80,7 +80,7 @@ using RiderTestRunner;
 [assembly: AssemblyCopyright("© 2023 Mega Crit Games")]
 [assembly: AssemblyDescription("sts2")]
 [assembly: AssemblyFileVersion("0.1.0.0")]
-[assembly: AssemblyInformationalVersion("0.1.0+cb602cefd883e8595b7f709863489a88c2a32765")]
+[assembly: AssemblyInformationalVersion("0.1.0+460a0ece9b1a6a2a66a71f2125128cf68ce104ad")]
 [assembly: AssemblyProduct("sts2")]
 [assembly: AssemblyTitle("sts2")]
 [assembly: AssemblyHasScripts(new Type[]
@@ -98,6 +98,7 @@ using RiderTestRunner;
 	typeof(NTrailTest),
 	typeof(LocTextLabel),
 	typeof(NDecimillipedeSegmentDriver),
+	typeof(NPhobiaAnimationToggler),
 	typeof(NSpineAutoPlayer),
 	typeof(NAudioManager),
 	typeof(NRunMusicController),
@@ -182,12 +183,10 @@ using RiderTestRunner;
 	typeof(NVerticalPopup),
 	typeof(NMultiplayerTest),
 	typeof(NMultiplayerTestCharacterPaginator),
-	typeof(NCommandHistory),
 	typeof(NDebugAspectRatio),
 	typeof(NDebugInfoLabelManager),
 	typeof(NDevConsole),
 	typeof(NFpsVisualizer),
-	typeof(NMemoryMonitor),
 	typeof(NParticleCounter),
 	typeof(NSceneBootstrapper),
 	typeof(NCrystalSphereCell),
@@ -249,7 +248,6 @@ using RiderTestRunner;
 	typeof(NBackgroundModeHandler),
 	typeof(NGame),
 	typeof(NMuteInBackgroundHandler),
-	typeof(NOneTimeInitialization),
 	typeof(NRun),
 	typeof(NSceneContainer),
 	typeof(NTransition),
@@ -275,6 +273,7 @@ using RiderTestRunner;
 	typeof(NLinkedRewardSet),
 	typeof(NRewardButton),
 	typeof(NCombatBackground),
+	typeof(NCombatBackgroundLayer),
 	typeof(NCombatRoom),
 	typeof(NEventRoom),
 	typeof(NMapRoom),
@@ -319,6 +318,7 @@ using RiderTestRunner;
 	typeof(NRunModifierTickbox),
 	typeof(NDailyRunCharacterContainer),
 	typeof(NDailyRunLeaderboard),
+	typeof(NDailyRunLeaderboardHeader),
 	typeof(NDailyRunLeaderboardRow),
 	typeof(NDailyRunLeaderboardSeparator),
 	typeof(NDailyRunLoadScreen),
@@ -341,6 +341,7 @@ using RiderTestRunner;
 	typeof(NGameOverScreen),
 	typeof(NReturnToMainMenuButton),
 	typeof(NRunSummary),
+	typeof(NScoreLine),
 	typeof(NViewRunButton),
 	typeof(NInspectRelicScreen),
 	typeof(NUpgradePreviewTickbox),
@@ -365,7 +366,6 @@ using RiderTestRunner;
 	typeof(NOpenProfileScreenButton),
 	typeof(NPatchNotesButton),
 	typeof(NPatchNotesScreen),
-	typeof(NPrideRainbow),
 	typeof(NShortSubmenuButton),
 	typeof(NSingleplayerSubmenu),
 	typeof(NSubmenu),
@@ -463,6 +463,8 @@ using RiderTestRunner;
 	typeof(NOpenModdingScreenButton),
 	typeof(NPaginateArrow),
 	typeof(NPaginator),
+	typeof(NPhobiaModeHoverTip),
+	typeof(NPhobiaModeTickbox),
 	typeof(NResetGameplayButton),
 	typeof(NResetGraphicsButton),
 	typeof(NResetToDefaultControlsButton),
@@ -484,6 +486,8 @@ using RiderTestRunner;
 	typeof(NSettingsTickbox),
 	typeof(NSettingsToast),
 	typeof(NSfxVolumeSlider),
+	typeof(NShowMpMapDrawingsHoverTip),
+	typeof(NShowMpMapDrawingsTickbox),
 	typeof(NTextEffectsHoverTip),
 	typeof(NTextEffectsTickbox),
 	typeof(NUploadDataTickbox),
@@ -696,6 +700,7 @@ using RiderTestRunner;
 	typeof(NStunnedVfx),
 	typeof(NSweepingBeamImpactVfx),
 	typeof(NSweepingBeamVfx),
+	typeof(NTestSubjectBurnVfx),
 	typeof(NTestSubjectVfx),
 	typeof(NTheInsatiableVfx),
 	typeof(NTheObscuraVfx),
@@ -709,6 +714,8 @@ using RiderTestRunner;
 	typeof(NEpochChains),
 	typeof(NGaseousScreenVfx),
 	typeof(NLowHpBorderVfx),
+	typeof(NPowerAppliedBuffVfx),
+	typeof(NPowerAppliedDebuffVfx),
 	typeof(LocalizedTexture),
 	typeof(NHitStop),
 	typeof(NParticlesContainer),
@@ -736,4 +743,3 @@ using RiderTestRunner;
 	typeof(NGameInfoUploader)
 })]
 [assembly: AssemblyVersion("0.1.0.0")]
-[module: RefSafetyRules(11)]

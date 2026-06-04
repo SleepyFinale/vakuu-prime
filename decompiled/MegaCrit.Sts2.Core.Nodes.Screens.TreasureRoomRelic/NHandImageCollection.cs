@@ -49,8 +49,6 @@ public class NHandImageCollection : Control
 		public static readonly StringName BeforeRelicsAwarded = "BeforeRelicsAwarded";
 
 		public static readonly StringName AnimateHandsIn = "AnimateHandsIn";
-
-		public static readonly StringName AnimateHandsAway = "AnimateHandsAway";
 	}
 
 	public new class PropertyName : Control.PropertyName
@@ -206,11 +204,14 @@ public class NHandImageCollection : Control
 		{
 			NetScreenType netScreenType = ((!RunManager.Instance.IsSinglePlayerOrFakeMultiplayer) ? _synchronizer.GetScreenType(hand.Player.NetId) : NetScreenType.SharedRelicPicking);
 			bool flag = netScreenType == NetScreenType.SharedRelicPicking && screenType == NetScreenType.SharedRelicPicking;
-			if (!hand.Visible && flag)
+			if (!hand.IsShown && flag)
 			{
 				hand.AnimateIn();
 			}
-			hand.Visible = flag;
+			else if (hand.IsShown && !flag)
+			{
+				hand.AnimateAway();
+			}
 		}
 		NGame.Instance.CursorManager.SetCursorShown(screenType != NetScreenType.SharedRelicPicking);
 	}
@@ -240,14 +241,6 @@ public class NHandImageCollection : Control
 			{
 				hand.AnimateIn();
 			}
-		}
-	}
-
-	public void AnimateHandsAway()
-	{
-		foreach (NHandImage hand in _hands)
-		{
-			hand.AnimateAway();
 		}
 	}
 
@@ -325,7 +318,7 @@ public class NHandImageCollection : Control
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	internal static List<MethodInfo> GetGodotMethodList()
 	{
-		List<MethodInfo> list = new List<MethodInfo>(14);
+		List<MethodInfo> list = new List<MethodInfo>(13);
 		list.Add(new MethodInfo(MethodName._EnterTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName._ExitTree, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.OnInputStateAdded, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, new List<PropertyInfo>
@@ -363,7 +356,6 @@ public class NHandImageCollection : Control
 		list.Add(new MethodInfo(MethodName.UpdateHandVisibility, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.BeforeRelicsAwarded, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		list.Add(new MethodInfo(MethodName.AnimateHandsIn, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
-		list.Add(new MethodInfo(MethodName.AnimateHandsAway, new PropertyInfo(Variant.Type.Nil, "", PropertyHint.None, "", PropertyUsageFlags.Default, exported: false), MethodFlags.Normal, null, null));
 		return list;
 	}
 
@@ -447,12 +439,6 @@ public class NHandImageCollection : Control
 			ret = default(godot_variant);
 			return true;
 		}
-		if (method == MethodName.AnimateHandsAway && args.Count == 0)
-		{
-			AnimateHandsAway();
-			ret = default(godot_variant);
-			return true;
-		}
 		return base.InvokeGodotClassMethod(in method, args, out ret);
 	}
 
@@ -508,10 +494,6 @@ public class NHandImageCollection : Control
 			return true;
 		}
 		if (method == MethodName.AnimateHandsIn)
-		{
-			return true;
-		}
-		if (method == MethodName.AnimateHandsAway)
 		{
 			return true;
 		}
