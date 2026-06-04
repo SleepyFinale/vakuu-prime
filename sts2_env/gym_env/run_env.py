@@ -42,7 +42,10 @@ Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (151).
 
 Reward
 ------
-Sparse: **+1** for winning the run, **-1** for death or timeout.
+Terminal: **+1** for winning the run, **-1** for death or timeout.
+
+Optional shaping (``reward_shaping=True``): floor progress, combat clear,
+and HP preservation bonuses via :mod:`run_reward`.
 
 Compatibility
 -------------
@@ -72,6 +75,12 @@ from sts2_env.gym_env.action_space import (
     is_potion_action,
 )
 from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE, encode_observation
+from sts2_env.gym_env.run_reward import (
+    RunRewardConfig,
+    RunRewardSnapshot,
+    compute_run_shaping,
+    snapshot_from_manager,
+)
 from sts2_env.core.rng import INT_MAX_EXCLUSIVE
 from sts2_env.run.run_manager import RunManager
 
@@ -246,6 +255,14 @@ class STS2RunEnv(gymnasium.Env):
     max_combat_turns : int
         Maximum turns within a single combat before it is force-ended
         as a loss.
+    reward_shaping : bool
+        If True, add dense floor/combat/HP shaping rewards each step.
+    act_count : int
+        Number of acts to complete before treating the run as won
+        (curriculum). ``3`` runs the full game.
+    reward_config : RunRewardConfig or None
+        Shaping scales; defaults to :class:`RunRewardConfig` when shaping
+        is enabled.
     render_mode : str or None
         ``"ansi"`` for text rendering.
     """
@@ -258,6 +275,9 @@ class STS2RunEnv(gymnasium.Env):
         ascension_level: int = 0,
         max_steps: int = DEFAULT_MAX_STEPS,
         max_combat_turns: int = DEFAULT_MAX_COMBAT_TURNS,
+        reward_shaping: bool = False,
+        act_count: int = 3,
+        reward_config: RunRewardConfig | None = None,
         render_mode: str | None = None,
     ):
         super().__init__()
@@ -274,11 +294,26 @@ class STS2RunEnv(gymnasium.Env):
         self._ascension_level = ascension_level
         self.max_steps = max_steps
         self.max_combat_turns = max_combat_turns
+        self.reward_shaping = reward_shaping
+        self.act_count = max(1, act_count)
+        self._reward_config = reward_config or RunRewardConfig()
         self.render_mode = render_mode
 
         # Mutable state -- set during reset()
         self._mgr: RunManager | None = None
         self._step_count: int = 0
+        self._prev_reward_snapshot: RunRewardSnapshot | None = None
+
+    @property
+    def run_state(self):
+        """Current :class:`RunState`, or None before reset."""
+        if self._mgr is None:
+            return None
+        return self._mgr.run_state
+
+    @property
+    def layout(self) -> _ActionLayout:
+        return _LAYOUT
 
     # ------------------------------------------------------------------
     # Gymnasium API
@@ -296,26 +331,64 @@ class STS2RunEnv(gymnasium.Env):
             seed=run_seed,
             character_id=self._character_id,
             ascension_level=self._ascension_level,
+            max_acts=self.act_count,
         )
         self._step_count = 0
+        self._prev_reward_snapshot = snapshot_from_manager(self._mgr)
 
         obs = self._encode_obs()
         info = self._build_info()
         return obs, info
 
     def step(
-        self, action: int,
+        self,
+        action: int,
+        *,
+        count_env_step: bool = True,
     ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         assert self._mgr is not None, "Must call reset() before step()"
-        self._step_count += 1
+        if count_env_step:
+            self._step_count += 1
+
+        prev_snapshot = self._prev_reward_snapshot
+        if prev_snapshot is None:
+            prev_snapshot = snapshot_from_manager(self._mgr)
+
+        self._dispatch_action(action)
 
         reward = 0.0
+        if self.reward_shaping:
+            curr_snapshot = snapshot_from_manager(self._mgr)
+            reward += compute_run_shaping(
+                prev_snapshot, curr_snapshot, self._reward_config,
+            )
+            self._prev_reward_snapshot = curr_snapshot
+
+        terminated = self._mgr.is_over
+        truncated = False
+
+        if not terminated and self._step_count >= self.max_steps:
+            truncated = True
+
+        if terminated:
+            reward += REWARD_WIN if self._mgr.player_won else REWARD_DEATH
+        elif truncated:
+            reward += REWARD_DEATH
+
+        obs = self._encode_obs()
+        info = self._build_info()
+        return obs, float(reward), terminated, truncated, info
+
+    def _dispatch_action(self, action: int) -> None:
+        """Apply one player action without computing reward or done flags."""
+        assert self._mgr is not None
         phase = self._mgr.phase
         actions = self._mgr.get_available_actions()
 
-        # ---- dispatch action to RunManager ----
         try:
-            if phase != RunManager.PHASE_COMBAT and any(a.get("action") in {"choose", "confirm_choice"} for a in actions):
+            if phase != RunManager.PHASE_COMBAT and any(
+                a.get("action") in {"choose", "confirm_choice"} for a in actions
+            ):
                 self._step_noncombat_choice(action)
             elif phase == RunManager.PHASE_COMBAT:
                 self._step_combat(action)
@@ -334,27 +407,34 @@ class STS2RunEnv(gymnasium.Env):
             elif phase == RunManager.PHASE_TREASURE:
                 self._step_treasure()
         except Exception:
-            # Guard against simulation bugs so the episode can finish.
-            # Force-end as a loss if the run is not already over.
-            logger.exception("STS2RunEnv.step failed during phase %s with action %s", phase, action)
+            logger.exception(
+                "STS2RunEnv.step failed during phase %s with action %s",
+                phase,
+                action,
+            )
             if not self._mgr.is_over:
                 self._mgr.run_state.lose_run()
 
-        # ---- terminal conditions ----
-        terminated = self._mgr.is_over
-        truncated = False
+    def is_active_combat(self) -> bool:
+        """True when in a live combat the hierarchical bot should play."""
+        if self._mgr is None or self._mgr.is_over:
+            return False
+        if self._mgr.phase != RunManager.PHASE_COMBAT:
+            return False
+        actions = self._mgr.get_available_actions()
+        if any(a.get("action") in {"choose", "confirm_choice"} for a in actions):
+            return False
+        combat = self._mgr.get_combat_state()
+        return combat is not None and not combat.is_over
 
-        if not terminated and self._step_count >= self.max_steps:
-            truncated = True
-
-        if terminated:
-            reward = REWARD_WIN if self._mgr.player_won else REWARD_DEATH
-        elif truncated:
-            reward = REWARD_DEATH
-
-        obs = self._encode_obs()
-        info = self._build_info()
-        return obs, float(reward), terminated, truncated, info
+    def needs_player_select(self) -> bool:
+        """True when combat phase requires selecting the acting player."""
+        if self._mgr is None or self._mgr.phase != RunManager.PHASE_COMBAT:
+            return False
+        return any(
+            a.get("action") == "select_player"
+            for a in self._mgr.get_available_actions()
+        )
 
     def action_masks(self) -> np.ndarray:
         """Return a boolean mask over the unified discrete action space.

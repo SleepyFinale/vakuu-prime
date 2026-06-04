@@ -704,6 +704,23 @@ class TestRewardStructure:
                 break
             assert reward == 0.0, f"Non-zero mid-run reward: {reward}"
 
+    def test_shaping_can_emit_nonzero_before_terminal(self):
+        shaped_env = STS2RunEnv(reward_shaping=True, act_count=3)
+        obs, info = shaped_env.reset(seed=42)
+        rng = np.random.RandomState(42)
+        saw_nonzero = False
+        for _ in range(200):
+            mask = info["action_mask"]
+            valid = np.where(mask == 1)[0]
+            action = int(rng.choice(valid))
+            obs, reward, terminated, truncated, info = shaped_env.step(action)
+            if reward != 0.0 and not terminated and not truncated:
+                saw_nonzero = True
+                break
+            if terminated or truncated:
+                break
+        assert saw_nonzero, "Expected shaping reward before episode end"
+
 
 # ---------------------------------------------------------------------------
 # Test: render

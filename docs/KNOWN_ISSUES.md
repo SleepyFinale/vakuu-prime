@@ -88,16 +88,25 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Severity:** High (fundamental training challenge)
 
-**Problem:** The full-run environment produces 0% win rate even after 1M training steps. The agent learns to progress further through Act 1 (avg 8.9 floors vs 3.9 for random) but cannot complete a run.
+**Status:** Mitigated (infrastructure added; win rate still expected to need long training)
+
+**Problem:** The full-run environment produces 0% win rate even after 1M training steps with a flat policy. The agent learns to progress further through Act 1 (avg 8.9 floors vs 3.9 for random) but cannot complete a run.
 
 **Root causes:**
 
-- Sparse reward: only +1 at run victory, -1 at death. No intermediate signal.
-- Long episodes: a full run spans thousands of steps.
+- Sparse reward: only +1 at run victory, -1 at death without shaping.
+- Long episodes: a full run spans thousands of micro-steps.
 - Multi-phase action space: `Discrete(157)` across combat, map, rewards, shop, rest, event, treasure, and player-selection slices.
 - Compounding decisions: bad deck choices early doom later combats.
 
-**Mitigation:** Reward shaping is available (`--reward-shaping` flag) but only provides small floor-progression bonuses. A fundamental redesign of the reward function or training approach (hierarchical RL, curriculum learning) is needed.
+**Mitigation (implemented):**
+
+- **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py): floor progress, combat clear, and HP preservation bonuses (`--reward-shaping`, default on).
+- **Act-count curriculum** via `RunManager.max_acts` and `--act-count` (train Act 1 before full game).
+- **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
+- **Curriculum fine-tune:** `--load-model` to resume from a Phase 1 checkpoint.
+
+Remaining work: more training timesteps, card-pick heuristics, and act-mixed combat models for later acts.
 
 ### 8. Only Ironclad combat model trained
 

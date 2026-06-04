@@ -78,13 +78,19 @@ def _thieving_hopper_targets(combat: CombatState, creature: Creature) -> list[Cr
     return living_player_targets(combat)
 
 
+def _deck_card_reference(card) -> object:
+    return getattr(card, "deck_version", None) or card
+
+
 def _contains_card_instance(cards: list, card) -> bool:
-    return any(candidate is card for candidate in cards)
+    ref = _deck_card_reference(card)
+    return any(candidate is ref for candidate in cards)
 
 
 def _remove_card_instance(cards: list, card) -> None:
+    ref = _deck_card_reference(card)
     for index, candidate in enumerate(cards):
-        if candidate is card:
+        if candidate is ref:
             cards.pop(index)
             return
 

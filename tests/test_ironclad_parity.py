@@ -14,7 +14,7 @@ from sts2_env.cards.ironclad import (
 )
 from sts2_env.cards.ironclad_basic import make_bash, make_defend_ironclad, make_strike_ironclad
 from sts2_env.core.combat import CombatState
-from sts2_env.core.enums import PowerId
+from sts2_env.core.enums import CardId, PowerId
 from sts2_env.core.rng import Rng
 from sts2_env.monsters.act1_weak import create_shrinker_beetle
 
@@ -77,6 +77,53 @@ class TestIroncladParity:
         assert combat.is_over
         assert strike.upgraded is False
         assert defend.upgraded is False
+
+    def test_armaments_upgrade_does_not_persist_to_run_deck(self):
+        """Combat-only upgrade: deck card stays base; next combat gets a fresh clone."""
+        deck = [make_strike_ironclad(), make_defend_ironclad()]
+        run_strike = deck[0]
+        combat = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=deck,
+            rng_seed=99,
+            character_id="Ironclad",
+        )
+        creature, ai = create_shrinker_beetle(Rng(99))
+        combat.add_enemy(creature, ai)
+        combat.start_combat()
+
+        combat_strike = next(
+            card
+            for card in combat.hand + combat.draw_pile + combat.discard_pile
+            if card.card_id == CardId.STRIKE_IRONCLAD
+        )
+        combat.hand = [make_armaments(), combat_strike]
+        combat.energy = 1
+
+        assert combat.play_card(0)
+        assert combat.pending_choice is None
+        assert combat_strike.upgraded is True
+        assert run_strike.upgraded is False
+
+        combat2 = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=deck,
+            rng_seed=100,
+            character_id="Ironclad",
+        )
+        creature2, ai2 = create_shrinker_beetle(Rng(100))
+        combat2.add_enemy(creature2, ai2)
+        combat2.start_combat()
+        assert run_strike.upgraded is False
+        next_strike = next(
+            card
+            for card in combat2.draw_pile + combat2.hand
+            if card.card_id == CardId.STRIKE_IRONCLAD
+        )
+        assert next_strike.upgraded is False
+        assert next_strike is not combat_strike
 
     def test_burning_pact_exhausts_selected_card_then_draws(self):
         """Matches BurningPact.cs: select one hand card to exhaust, then draw the configured amount."""

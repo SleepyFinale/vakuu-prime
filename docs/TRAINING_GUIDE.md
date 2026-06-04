@@ -138,12 +138,21 @@ Key metrics to watch:
 
 ## Full-Run Training
 
-Train an agent that handles an entire run: combat, map navigation, card rewards, events, shops, and rest sites.
+Train a **meta-policy** for map navigation, card rewards, events, shops, and rest sites. Combat is delegated to a pre-trained combat MaskablePPO (`STS2HierarchicalRunEnv`).
 
-### Full-Run Command
+### Prerequisites
+
+Train combat first:
+
+```bash
+python scripts/train_combat.py --total-timesteps 2000000 --output-dir output/combat_ppo
+```
+
+### Full-Run Command (hierarchical)
 
 ```bash
 python scripts/train_full_run.py \
+    --combat-model output/combat_ppo/best_model/best_model.zip \
     --total-timesteps 1000000 \
     --act-count 1 \
     --n-envs 4 \
@@ -151,6 +160,7 @@ python scripts/train_full_run.py \
     --batch-size 256 \
     --gamma 0.995 \
     --ent-coef 0.02 \
+    --max-steps 10000 \
     --output-dir output/run_ppo
 ```
 
@@ -158,26 +168,41 @@ python scripts/train_full_run.py \
 
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
-| `--act-count` | 1 | Acts per run (1 = Act 1 only, 3 = full game) |
-| `--reward-shaping` | True | Enable floor/act completion bonuses |
-| `--no-reward-shaping` | - | Sparse reward only (+1 win / -1 death) |
+| `--combat-model` | `output/combat_ppo/best_model/best_model.zip` | Frozen combat MaskablePPO |
+| `--act-count` | 1 | Acts before curriculum win (1 = Act 1, 3 = full game) |
+| `--reward-shaping` | True | Floor/combat-clear/HP shaping (see `run_reward.py`) |
+| `--no-reward-shaping` | - | Sparse terminal reward only (used in eval reporting) |
+| `--load-model` | - | Fine-tune from a saved meta-policy zip |
+| `--no-combat-delegate` | - | Ablation: flat `STS2RunEnv` without combat bot |
+| `--max-steps` | 10000 | Max meta-decisions per episode |
 | `--gamma` | 0.995 | Higher discount for long episodes |
 | `--ent-coef` | 0.02 | More exploration for complex decision space |
 | `--baseline-only` | - | Only run random baseline (no training) |
 
-The training script uses a larger network architecture (256x256 for both policy and value) compared to combat training (default MLP).
+The meta-policy uses a larger network (256x256 pi/vf) than default combat training.
+
+### Reward shaping scales (defaults)
+
+| Signal | Scale |
+| ------ | ----- |
+| Floor advanced | +0.05 per floor |
+| Combat cleared | +0.10 |
+| HP lost after combat | up to -0.20 |
+| Run win / death | +1 / -1 |
 
 ### Curriculum Learning
 
-Start with Act 1 only, then expand:
-
 ```bash
-# Phase 1: Act 1 only (shorter episodes, denser signal)
-python scripts/train_full_run.py --act-count 1 --total-timesteps 2000000
+# Phase 1: Act 1 only
+python scripts/train_full_run.py \
+    --combat-model output/combat_ppo/best_model/best_model.zip \
+    --act-count 1 --total-timesteps 2000000
 
-# Phase 2: Full game (load Phase 1 model, fine-tune)
-# TODO: model loading for curriculum not yet implemented
-python scripts/train_full_run.py --act-count 3 --total-timesteps 5000000
+# Phase 2: Full game (fine-tune Phase 1 meta-policy)
+python scripts/train_full_run.py \
+    --combat-model output/combat_ppo/best_model/best_model.zip \
+    --load-model output/run_ppo/final_model.zip \
+    --act-count 3 --total-timesteps 5000000
 ```
 
 ### Full-Run Expected Results
@@ -209,11 +234,11 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 | Challenge | Current State | Future Direction |
 | --------- | ------------ | ---------------- |
-| Sparse reward | Reward shaping (floor bonus) helps slightly | Better intermediate rewards, hindsight experience replay |
-| Long episodes | Act-count curriculum | Hierarchical policy (meta-policy picks strategy, sub-policies execute) |
-| Multi-phase | Single flat policy for all phases | Separate policies per phase, combined with a router |
+| Sparse reward | Shaping in `run_reward.py` | Hindsight experience replay |
+| Long episodes | Meta-steps + act-count curriculum | Further episode compression |
+| Multi-phase | Hierarchical combat delegate + meta PPO | Dedicated card-value network for rewards |
 | Simulation speed | ~1,200 combats/sec | Cython acceleration of core loop (target: 10k+/sec) |
-| Card selection | Random/first heuristic | Dedicated card evaluation network |
+| Card selection | Meta policy via combat-slice choices | Dedicated card evaluation network |
 
 ---
 
@@ -234,10 +259,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 2. **Cython acceleration:** Port `core/combat.py`, `core/hooks.py`, and `core/damage.py` to Cython for 5-10x speedup. The main bottleneck is Python interpreter overhead in the hot loop.
 
-3. **Reward shaping:** Design intermediate rewards that correlate with run success:
-   - HP preservation bonus after each combat
-   - Deck quality score (attack/defense ratio, synergy metrics)
-   - Gold efficiency metric
+3. **Reward shaping:** Implemented in `sts2_env/gym_env/run_reward.py`. Possible extensions: deck-quality score, gold-efficiency metric.
 
 4. **Population-based training (PBT):** Use Ray RLlib to train multiple agents with different hyperparameters in parallel, automatically tuning learning rate, entropy, and gamma.
 

@@ -186,7 +186,16 @@ class TestRelicUncommonOwnerScopeAndRoomHooksParity:
         creature, ai = create_shrinker_beetle(Rng(1206))
         non_boss.add_enemy(creature, ai)
         non_boss.start_combat()
-        assert sum(1 for card in non_boss.combat_player_states[0].starting_deck if card.upgraded) == 1
+        non_boss_state = non_boss.combat_player_states[0]
+        player_state = non_boss_state.player_state
+        combat_cards = (
+            list(non_boss_state.hand)
+            + list(non_boss_state.draw)
+            + list(non_boss_state.discard)
+            + list(non_boss_state.exhaust)
+        )
+        assert sum(1 for card in player_state.deck if card.upgraded) == 1
+        assert sum(1 for card in combat_cards if card.upgraded) == 1
 
         boss = CombatState(
             player_hp=80,
@@ -200,7 +209,16 @@ class TestRelicUncommonOwnerScopeAndRoomHooksParity:
         creature, ai = create_shrinker_beetle(Rng(1207))
         boss.add_enemy(creature, ai)
         boss.start_combat()
-        assert sum(1 for card in boss.combat_player_states[0].starting_deck if card.upgraded) == 4
+        boss_state = boss.combat_player_states[0]
+        boss_player_state = boss_state.player_state
+        boss_combat_cards = (
+            list(boss_state.hand)
+            + list(boss_state.draw)
+            + list(boss_state.discard)
+            + list(boss_state.exhaust)
+        )
+        assert sum(1 for card in boss_player_state.deck if card.upgraded) == 1
+        assert sum(1 for card in boss_combat_cards if card.upgraded) == 4
 
     def test_owner_scoped_card_play_relics_ignore_other_players_cards(self):
         """Matches owner checks on common and uncommon card-play relic hooks."""

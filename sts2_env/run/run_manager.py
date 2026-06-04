@@ -196,10 +196,12 @@ class RunManager:
         character_id: str = DEFAULT_CHARACTER_ID,
         ascension_level: int = 0,
         start_with_neow: bool = False,
+        max_acts: int | None = None,
     ):
         self._seed = seed
         self._character_id = character_id
         self._ascension_level = ascension_level
+        self._max_acts = max_acts
 
         # Master RNG (for encounter selection, gold rolls, etc.)
         self._rng = Rng(seed + RUN_MANAGER_RNG_SEED_OFFSET)
@@ -2052,6 +2054,16 @@ class RunManager:
 
     def _transition_next_act(self) -> None:
         """Move to the next act, or win the run if there are no more acts."""
+        if (
+            self._max_acts is not None
+            and self._run_state.current_act_index + 1 >= self._max_acts
+            and self._run_state.current_act_index < len(self._run_state.acts) - 1
+        ):
+            self._run_state.is_over = True
+            self._run_state.player_won = True
+            self._phase = self.PHASE_RUN_OVER
+            return
+
         success = self._run_state.enter_next_act()
         if not success:
             # Run completed (all acts cleared)

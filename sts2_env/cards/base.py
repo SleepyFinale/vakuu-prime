@@ -80,6 +80,25 @@ def restore_self_mutating_card_progress(card: CardInstance, progress: dict[str, 
         increase_base_block(card, block_bonus)
 
 
+def sync_self_mutating_progress_to_deck(card: CardInstance) -> None:
+    """Copy in-combat self-mutating growth onto the persistent deck card."""
+    from sts2_env.cards.registry import (
+        card_preserves_self_mutating_block,
+        card_preserves_self_mutating_damage,
+    )
+
+    deck_card = card.deck_version
+    if deck_card is None:
+        return
+    if not (
+        card_preserves_self_mutating_damage(card.card_id)
+        or card_preserves_self_mutating_block(card.card_id)
+    ):
+        return
+    progress = capture_self_mutating_card_progress(card)
+    restore_self_mutating_card_progress(deck_card, progress)
+
+
 def reference_has_turn_end_in_hand_effect(card_id: CardId) -> bool:
     from sts2_env.cards.reference_static_metadata import reference_metadata_by_card_id
 
@@ -181,6 +200,8 @@ class CardInstance:
     single_turn_retain: bool = False
     bound: bool = False
     base_replay_count: int = 0
+    # Persistent deck card this combat instance was cloned from (if any).
+    deck_version: CardInstance | None = None
 
     def __post_init__(self):
         if self.original_cost is None:
@@ -393,7 +414,15 @@ class CardInstance:
             single_turn_retain=self.single_turn_retain,
             bound=self.bound,
             base_replay_count=self.base_replay_count,
+            deck_version=None,
         )
+
+    def clone_for_combat(self, new_id: int) -> CardInstance:
+        """Clone a deck card for use in combat piles only (mirrors PopulateCombatState)."""
+        combat_card = self.clone(new_id)
+        combat_card.combat_vars.pop("_is_clone", None)
+        combat_card.deck_version = self
+        return combat_card
 
     def create_dupe(self, new_id: int) -> CardInstance:
         dupe = self.clone(new_id)

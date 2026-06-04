@@ -663,7 +663,7 @@ class CombatState:
         state = CombatPlayerState(
             player_state=player_state,
             creature=creature,
-            starting_deck=list(player_state.deck),
+            starting_deck=[],
             max_potion_slots=player_state.max_potion_slots,
             base_max_energy=player_state.max_energy or BASE_ENERGY,
         )
@@ -761,10 +761,21 @@ class CombatState:
             fire_after_creature_added_to_combat(creature, self)
         return creature
 
+    def _populate_combat_deck_clones(self, state: CombatPlayerState) -> None:
+        """Clone run-deck cards into combat-only instances (matches PopulateCombatState)."""
+        from sts2_env.cards.base import new_card_instance_id_after
+
+        new_card_instance_id_after(state.player_state.deck)
+        state.starting_deck = [
+            deck_card.clone_for_combat(new_card_instance_id())
+            for deck_card in state.player_state.deck
+        ]
+
     def _reset_player_combat_state(self, state: CombatPlayerState) -> None:
         state.energy = 0
         state.stars = 0
         state.hand.clear()
+        self._populate_combat_deck_clones(state)
         for card in state.starting_deck:
             reset_combat_enchantments(card)
         state.draw[:] = list(state.starting_deck)
@@ -2688,15 +2699,20 @@ class CombatState:
             state = self.combat_player_state_for(owner) if owner is not None else None
         if state is None:
             return
-        if not any(existing is card for existing in state.player_state.deck):
-            state.player_state.add_card_instance_to_deck(card)
+        deck_card = card.deck_version or card
+        if not any(existing is deck_card for existing in state.player_state.deck):
+            state.player_state.add_card_instance_to_deck(deck_card)
         room = self.room
         if room is not None and hasattr(room, "add_extra_reward"):
             from sts2_env.run.reward_objects import RecoveredCardReward
 
             room.add_extra_reward(
                 state.player_state.player_id,
-                RecoveredCardReward(state.player_state.player_id, card, encounter_source="THIEVING_HOPPER"),
+                RecoveredCardReward(
+                    state.player_state.player_id,
+                    deck_card,
+                    encounter_source="THIEVING_HOPPER",
+                ),
             )
 
     def _zones_for_creature(self, creature: Creature) -> dict[str, list[CardInstance]]:

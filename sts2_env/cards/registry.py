@@ -342,6 +342,9 @@ def play_card_effect(
     try:
         effect(card, combat, target)
     finally:
+        from sts2_env.cards.base import sync_self_mutating_progress_to_deck
+
+        sync_self_mutating_progress_to_deck(card)
         combat.flush_pending_attack_context()
 
 

@@ -56,8 +56,6 @@ class CombatPlayerState:
                     potion.owner = self.creature
                 except AttributeError:
                     pass
-        if not self.starting_deck:
-            self.starting_deck = list(self.player_state.deck)
         if self.max_potion_slots <= 0:
             self.max_potion_slots = self.player_state.max_potion_slots
         if self.base_max_energy <= 0:
