@@ -29,7 +29,7 @@ python scripts/benchmark.py
 
 ### Project Layout
 
-```
+```text
 sts2_env/           Python package (headless simulator + gym envs + bridge)
   core/             Combat engine (no content dependencies)
   cards/            Card definitions (577 cards)
@@ -70,6 +70,7 @@ pytest tests/ --cov=sts2_env --cov-report=term-missing
 ```
 
 The test suite covers:
+
 - `test_combat_damage_block_pipeline.py` -- damage/block calculation pipelines
 - `test_combat_flow.py` -- turn flow, card play, end turn
 - `test_ironclad_basic_card_effects_parity.py` -- Ironclad starter card effects
@@ -109,6 +110,7 @@ The test suite covers:
 1. **Identify the card** in `decompiled/MegaCrit.Sts2.Core.Models.Cards/YourCard.cs`. Note the constructor parameters and `OnPlay` method.
 
 2. **Add the CardId enum** in `core/enums.py`:
+
    ```python
    class CardId(Enum):
        # ... existing entries ...
@@ -116,6 +118,7 @@ The test suite covers:
    ```
 
 3. **Register the card effect** in the appropriate character file (e.g., `cards/ironclad.py`):
+
    ```python
    @register_effect(CardId.YOUR_CARD)
    def _your_card(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
@@ -124,6 +127,7 @@ The test suite covers:
    ```
 
 4. **Create the card factory** in the same file or in the appropriate character starter deck:
+
    ```python
    def make_your_card(upgraded: bool = False) -> CardInstance:
        dmg = 10 if not upgraded else 14
@@ -138,6 +142,7 @@ The test suite covers:
    ```
 
 5. **Add tests** in the matching card parity test file:
+
    ```python
    def test_your_card_deals_damage_and_applies_vulnerable():
        combat = make_combat_with_deck([make_your_card()])
@@ -151,12 +156,14 @@ The test suite covers:
 1. **Study the C# source** in `decompiled/MegaCrit.Sts2.Core.Models.Powers/YourPower.cs`. Identify which hook methods it overrides.
 
 2. **Add the PowerId enum** in `core/enums.py`:
+
    ```python
    class PowerId(Enum):
        YOUR_POWER = auto()
    ```
 
 3. **Create the PowerInstance subclass** in the appropriate power file (e.g., `powers/common.py`):
+
    ```python
    class YourPower(PowerInstance):
        power_type = PowerType.BUFF  # or DEBUFF
@@ -171,6 +178,7 @@ The test suite covers:
    ```
 
 4. **Register the power** at the bottom of the file:
+
    ```python
    register_power_class(PowerId.YOUR_POWER, YourPower)
    ```
@@ -184,6 +192,7 @@ The test suite covers:
 1. **Study the C# source** in `decompiled/MegaCrit.Sts2.Core.Models.Monsters/YourMonster.cs`. Note HP ranges, damage values, and `GenerateMoveStateMachine()`.
 
 2. **Create the monster factory** in the appropriate act file (e.g., `monsters/act1.py`):
+
    ```python
    def create_your_monster(combat: CombatState, rng: Rng) -> tuple[Creature, MonsterAI]:
        creature = Creature(max_hp=rng.next_int(40, 50), monster_id="YOUR_MONSTER")
@@ -242,6 +251,7 @@ git diff decompiled/
 ```
 
 Focus on changes in:
+
 - `MegaCrit.Sts2.Core.Models.Cards/` -- new cards, balance changes
 - `MegaCrit.Sts2.Core.Models.Powers/` -- new powers, mechanic changes
 - `MegaCrit.Sts2.Core.Models.Monsters/` -- new monsters, AI changes
@@ -271,6 +281,7 @@ Fix any failures caused by changed game mechanics.
 ### 7. Update bridge mod
 
 If the game's C# API changed:
+
 - Update Harmony patch targets in `bridge_mod/MainFile.cs`
 - Update state serialization if new fields are needed
 - Rebuild with: `dotnet build bridge_mod/ -c Release`
