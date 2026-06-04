@@ -394,7 +394,7 @@ def test_waterlogged_scriptorium_tentacle_and_prickly_apply_steady_enchantments(
     event = WaterloggedScriptorium()
 
     locked_state = _make_run_state(4051)
-    locked_state.player.gold = 64
+    locked_state.player.gold = 54
     locked_options = event.generate_initial_options(locked_state)
     assert [option.option_id for option in locked_options] == ["bloody_ink", "tentacle_quill", "prickly_sponge"]
     assert [option.enabled for option in locked_options] == [True, False, False]
@@ -429,13 +429,13 @@ def test_waterlogged_scriptorium_tentacle_and_prickly_apply_steady_enchantments(
 
 def test_waterlogged_scriptorium_requires_all_players_to_have_spawn_gold():
     run_state = _make_run_state(4061)
-    run_state.player.gold = 65
-    ally = run_state.add_player(PlayerState(player_id=2, character_id="Silent", gold=64))
+    run_state.player.gold = 55
+    ally = run_state.add_player(PlayerState(player_id=2, character_id="Silent", gold=54))
     event = WaterloggedScriptorium()
 
     assert event.is_allowed(run_state) is False
 
-    ally.gold = 65
+    ally.gold = 55
     assert event.is_allowed(run_state) is True
 
 

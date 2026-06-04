@@ -82,3 +82,27 @@ class TestHierarchicalRunEnv:
     def test_run_state_property(self, mock_hier_env):
         mock_hier_env.reset(seed=1)
         assert mock_hier_env.run_state is not None
+
+    def test_noncombat_heuristic_auto_resolves_card_reward(self):
+        from sts2_env.gym_env.hierarchical_run_env import STS2HierarchicalRunEnv
+        from sts2_env.run.reward_objects import CardReward
+
+        env = STS2HierarchicalRunEnv(
+            delegate_combat=True,
+            combat_model=_MockCombatModel(),
+            use_noncombat_heuristic=True,
+            max_steps=500,
+        )
+        env.reset(seed=42)
+        mgr = env._run_env._mgr
+        mgr._phase = RunManager.PHASE_CARD_REWARD
+        reward = CardReward(mgr.run_state.player.player_id)
+        reward.populate(mgr.run_state, None)
+        mgr._current_reward = reward
+        mgr._offered_cards = list(reward.cards)
+
+        meta_steps_before = env._meta_step_count
+        shaping_reward = env._auto_resolve_noncombat()
+        assert shaping_reward >= 0.0
+        assert env._meta_step_count == meta_steps_before
+        assert mgr.phase != RunManager.PHASE_CARD_REWARD

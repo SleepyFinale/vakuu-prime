@@ -903,7 +903,7 @@ class TestAct2Pools:
         assert len(ACT2_WEAK) == 4
 
     def test_normal_encounter_count(self):
-        assert len(ACT2_NORMAL) == 11
+        assert len(ACT2_NORMAL) == 10
 
     def test_elite_encounter_count(self):
         assert len(ACT2_ELITE) == 3
@@ -912,7 +912,7 @@ class TestAct2Pools:
         assert len(ACT2_BOSS) == 3
 
     def test_all_act2_total(self):
-        assert len(ALL_ACT2_ENCOUNTERS) == 4 + 11 + 3 + 3  # 21
+        assert len(ALL_ACT2_ENCOUNTERS) == 4 + 10 + 3 + 3  # 20
 
 
 # ========================================================================
@@ -972,7 +972,7 @@ class TestAct4Pools:
         assert len(ACT4_WEAK) == 4
 
     def test_normal_encounter_count(self):
-        assert len(ACT4_NORMAL) == 11
+        assert len(ACT4_NORMAL) == 10
 
     def test_elite_encounter_count(self):
         assert len(ACT4_ELITE) == 3
@@ -981,7 +981,7 @@ class TestAct4Pools:
         assert len(ACT4_BOSS) == 3
 
     def test_all_act4_total(self):
-        assert len(ALL_ACT4_ENCOUNTERS) == 4 + 11 + 3 + 3  # 21
+        assert len(ALL_ACT4_ENCOUNTERS) == 4 + 10 + 3 + 3  # 20
 
 
 # ========================================================================
@@ -1057,8 +1057,8 @@ class TestAllActsHaveEncounters:
             len(ALL_ACT3_ENCOUNTERS) +
             len(ALL_ACT4_ENCOUNTERS)
         )
-        # 22 + 21 + 18 + 20 = 81
-        assert total == 81
+        # 22 + 20 + 18 + 20 = 80
+        assert total == 80
 
     def test_each_act_has_all_tiers(self):
         """Each act should have weak, normal, elite, and boss encounters."""

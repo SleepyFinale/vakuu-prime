@@ -794,6 +794,19 @@ class ColorfulPhilosophers(EventModel):
         unlocked = set(configured)
         return tuple(cid for cid in self._POOL_ORDER if cid in unlocked)
 
+    @staticmethod
+    def _unlocked_pool_count(player: PlayerState) -> int:
+        configured = player.unlock_state.get("character_card_pools")
+        if configured is None:
+            return len(ColorfulPhilosophers._POOL_ORDER)
+        return len(configured)
+
+    def is_allowed(self, run_state: RunState) -> bool:
+        return all(
+            self._unlocked_pool_count(player) > 1
+            for player in run_state.players
+        )
+
     def generate_initial_options(self, run_state: RunState) -> list[EventOption]:
         available = [cid for cid in self._unlocked_pools(run_state) if cid != run_state.player.character_id]
         rng = self.get_rng(run_state)
@@ -1122,6 +1135,13 @@ class GraveOfTheForgotten(EventModel):
     """
 
     event_id = "GraveOfTheForgotten"
+
+    @staticmethod
+    def _has_enchantable_cards(player: PlayerState) -> bool:
+        return any(can_enchant_card(card, "SoulsPower") for card in player.deck)
+
+    def is_allowed(self, run_state: RunState) -> bool:
+        return all(self._has_enchantable_cards(player) for player in run_state.players)
 
     def generate_initial_options(self, run_state: RunState) -> list[EventOption]:
         confront_enabled = any(can_enchant_card(card, "SoulsPower") for card in run_state.player.deck)
@@ -1609,6 +1629,10 @@ class RoundTeaParty(EventModel):
     """
 
     event_id = "RoundTeaParty"
+    MIN_HP = 12
+
+    def is_allowed(self, run_state: RunState) -> bool:
+        return all(player.current_hp >= self.MIN_HP for player in run_state.players)
 
     def generate_initial_options(self, run_state: RunState) -> list[EventOption]:
         return [

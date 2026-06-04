@@ -201,12 +201,12 @@ In particular, these areas now have direct automated coverage:
 - Act 1 weak monster move ids for Shrinker Beetle, Nibbit, Leaf Slime S, Twig Slime S, and Twig Slime M now match the decompiled move-state names
 - Act 1 normal monster move ids for Cubex Construct, Flyconid, Eye With Teeth, Fogmog, Mawler, Ruby Raiders, and Byrdonis now match the decompiled move-state names; Slithering Strangler now opens with `CONSTRICT` and then rolls `TWACK` / `LASH` like the original
 - Act 2 monster move ids and several direct behavior mismatches now match the decompiled models for Tunneler, Bowlbugs, Exoskeletons, Chomper, Hunter-Killer, Ovicopter / Tough Egg, Slumbering Beetle, Spiny Toad, The Obscura / Parafright, Decimillipede, Entomancer, The Insatiable, Knowledge Demon, and Kaiser Crab
-- Act 4 weak monster move ids, HP ranges, and direct behaviors now match the decompiled models for Corpse Slug, Seapunk, Sludge Spinner, and Toadpole; the related Corpse Slug and Toadpole encounter compositions now match the original setup
-- Act 4 normal move ids and direct behaviors now match the decompiled models for Calcified Cultist, Damp Cultist, Fossil Stalker, Gremlin Merc, Sneaky Gremlin, and Fat Gremlin
-- Act 4 normal Punch Construct and Sewer Clam now match the decompiled HP, setup powers, move ids, direct effects, and opening cycles
-- Act 4 normal Haunted Ship, Living Fog / Gas Bomb, and Two Tailed Rat now match the decompiled HP, move ids, direct effects, and normal encounter composition
-- Act 4 elites now match the decompiled HP, setup powers, move ids, direct effects, and Phantasmal Gardeners encounter composition
-- Act 4 bosses now match the decompiled HP, setup powers, move ids, direct effects, death/wake transitions, and boss encounter composition for Waterfall Giant, Soul Fysh, and Lagavulin Matriarch
+- Underdocks (alternate Act 1) weak monster move ids, HP ranges, and direct behaviors now match the decompiled models for Corpse Slug, Seapunk, Sludge Spinner, and Toadpole; the related Corpse Slug and Toadpole encounter compositions now match the original setup
+- Underdocks (alternate Act 1) normal move ids and direct behaviors now match the decompiled models for Calcified Cultist, Damp Cultist, Fossil Stalker, Gremlin Merc, Sneaky Gremlin, and Fat Gremlin
+- Underdocks (alternate Act 1) normal Punch Construct and Sewer Clam now match the decompiled HP, setup powers, move ids, direct effects, and opening cycles
+- Underdocks (alternate Act 1) normal Haunted Ship, Living Fog / Gas Bomb, and Two Tailed Rat now match the decompiled HP, move ids, direct effects, and normal encounter composition
+- Underdocks (alternate Act 1) elites now match the decompiled HP, setup powers, move ids, direct effects, and Phantasmal Gardeners encounter composition
+- Underdocks (alternate Act 1) bosses now match the decompiled HP, setup powers, move ids, direct effects, death/wake transitions, and boss encounter composition for Waterfall Giant, Soul Fysh, and Lagavulin Matriarch
 
 ## Current Confirmed Blockers
 

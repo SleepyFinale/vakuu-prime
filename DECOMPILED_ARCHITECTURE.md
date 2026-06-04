@@ -663,12 +663,13 @@ Unassigned, Unknown, Shop, Treasure, RestSite, Monster, Elite, Boss, Ancient
 
 ### 8.5 Per-act configuration
 
-| Act | Name | Room count | Notes |
+| Run act | Name | Room count | Notes |
 | --- | ---- | ---------- | ----- |
-| Act 1 | Overgrowth | 15 | Intro encounters |
-| Act 2 | Hive | — | Mid-game challenge |
-| Act 3 | Glory | — | Hard encounters |
-| Act 4 | Underdocks | — | Final challenge |
+| 1 | Overgrowth **or** Underdocks | 15 | Alternate Act 1 biomes (RNG / lobby); same map rules |
+| 2 | Hive | 14 | Mid-game challenge |
+| 3 | Glory | 13 | Final act |
+
+Four act **types** exist in `ModelDb` (including both Act 1 biomes), but a standard run uses three slots from `ActModel.GetDefaultList()` with slot 0 optionally swapped to Underdocks.
 
 Each act defines its own: boss pool, encounter pool, event pool, ancient NPCs
 

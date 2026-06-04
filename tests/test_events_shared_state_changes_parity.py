@@ -111,6 +111,16 @@ def test_shared_event_random_gold_uses_exclusive_upper_bounds():
     assert this_or_that._gold == 68
 
 
+def test_round_tea_party_requires_all_players_to_have_minimum_hp():
+    run_state = RunState(seed=7, character_id="Ironclad")
+    run_state.initialize_run()
+    run_state.player.current_hp = RoundTeaParty.MIN_HP - 1
+    assert RoundTeaParty().is_allowed(run_state) is False
+
+    run_state.player.current_hp = RoundTeaParty.MIN_HP
+    assert RoundTeaParty().is_allowed(run_state) is True
+
+
 def test_round_tea_party_pick_fight_is_multi_page_and_grants_relic():
     run_state = RunState(seed=7, character_id="Ironclad")
     run_state.initialize_run()

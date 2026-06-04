@@ -1,4 +1,4 @@
-"""Act 4 (Underdocks) encounter definitions: weak, normal, elite, boss."""
+"""Underdocks (alternate Act 1 biome) encounter definitions: weak, normal, elite, boss."""
 
 from __future__ import annotations
 
@@ -159,7 +159,6 @@ NORMAL_ENCOUNTERS: list[EncounterSetup] = [
     setup_punch_construct_normal,
     setup_seapunk_normal,
     setup_sewer_clam_normal,
-    setup_toadpoles_normal,
     setup_two_tailed_rats_normal,
 ]
 

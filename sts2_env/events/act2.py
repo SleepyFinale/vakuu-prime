@@ -235,7 +235,7 @@ class EndlessConveyor(EventModel):
     SPICY_SNAPPY_UPGRADE_COUNT = 1
     JELLY_LIVER_TRANSFORM_COUNT = 1
     GRAB_GOLD = 35
-    REQUIRED_GOLD = 105
+    REQUIRED_GOLD = 120
     GOLDEN_FYSH_GOLD = 75
     CLAM_ROLL_HEAL = 10
     CAVIAR_MAX_HP = 4
@@ -768,8 +768,19 @@ class MorphicGrove(EventModel):
 
     event_id = "MorphicGrove"
 
+    GROUP_GOLD_COST = 100
+    GROUP_TRANSFORM_COUNT = 2
+
+    @staticmethod
+    def _transformable_card_count(player: PlayerState) -> int:
+        return sum(1 for card in player.deck if card.is_removable)
+
     def is_allowed(self, run_state: RunState) -> bool:
-        return all(player.gold >= 100 for player in run_state.players)
+        return all(
+            player.gold >= self.GROUP_GOLD_COST
+            and self._transformable_card_count(player) >= self.GROUP_TRANSFORM_COUNT
+            for player in run_state.players
+        )
 
     def generate_initial_options(self, run_state: RunState) -> list[EventOption]:
         return [
@@ -1413,7 +1424,7 @@ class WaterloggedScriptorium(EventModel):
     """
 
     event_id = "WaterloggedScriptorium"
-    SPAWN_GOLD_REQUIREMENT = 65
+    SPAWN_GOLD_REQUIREMENT = 55
     BLOODY_INK_MAX_HP_GAIN = 6
     TENTACLE_QUILL_COST = 65
     TENTACLE_QUILL_CARDS = 1
@@ -1695,23 +1706,40 @@ register_event(WelcomeToWongos())
 # ── WhisperingHollow ──────────────────────────────────────────────────
 
 class WhisperingHollow(EventModel):
-    """Gold: Pay 50g, gain 2 potions. Hug: Take 9 damage, transform 1 card."""
+    """Gold: Pay 35-44g (rolled), gain 2 potions. Hug: Take 9 damage, transform 1 card."""
 
     event_id = "WhisperingHollow"
-    GOLD_COST = 50
+    SPAWN_GOLD_REQUIREMENT = 44
+    BASE_GOLD_COST = 35
+    GOLD_VARIANCE_MIN = -9
+    GOLD_VARIANCE_MAX = 9
     GOLD_POTION_REWARD_COUNT = 2
     HUG_DAMAGE = 9
     OPTION_GOLD = "gold"
     OPTION_HUG = "hug"
 
+    def __init__(self) -> None:
+        self._gold_cost = self.BASE_GOLD_COST
+
+    def calculate_vars(self, run_state: RunState) -> None:
+        variance = self.get_rng(run_state).next_int(
+            self.GOLD_VARIANCE_MIN,
+            self.GOLD_VARIANCE_MAX,
+        )
+        self._gold_cost = self.BASE_GOLD_COST + variance
+
     def is_allowed(self, run_state: RunState) -> bool:
-        return all(player.gold >= self.GOLD_COST for player in run_state.players)
+        return all(
+            player.gold >= self.SPAWN_GOLD_REQUIREMENT
+            for player in run_state.players
+        )
 
     def generate_initial_options(self, run_state: RunState) -> list[EventOption]:
+        self.ensure_vars_calculated(run_state)
         return [
             EventOption(
                 self.OPTION_GOLD,
-                f"Pay Gold ({self.GOLD_COST}g)",
+                f"Pay Gold ({self._gold_cost}g)",
                 f"Gain {self.GOLD_POTION_REWARD_COUNT} potions",
             ),
             EventOption(
@@ -1723,14 +1751,15 @@ class WhisperingHollow(EventModel):
 
     def choose(self, run_state: RunState, option_id: str) -> EventResult:
         if option_id == self.OPTION_GOLD:
-            run_state.player.lose_gold(self.GOLD_COST)
+            self.ensure_vars_calculated(run_state)
+            run_state.player.lose_gold(self._gold_cost)
             rewards = [
                 PotionReward(run_state.player.player_id)
                 for _ in range(self.GOLD_POTION_REWARD_COUNT)
             ]
             return EventResult(
                 finished=True,
-                description=f"Paid {self.GOLD_COST}g, gained {self.GOLD_POTION_REWARD_COUNT} potions.",
+                description=f"Paid {self._gold_cost}g, gained {self.GOLD_POTION_REWARD_COUNT} potions.",
                 rewards={"reward_objects": rewards},
             )
         candidates = run_state.player.transformable_deck_cards()

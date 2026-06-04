@@ -73,6 +73,7 @@ from sts2_env.run.rest_site import MendOption, RestSiteOption, generate_rest_sit
 from sts2_env.run.rewards import generate_combat_reward_cards
 from sts2_env.run.rooms import CombatRoom, Room, RoomVisitContext, create_room
 from sts2_env.characters.all import ALL_CHARACTERS, get_character
+from sts2_env.map.acts import Act1BiomeChoice
 from sts2_env.run.run_state import RunState
 from sts2_env.run.shop import (
     SHOP_ENTRY_SOLD_OUT_PRICE,
@@ -124,29 +125,20 @@ def _get_starter_deck(character_id: str) -> list[CardInstance]:
 # Encounter pool accessor per act
 # ---------------------------------------------------------------------------
 
-def _get_encounter_pools(act_index: int) -> dict[str, list]:
-    """Return {weak, normal, elite, boss} encounter setup lists for an act."""
-    if act_index == 0:
-        from sts2_env.encounters.act1 import (
-            WEAK_ENCOUNTERS, NORMAL_ENCOUNTERS, ELITE_ENCOUNTERS, BOSS_ENCOUNTERS,
-        )
-    elif act_index == 1:
-        from sts2_env.encounters.act2 import (
-            WEAK_ENCOUNTERS, NORMAL_ENCOUNTERS, ELITE_ENCOUNTERS, BOSS_ENCOUNTERS,
-        )
-    elif act_index == 2:
-        from sts2_env.encounters.act3 import (
-            WEAK_ENCOUNTERS, NORMAL_ENCOUNTERS, ELITE_ENCOUNTERS, BOSS_ENCOUNTERS,
-        )
-    else:
-        from sts2_env.encounters.act4 import (
-            WEAK_ENCOUNTERS, NORMAL_ENCOUNTERS, ELITE_ENCOUNTERS, BOSS_ENCOUNTERS,
-        )
+def _get_encounter_pools(run_state: "RunState") -> dict[str, list]:
+    """Return {weak, normal, elite, boss} encounter setup lists for the current act."""
+    from sts2_env.encounters.pools import encounter_lists_for_act
+
+    act = run_state.current_act
+    weak, normal, elite, boss = encounter_lists_for_act(
+        run_state.current_act_index,
+        biome_id=act.biome_id if run_state.current_act_index == 0 else None,
+    )
     return {
-        "weak": list(WEAK_ENCOUNTERS),
-        "normal": list(NORMAL_ENCOUNTERS),
-        "elite": list(ELITE_ENCOUNTERS),
-        "boss": list(BOSS_ENCOUNTERS),
+        "weak": weak,
+        "normal": normal,
+        "elite": elite,
+        "boss": boss,
     }
 
 
@@ -197,6 +189,10 @@ class RunManager:
         ascension_level: int = 0,
         start_with_neow: bool = False,
         max_acts: int | None = None,
+        *,
+        act1_biome: Act1BiomeChoice = "random",
+        underdocks_unlocked: bool = True,
+        underdocks_discovered: bool = True,
     ):
         self._seed = seed
         self._character_id = character_id
@@ -212,6 +208,9 @@ class RunManager:
             seed=seed,
             ascension_level=ascension_level,
             character_id=character_id,
+            act1_biome=act1_biome,
+            underdocks_unlocked=underdocks_unlocked,
+            underdocks_discovered=underdocks_discovered,
         )
         self._run_state.enable_deck_choice_requests = True
         self._run_state.player.max_hp = char_cfg.starting_hp
@@ -515,7 +514,7 @@ class RunManager:
         self._selected_combat_player_id = player.player_id
 
         # Select encounter from appropriate pool
-        pools = _get_encounter_pools(self._run_state.current_act_index)
+        pools = _get_encounter_pools(self._run_state)
         setup_fn = None
         if room_type == RoomType.BOSS:
             pool = pools["boss"]

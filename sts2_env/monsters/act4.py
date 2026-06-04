@@ -1,4 +1,4 @@
-"""Act 4 (Underdocks) monsters: weak, normal, elite, boss.
+"""Underdocks (alternate Act 1 biome) monsters: weak, normal, elite, boss.
 
 All HP ranges, damage values, and state machines verified against decompiled C# source.
 """

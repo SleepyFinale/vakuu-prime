@@ -25,8 +25,8 @@ def test_initialize_run_generates_shuffled_act_event_rooms_like_csharp_runmanage
     shuffle_rng_calls = sum(
         max(0, len(build_act_event_pool(act)) - 1) for act in ALL_ACTS
     )
-    shared_ancient_rng_calls = 2 + 3  # 2 subset rolls (acts 1-2) + 3 ancient choices
-    assert run_state.rng.up_front.counter == shuffle_rng_calls + shared_ancient_rng_calls
+    setup_rng_calls = 2 + 3 + 3  # 2 shared-ancient subset rolls + 3 ancients + 3 bosses
+    assert run_state.rng.up_front.counter == shuffle_rng_calls + setup_rng_calls
     assert all(act.ancient_id is not None for act in run_state.acts)
 
 

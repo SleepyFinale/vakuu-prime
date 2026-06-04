@@ -441,7 +441,7 @@ Events without an `IsAllowed` override are always allowed (default = true). Depr
 | DollRoom | `currentActIndex == 1` |
 | DoorsOfLightAndDark | Always |
 | DrowningBeacon | Always |
-| EndlessConveyor | All players have >= 105 gold |
+| EndlessConveyor | All players have >= 120 gold |
 | FakeMerchant | `currentActIndex >= 1` AND singleplayer AND (gold >= 100 OR has FoulPotion) |
 | FieldOfManSizedHoles | All players have a card that can be enchanted with PerfectFit |
 | GraveOfTheForgotten | Always |
@@ -485,10 +485,10 @@ Events without an `IsAllowed` override are always allowed (default = true). Depr
 | UnrestSite | All players have HP <= 70% of max HP |
 | Vakuu | Always |
 | WarHistorianRepy | **Disabled** (returns false) |
-| WaterloggedScriptorium | All players have >= 65 gold |
+| WaterloggedScriptorium | All players have >= 55 gold |
 | WelcomeToWongos | `currentActIndex == 1` AND all players have >= 100 gold |
 | Wellspring | Always |
-| WhisperingHollow | All players have enough gold (variable) |
+| WhisperingHollow | All players have >= 44 gold (pay cost is 35 + RNG variance) |
 | WoodCarvings | All players have a removable Basic-rarity card in deck |
 | ZenWeaver | All players have enough gold (variable - "EmotionalAwarenessCost") |
 

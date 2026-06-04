@@ -106,7 +106,18 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 - **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
 - **Curriculum fine-tune:** `--load-model` to resume from a Phase 1 checkpoint.
 
-Remaining work: more training timesteps, card-pick heuristics, and act-mixed combat models for later acts.
+**Also implemented (extensions):**
+
+- **Training presets** (`--preset phase1|phase2|full`) with 2M / 5M / 8M meta timesteps ([`scripts/train_full_run.py`](../scripts/train_full_run.py)).
+- **Non-combat heuristics** ([`sts2_env/gym_env/noncombat_heuristics.py`](../sts2_env/gym_env/noncombat_heuristics.py)): auto card-reward, boss-relic, and rest picks during training (`--no-noncombat-heuristic` to disable).
+- **Act-mixed combat training** ([`sts2_env/encounters/pools.py`](../sts2_env/encounters/pools.py), `train_combat.py --acts 0,1,2`) and per-act routing (`--combat-models`).
+
+**Card-value network and win tracking (implemented):**
+
+- Learned card picker in [`sts2_env/gym_env/card_value.py`](../sts2_env/gym_env/card_value.py), trained via [`scripts/train_card_value.py`](../scripts/train_card_value.py) with outcome-weighted heuristic labels.
+- [`RunWinRateCallback`](../sts2_env/training/callbacks.py) logs `eval/win_rate` during long meta training; [`scripts/eval_full_run.py`](../scripts/eval_full_run.py) for post-training sweeps.
+
+Remaining work: achieving a positive full-run win rate still depends on running full preset schedules (2M–8M meta steps) with mixed-act combat and a trained card-value model; no guarantee without sufficient training time.
 
 ### 8. Only Ironclad combat model trained
 

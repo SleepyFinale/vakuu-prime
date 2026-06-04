@@ -48,25 +48,37 @@ Steps/sec:      28101
 
 ## Combat-Only Training
 
-Train an agent to play single combat encounters (Act 1 Ironclad).
+Train an agent to play single combat encounters (Ironclad starter deck).
 
-### Command
+### Command (Act 1 only)
 
 ```bash
 python scripts/train_combat.py \
+    --acts 0 \
     --total-timesteps 2000000 \
     --n-envs 8 \
-    --lr 3e-4 \
-    --batch-size 256 \
-    --n-steps 2048 \
     --output-dir output/combat_ppo
 ```
+
+### Command (acts 0–2 mixed, recommended for full-run delegate)
+
+```bash
+python scripts/train_combat.py \
+    --acts 0,1,2 \
+    --total-timesteps 3000000 \
+    --n-envs 8 \
+    --output-dir output/combat_ppo_mixed
+```
+
+Boss encounters are excluded from the RL pool (they are scripted in full runs).
 
 ### Flags
 
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
-| `--total-timesteps` | 500,000 | Total environment steps |
+| `--acts` | `0` | Encounter acts: `0`, `0,1,2`, or `all` |
+| `--act1-biome` | random | Act 1 biome for index 0: random (both biomes), overgrowth, or underdocks |
+| `--total-timesteps` | 2M (act 0) / 3M (mixed) | Total environment steps |
 | `--n-envs` | 4 | Parallel environments (set to CPU core count) |
 | `--lr` | 3e-4 | Learning rate |
 | `--batch-size` | 256 | Minibatch size |
@@ -76,7 +88,7 @@ python scripts/train_combat.py \
 | `--ent-coef` | 0.01 | Entropy coefficient (exploration) |
 | `--eval-freq` | 10,000 | Evaluate every N steps |
 | `--eval-episodes` | 20 | Episodes per evaluation |
-| `--output-dir` | output/combat_ppo | Where to save models and logs |
+| `--output-dir` | `output/combat_ppo` or `combat_ppo_mixed` | Model output directory |
 
 ### Expected Results
 
@@ -142,36 +154,37 @@ Train a **meta-policy** for map navigation, card rewards, events, shops, and res
 
 ### Prerequisites
 
-Train combat first:
+Train mixed-act combat first (recommended):
 
 ```bash
-python scripts/train_combat.py --total-timesteps 2000000 --output-dir output/combat_ppo
+python scripts/train_combat.py --acts 0,1,2 --total-timesteps 3000000 \
+    --output-dir output/combat_ppo_mixed
 ```
 
-### Full-Run Command (hierarchical)
+### Full-Run Command (hierarchical + heuristics)
 
 ```bash
-python scripts/train_full_run.py \
-    --combat-model output/combat_ppo/best_model/best_model.zip \
-    --total-timesteps 1000000 \
-    --act-count 1 \
-    --n-envs 4 \
-    --lr 3e-4 \
-    --batch-size 256 \
-    --gamma 0.995 \
-    --ent-coef 0.02 \
-    --max-steps 10000 \
-    --output-dir output/run_ppo
+python scripts/train_full_run.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --n-envs 4 --output-dir output/run_ppo
 ```
 
 ### Key Flags
 
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
-| `--combat-model` | `output/combat_ppo/best_model/best_model.zip` | Frozen combat MaskablePPO |
+| `--preset` | - | `phase1` (2M, act 1), `phase2` (5M, full), `full` (8M, full) |
+| `--total-timesteps` | 2,000,000 | Meta-policy training steps |
+| `--combat-model` | `output/combat_ppo_mixed/...` | Single frozen combat PPO |
+| `--combat-models` | - | Per-act models: `0:path0,1:path1,2:path2` |
 | `--act-count` | 1 | Acts before curriculum win (1 = Act 1, 3 = full game) |
+| `--act1-biome` | random | Act 1 biome: random, overgrowth, or underdocks (full-run training) |
 | `--reward-shaping` | True | Floor/combat-clear/HP shaping (see `run_reward.py`) |
-| `--no-reward-shaping` | - | Sparse terminal reward only (used in eval reporting) |
+| `--no-reward-shaping` | - | Sparse terminal reward only |
+| `--no-noncombat-heuristic` | - | Disable auto card/boss/rest picks (on by default) |
+| `--card-value-model` | - | Learned card picker (`.pt` from `train_card_value.py`) |
+| `--no-card-value-model` | - | Force rule-based card rewards |
+| `--eval-with-heuristics` | - | Eval with assisted card/boss/rest picks |
 | `--load-model` | - | Fine-tune from a saved meta-policy zip |
 | `--no-combat-delegate` | - | Ablation: flat `STS2RunEnv` without combat bot |
 | `--max-steps` | 10000 | Max meta-decisions per episode |
@@ -190,19 +203,44 @@ The meta-policy uses a larger network (256x256 pi/vf) than default combat traini
 | HP lost after combat | up to -0.20 |
 | Run win / death | +1 / -1 |
 
+### Non-combat heuristics and card-value network
+
+During training, boss relics and rest sites use rules in [`noncombat_heuristics.py`](../sts2_env/gym_env/noncombat_heuristics.py). Card rewards can use a **learned card-value network** instead:
+
+```bash
+python scripts/train_card_value.py --collect-episodes 5000
+python scripts/train_full_run.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --card-value-model output/card_value/best_model.pt
+```
+
+Training uses outcome-weighted labels (winning runs weight 1.0, losses 0.3). Evaluation uses sparse rewards; `--eval-with-heuristics` reports assisted win rate.
+
+### Win-rate monitoring
+
+`RunWinRateCallback` logs `eval/win_rate`, `eval/mean_floors`, and `eval/mean_meta_steps` to TensorBoard during training. After training:
+
+```bash
+python scripts/eval_full_run.py --load-model output/run_ppo/best_model/best_model.zip \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --card-value-model output/card_value/best_model.pt
+```
+
 ### Curriculum Learning
 
 ```bash
-# Phase 1: Act 1 only
-python scripts/train_full_run.py \
-    --combat-model output/combat_ppo/best_model/best_model.zip \
-    --act-count 1 --total-timesteps 2000000
+# Phase 1: Act 1 only (2M meta steps)
+python scripts/train_full_run.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip
 
-# Phase 2: Full game (fine-tune Phase 1 meta-policy)
-python scripts/train_full_run.py \
-    --combat-model output/combat_ppo/best_model/best_model.zip \
-    --load-model output/run_ppo/final_model.zip \
-    --act-count 3 --total-timesteps 5000000
+# Phase 2: Full game fine-tune (5M meta steps)
+python scripts/train_full_run.py --preset phase2 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --load-model output/run_ppo/final_model.zip
+
+# Optional: per-act combat specialists
+python scripts/train_full_run.py --preset full \
+    --combat-models "0:output/combat_act0.zip,1:output/combat_act1.zip,2:output/combat_act2.zip"
 ```
 
 ### Full-Run Expected Results
@@ -236,7 +274,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 | --------- | ------------ | ---------------- |
 | Sparse reward | Shaping in `run_reward.py` | Hindsight experience replay |
 | Long episodes | Meta-steps + act-count curriculum | Further episode compression |
-| Multi-phase | Hierarchical combat delegate + meta PPO | Dedicated card-value network for rewards |
+| Multi-phase | Hierarchical combat delegate + meta PPO | Further shop/event learned policies |
 | Simulation speed | ~1,200 combats/sec | Cython acceleration of core loop (target: 10k+/sec) |
 | Card selection | Meta policy via combat-slice choices | Dedicated card evaluation network |
 

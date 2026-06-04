@@ -574,7 +574,7 @@ def generate_act_map(
         rng: Seeded RNG for deterministic generation.
         ascension_level: Current ascension level.
         replace_treasure_with_elite: If True, treasure row becomes elite.
-        act_index: Which act (0=Overgrowth, 1=Hive, 2=Glory).
+        act_index: Which act (0=Act1 Overgrowth/Underdocks, 1=Hive, 2=Glory).
 
     Returns:
         A fully generated ActMap with all room types assigned.

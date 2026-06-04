@@ -1,4 +1,4 @@
-"""Act 1 (Overgrowth) encounter definitions: weak, normal, elite, boss."""
+"""Overgrowth (default Act 1 biome) encounter definitions: weak, normal, elite, boss."""
 
 from __future__ import annotations
 

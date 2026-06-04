@@ -77,31 +77,34 @@ The full-run environment (`STS2RunEnv`) trains an agent on complete game runs, i
 
 ### Basic Full-Run Training
 
+Requires a trained combat model (mixed acts recommended):
+
 ```bash
-python scripts/train_full_run.py
+python scripts/train_combat.py --acts 0,1,2 --output-dir output/combat_ppo_mixed
+python scripts/train_card_value.py --collect-episodes 5000
+python scripts/train_full_run.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --card-value-model output/card_value/best_model.pt
 ```
 
 ### Training with Options
 
 ```bash
-python scripts/train_full_run.py \
-    --total-timesteps 5000000 \
-    --act-count 1 \
-    --n-envs 8 \
-    --lr 3e-4 \
-    --gamma 0.995 \
-    --ent-coef 0.02 \
-    --reward-shaping \
-    --output-dir output/run_ppo
+python scripts/train_full_run.py --preset phase2 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --combat-models "0:act0.zip,1:act1.zip,2:act2.zip" \
+    --load-model output/run_ppo/final_model.zip \
+    --n-envs 8 --output-dir output/run_ppo
 ```
 
 ### Key Differences from Combat Training
 
-- **Action space is larger:** `Discrete(157)` vs combat-only `Discrete(115)`. Includes combat actions plus map choices, card rewards, boss relics, shop, rest, event, treasure, and acting-player selection.
-- **Episodes are longer:** A full Act 1 run takes hundreds of steps.
-- **Gamma is higher:** 0.995 (default) vs 0.99, because long-term planning matters more.
-- **Entropy coefficient is higher:** 0.02 to encourage exploring different paths.
-- **Reward shaping is available:** `--reward-shaping` adds small bonuses for floor progression and act completion, making the reward less sparse.
+- **Hierarchical combat:** Fights are played by a frozen combat PPO (`--combat-model` or `--combat-models`).
+- **Non-combat heuristics:** Boss relics and rest are rule-based; card rewards use rules by default or a learned model (`--card-value-model`, trained via `scripts/train_card_value.py`). Disable all auto-picks with `--no-noncombat-heuristic`.
+- **Win-rate tracking:** TensorBoard `eval/win_rate` during training; post-hoc sweeps via `scripts/eval_full_run.py` (`--eval-with-heuristics`, `--card-value-model`).
+- **Meta action space:** Map, shop, and events under `Discrete(157)`; combat/card-rest slices are masked or auto-played.
+- **Presets:** `--preset phase1` (2M steps, Act 1), `phase2` (5M, full run), `full` (8M).
+- **Gamma / entropy:** 0.995 and 0.02 defaults for long-horizon meta decisions.
 
 ### Act Count
 
@@ -109,11 +112,11 @@ The `--act-count` flag controls episode length:
 
 | Value | Description | Recommended for |
 | ----- | ----------- | ----------------- |
-| 1 | Act 1 only (Overgrowth) | Initial training |
+| 1 | Act 1 only (Overgrowth or Underdocks; see `--act1-biome`) | Initial training |
 | 2 | Acts 1-2 | Intermediate |
 | 3 | Full game (Acts 1-3) | Final training |
 
-Start with `--act-count 1` and increase after the agent achieves >70% win rate.
+Start with `--act-count 1` and increase after the agent achieves >70% win rate. Use `--act1-biome random|overgrowth|underdocks` to control the Act 1 biome (default: random per game rules).
 
 ### Random Baseline
 

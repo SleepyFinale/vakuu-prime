@@ -279,6 +279,9 @@ class STS2RunEnv(gymnasium.Env):
         act_count: int = 3,
         reward_config: RunRewardConfig | None = None,
         render_mode: str | None = None,
+        act1_biome: str = "random",
+        underdocks_unlocked: bool = True,
+        underdocks_discovered: bool = True,
     ):
         super().__init__()
 
@@ -298,6 +301,9 @@ class STS2RunEnv(gymnasium.Env):
         self.act_count = max(1, act_count)
         self._reward_config = reward_config or RunRewardConfig()
         self.render_mode = render_mode
+        self._act1_biome = act1_biome
+        self._underdocks_unlocked = underdocks_unlocked
+        self._underdocks_discovered = underdocks_discovered
 
         # Mutable state -- set during reset()
         self._mgr: RunManager | None = None
@@ -332,6 +338,9 @@ class STS2RunEnv(gymnasium.Env):
             character_id=self._character_id,
             ascension_level=self._ascension_level,
             max_acts=self.act_count,
+            act1_biome=self._act1_biome,
+            underdocks_unlocked=self._underdocks_unlocked,
+            underdocks_discovered=self._underdocks_discovered,
         )
         self._step_count = 0
         self._prev_reward_snapshot = snapshot_from_manager(self._mgr)

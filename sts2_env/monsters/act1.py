@@ -1,4 +1,4 @@
-"""Act 1 (Overgrowth) monsters: weak, normal, elite, boss.
+"""Overgrowth (default Act 1 biome) monsters: weak, normal, elite, boss.
 
 All HP ranges, damage values, and state machines verified against decompiled C# source.
 Weak monsters are re-exported from act1_weak.py for convenience.

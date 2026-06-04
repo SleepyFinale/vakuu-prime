@@ -345,7 +345,7 @@ However, spire-codex only extracts static data (names, costs, damage values). Dy
 | New mechanic: Enchantments | N/A | 23 enchantments modify card behavior |
 | New mechanic: Orbs (expanded) | Lightning/Frost/Dark/Plasma | 5 orb types |
 | Characters | 4 | 5 playable + 2 additional |
-| Acts | 3 + optional 4th | 4 (Overgrowth, Hive, Glory, Underdocks) |
+| Acts | 3 per run; Act 1 = Overgrowth or Underdocks | 4 act types in ModelDb; 3 in a run |
 
 ---
 

@@ -74,6 +74,16 @@ def _card_reward_with_rarity(rewards: list[CardReward], rarity: CardRarity) -> C
     return next(reward for reward in rewards if reward.card_pool_rarity_filter is rarity)
 
 
+def test_colorful_philosophers_requires_more_than_one_unlocked_character_pool():
+    blocked = _make_run_state(4010, character_id="Ironclad")
+    blocked.player.unlock_state["character_card_pools"] = ["Ironclad"]
+    assert ColorfulPhilosophers().is_allowed(blocked) is False
+
+    allowed = _make_run_state(4011, character_id="Ironclad")
+    allowed.player.unlock_state["character_card_pools"] = ["Ironclad", "Silent"]
+    assert ColorfulPhilosophers().is_allowed(allowed) is True
+
+
 def test_colorful_philosophers_choice_surfaces_three_rarity_tiered_card_rewards():
     run_state = _make_run_state(401, character_id="Defect")
     event = ColorfulPhilosophers()

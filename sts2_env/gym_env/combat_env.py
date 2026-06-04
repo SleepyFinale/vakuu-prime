@@ -12,7 +12,12 @@ from sts2_env.cards.base import reset_instance_counter
 from sts2_env.cards.ironclad import create_ironclad_starter_deck
 from sts2_env.core.combat import CombatState
 from sts2_env.core.constants import ACTION_END_TURN, ACTION_SPACE_SIZE, IRONCLAD_STARTING_HP
-from sts2_env.encounters.act1 import ALL_ACT1_ENCOUNTERS, EncounterSetup
+from sts2_env.encounters.act1 import ALL_ACT1_ENCOUNTERS
+from sts2_env.encounters.pools import (
+    build_encounter_pool,
+    build_mixed_act1_encounter_pool,
+)
+from sts2_env.encounters.registry import EncounterSetup
 from sts2_env.core.rng import INT_MAX_EXCLUSIVE, Rng
 from sts2_env.gym_env.action_space import (
     action_to_card_and_target,
@@ -38,6 +43,8 @@ class STS2CombatEnv(gymnasium.Env):
     def __init__(
         self,
         encounter_pool: list[EncounterSetup] | None = None,
+        encounter_acts: tuple[int, ...] = (0,),
+        act1_biome: str = "random",
         player_hp: int = IRONCLAD_STARTING_HP,
         player_max_hp: int = IRONCLAD_STARTING_HP,
         max_turns: int = 200,
@@ -48,7 +55,20 @@ class STS2CombatEnv(gymnasium.Env):
             low=-1.0, high=10.0, shape=(OBS_SIZE,), dtype=np.float32
         )
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
-        self.encounter_pool = encounter_pool or ALL_ACT1_ENCOUNTERS
+        if encounter_pool is not None:
+            self.encounter_pool = encounter_pool
+        elif act1_biome == "random" and 0 in encounter_acts:
+            self.encounter_pool = build_mixed_act1_encounter_pool(
+                encounter_acts, include_boss=False,
+            )
+        else:
+            self.encounter_pool = build_encounter_pool(
+                encounter_acts,
+                include_boss=False,
+                act1_biome=act1_biome,
+            )
+        self.encounter_acts = encounter_acts
+        self.act1_biome = act1_biome
         self.player_hp = player_hp
         self.player_max_hp = player_max_hp
         self.max_turns = max_turns

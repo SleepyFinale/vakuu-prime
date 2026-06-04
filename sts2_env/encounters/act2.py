@@ -162,7 +162,6 @@ NORMAL_ENCOUNTERS: list[EncounterSetup] = [
     setup_slumbering_beetle_normal,
     setup_spiny_toad_normal,
     setup_the_obscura_normal,
-    setup_tunneler_normal,
 ]
 
 

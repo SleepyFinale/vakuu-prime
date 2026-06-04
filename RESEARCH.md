@@ -337,7 +337,7 @@ spire-codex/
 
 
 Playable characters: **Ironclad, Silent, Defect, Necrobinder, Regent** (5 total).
-Acts: **Overgrowth (Act 1), Hive (Act 2), Glory (Act 3), Underdocks**.
+Acts: **3 per run** — Act 1 is **Overgrowth or Underdocks** (alternate biomes), then **Hive**, then **Glory**. Four act types exist in the content DB; Underdocks is not a fourth sequential act.
 
 ### 11.3 JSON data structure examples
 

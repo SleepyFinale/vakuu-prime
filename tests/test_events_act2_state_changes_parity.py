@@ -5,7 +5,7 @@ import sts2_env.events.act2  # noqa: F401
 from sts2_env.cards.factory import create_card
 from sts2_env.cards.factory import create_card
 from sts2_env.cards.ironclad import create_ironclad_starter_deck
-from sts2_env.cards.status import make_spore_mind
+from sts2_env.cards.status import make_greed, make_spore_mind
 from sts2_env.core.enums import CardId
 from sts2_env.events.act2 import (
     CrystalSphere,
@@ -121,17 +121,25 @@ def test_luminous_choir_and_morphic_grove_apply_real_deck_changes():
     assert before_ids != after_ids
 
 
-def test_morphic_grove_requires_all_players_to_have_gold():
+def test_morphic_grove_requires_all_players_to_have_gold_and_transformable_cards():
     run_state = RunState(seed=2901, character_id="Ironclad")
     run_state.initialize_run()
+    run_state.player.deck = create_ironclad_starter_deck()
     run_state.player.gold = 100
     ally = run_state.add_player(PlayerState(player_id=2, character_id="Silent", gold=99))
+    ally.deck = create_ironclad_starter_deck()
     event = MorphicGrove()
 
     assert event.is_allowed(run_state) is False
 
     ally.gold = 100
     assert event.is_allowed(run_state) is True
+
+    poor_deck_state = RunState(seed=2902, character_id="Ironclad")
+    poor_deck_state.initialize_run()
+    poor_deck_state.player.gold = 200
+    poor_deck_state.player.deck = [make_greed(), make_greed()]
+    assert MorphicGrove().is_allowed(poor_deck_state) is False
 
 
 def test_potion_courier_ranwid_and_whispering_hollow_change_inventory():
@@ -203,16 +211,22 @@ def test_ranwid_requires_all_players_to_have_gold_potion_and_tradable_relic():
     assert event.is_allowed(run_state) is True
 
 
-def test_whispering_hollow_requires_all_players_to_have_gold():
+def test_whispering_hollow_requires_all_players_to_have_spawn_gold():
     run_state = RunState(seed=3101, character_id="Ironclad")
     run_state.initialize_run()
-    run_state.player.gold = WhisperingHollow.GOLD_COST
-    ally = run_state.add_player(PlayerState(player_id=2, character_id="Silent", gold=WhisperingHollow.GOLD_COST - 1))
+    run_state.player.gold = WhisperingHollow.SPAWN_GOLD_REQUIREMENT
+    ally = run_state.add_player(
+        PlayerState(
+            player_id=2,
+            character_id="Silent",
+            gold=WhisperingHollow.SPAWN_GOLD_REQUIREMENT - 1,
+        )
+    )
     event = WhisperingHollow()
 
     assert event.is_allowed(run_state) is False
 
-    ally.gold = WhisperingHollow.GOLD_COST
+    ally.gold = WhisperingHollow.SPAWN_GOLD_REQUIREMENT
     assert event.is_allowed(run_state) is True
 
 
@@ -222,14 +236,14 @@ def test_whispering_hollow_options_and_effects_match_reference_vars():
     run_state.player.deck = create_ironclad_starter_deck()
     run_state.player.gold = 200
     event = WhisperingHollow()
-
     options = event.generate_initial_options(run_state)
+    gold_cost = event._gold_cost
 
     assert [option.option_id for option in options] == [
         WhisperingHollow.OPTION_GOLD,
         WhisperingHollow.OPTION_HUG,
     ]
-    assert options[0].label == f"Pay Gold ({WhisperingHollow.GOLD_COST}g)"
+    assert options[0].label == f"Pay Gold ({gold_cost}g)"
     assert options[0].description == f"Gain {WhisperingHollow.GOLD_POTION_REWARD_COUNT} potions"
     assert options[1].description == f"Take {WhisperingHollow.HUG_DAMAGE} damage, transform 1 card"
 
@@ -238,7 +252,7 @@ def test_whispering_hollow_options_and_effects_match_reference_vars():
     potion_rewards = gold_result.rewards["reward_objects"]
 
     assert gold_result.finished
-    assert run_state.player.gold == gold_before - WhisperingHollow.GOLD_COST
+    assert run_state.player.gold == gold_before - gold_cost
     assert len(potion_rewards) == WhisperingHollow.GOLD_POTION_REWARD_COUNT
     assert all(isinstance(reward, PotionReward) for reward in potion_rewards)
 
@@ -516,7 +530,7 @@ def test_whispering_hollow_hug_transforms_before_damage_can_end_run():
     other = create_card(CardId.DEFEND_IRONCLAD)
     mgr.run_state.player.deck = [target, other]
     mgr.run_state.player.current_hp = WhisperingHollow.HUG_DAMAGE
-    mgr.run_state.player.gold = WhisperingHollow.GOLD_COST
+    mgr.run_state.player.gold = WhisperingHollow.SPAWN_GOLD_REQUIREMENT
     mgr._phase = RunManager.PHASE_EVENT
     event = WhisperingHollow()
     mgr._event_model = event

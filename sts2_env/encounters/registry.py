@@ -25,6 +25,11 @@ from sts2_env.encounters.act3 import (
     setup_queen_boss,
     setup_test_subject_boss,
 )
+from sts2_env.encounters.act4 import (
+    setup_lagavulin_matriarch_boss,
+    setup_soul_fysh_boss,
+    setup_waterfall_giant_boss,
+)
 
 BOSS_SETUP_BY_ID: dict[str, EncounterSetup] = {
     "VantomBoss": setup_vantom_boss,
@@ -36,6 +41,9 @@ BOSS_SETUP_BY_ID: dict[str, EncounterSetup] = {
     "QueenBoss": setup_queen_boss,
     "TestSubjectBoss": setup_test_subject_boss,
     "DoormakerBoss": setup_doormaker_boss,
+    "WaterfallGiantBoss": setup_waterfall_giant_boss,
+    "SoulFyshBoss": setup_soul_fysh_boss,
+    "LagavulinMatriarchBoss": setup_lagavulin_matriarch_boss,
 }
 
 

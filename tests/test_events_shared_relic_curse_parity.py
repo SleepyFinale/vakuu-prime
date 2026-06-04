@@ -75,6 +75,15 @@ def test_grave_of_the_forgotten_confront_adds_decay_and_souls_power_enchant():
     assert [option.enabled for option in locked_options] == [False, True]
 
 
+def test_grave_of_the_forgotten_requires_all_players_to_have_enchantable_cards():
+    run_state = _make_run_state(3022)
+    run_state.player.deck = [make_decay(), make_doubt()]
+    assert GraveOfTheForgotten().is_allowed(run_state) is False
+
+    run_state.player.deck.append(make_backstab())
+    assert GraveOfTheForgotten().is_allowed(run_state) is True
+
+
 def test_hungry_for_mushrooms_big_and_fragrant_apply_expected_hp_and_relics():
     run_state = _make_run_state(303)
     event = HungryForMushrooms()

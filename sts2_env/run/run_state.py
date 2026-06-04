@@ -26,9 +26,10 @@ from sts2_env.map.map_point import MapCoord, MapPoint
 from sts2_env.map.generator import ActMap, generate_act_map
 from sts2_env.map.acts import (
     ActConfig,
-    ALL_ACTS,
+    Act1BiomeChoice,
     SHARED_ANCIENT_IDS,
     build_act_event_pool,
+    build_run_acts,
 )
 from sts2_env.potions.base import PotionInstance
 from sts2_env.relics.base import RelicId, RelicRarity
@@ -1410,10 +1411,17 @@ class RunState:
         seed: int = 0,
         ascension_level: int = 0,
         character_id: str = "Ironclad",
+        *,
+        act1_biome: Act1BiomeChoice = "random",
+        underdocks_unlocked: bool = True,
+        underdocks_discovered: bool = True,
     ):
         self.seed = seed
         self.ascension_level = ascension_level
         self.rng = RunRngSet(seed)
+        self.act1_biome = act1_biome
+        self.underdocks_unlocked = underdocks_unlocked
+        self.underdocks_discovered = underdocks_discovered
 
         # Player
         self.player = PlayerState(character_id=character_id)
@@ -1421,8 +1429,14 @@ class RunState:
         self.player.base_orb_slot_count = get_character(character_id).base_orb_slots
         self.players: list[PlayerState] = [self.player]
 
-        # Act / map state
-        self.acts: list[ActConfig] = [act.to_mutable() for act in ALL_ACTS]
+        # Act / map state (3 acts; act 1 slot is Overgrowth or Underdocks)
+        act_list_rng = Rng(seed, "act_list")
+        self.acts: list[ActConfig] = build_run_acts(
+            act_list_rng,
+            underdocks_unlocked=underdocks_unlocked,
+            underdocks_discovered=underdocks_discovered,
+            act1_biome=act1_biome,
+        )
         self.current_act_index: int = 0
         self.map: ActMap | None = None
         self.visited_map_coords: list[MapCoord] = []
