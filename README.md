@@ -31,19 +31,21 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 
 ## Project Stats
 
-| Metric | Value |
-|--------|-------|
-| Source files | 133 Python + C# |
-| Lines of code | ~50,000 |
-| Test functions | 408 |
-| Cards implemented | 577 |
-| Powers implemented | 260 |
-| Monsters implemented | 121 |
-| Relics implemented | 290 |
-| Potions implemented | 63 |
-| Playable characters | 5 (Ironclad, Silent, Defect, Necrobinder, Regent) |
-| Simulation speed | ~1,200 combats/sec, ~28,000 steps/sec |
-| Combat win rate (trained PPO) | ~92% (Act 1 Ironclad) |
+
+| Metric                        | Value                                             |
+| ----------------------------- | ------------------------------------------------- |
+| Source files                  | 133 Python + C#                                   |
+| Lines of code                 | ~50,000                                           |
+| Test functions                | 408                                               |
+| Cards implemented             | 577                                               |
+| Powers implemented            | 260                                               |
+| Monsters implemented          | 121                                               |
+| Relics implemented            | 290                                               |
+| Potions implemented           | 63                                                |
+| Playable characters           | 5 (Ironclad, Silent, Defect, Necrobinder, Regent) |
+| Simulation speed              | ~1,200 combats/sec, ~28,000 steps/sec             |
+| Combat win rate (trained PPO) | ~92% (Act 1 Ironclad)                             |
+
 
 ## Quick Start
 
@@ -115,7 +117,7 @@ Run the local web UI:
 python -m sts2_env.web.play_run --port 8765
 ```
 
-Then open <http://127.0.0.1:8765/>. The browser UI uses the same `RunManager`
+Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). The browser UI uses the same `RunManager`
 logic as the terminal version, but presents the run as clickable screens for
 map, combat, events, rewards, shop, rest sites, treasure, and boss relics.
 
@@ -132,14 +134,16 @@ python scripts/train_combat.py \
 
 Key flags:
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--total-timesteps` | 500,000 | Total environment steps |
-| `--n-envs` | 4 | Parallel environments (use CPU cores) |
-| `--lr` | 3e-4 | Learning rate |
-| `--batch-size` | 256 | Minibatch size |
-| `--n-steps` | 2048 | Steps per rollout per env |
-| `--output-dir` | output/combat_ppo | Where to save models and logs |
+
+| Flag                | Default           | Description                           |
+| ------------------- | ----------------- | ------------------------------------- |
+| `--total-timesteps` | 500,000           | Total environment steps               |
+| `--n-envs`          | 4                 | Parallel environments (use CPU cores) |
+| `--lr`              | 3e-4              | Learning rate                         |
+| `--batch-size`      | 256               | Minibatch size                        |
+| `--n-steps`         | 2048              | Steps per rollout per env             |
+| `--output-dir`      | output/combat_ppo | Where to save models and logs         |
+
 
 ### Train a Full-Run Agent
 
@@ -277,17 +281,19 @@ sts2-rl-agent/
 
 ## Game Content Coverage
 
-| Content Type | Game Total | Implemented | Coverage |
-|-------------|-----------|-------------|----------|
-| Cards | 577 | 577 | 100% |
-| Powers (status effects) | 260 | 260 | 100% |
-| Monsters | 121 | 121 | 100% |
-| Relics | 290 | 290 | 100% |
-| Potions | 63 | 63 | 100% |
-| Encounters | 88 | 88 | 100% |
-| Events | 68 | 68 | 100% |
-| Characters | 5 + 2 | 5 | 100% (playable) |
-| Acts | 4 | 4 | 100% |
+
+| Content Type            | Game Total | Implemented | Coverage        |
+| ----------------------- | ---------- | ----------- | --------------- |
+| Cards                   | 577        | 577         | 100%            |
+| Powers (status effects) | 260        | 260         | 100%            |
+| Monsters                | 121        | 121         | 100%            |
+| Relics                  | 290        | 290         | 100%            |
+| Potions                 | 63         | 63          | 100%            |
+| Encounters              | 88         | 88          | 100%            |
+| Events                  | 68         | 68          | 100%            |
+| Characters              | 5 + 2      | 5           | 100% (playable) |
+| Acts                    | 4          | 4           | 100%            |
+
 
 ## How It Works
 
@@ -296,7 +302,6 @@ sts2-rl-agent/
 Following lessons from the STS1 RL community, this project uses a two-phase strategy:
 
 1. **Headless Simulator** (for training): A pure-Python reimplementation of STS2 combat and run mechanics, verified against the decompiled C# source. Runs at ~1,200 combats/second -- fast enough for millions of training episodes.
-
 2. **Bridge Mod** (for validation): A C# mod that hooks into the real game via Harmony, exposes state over TCP, and injects agent decisions. Includes 5-10x speed patches for faster real-game evaluation.
 
 ### RL Algorithm
@@ -309,32 +314,36 @@ Following lessons from the STS1 RL community, this project uses a two-phase stra
 ### Reward Design
 
 **Combat environment:**
+
 - Win: +1.0
 - Loss: -1.0
 - HP loss: small negative penalty (encourages efficient play)
 
 **Full-run environment:**
+
 - Win the run: +1.0
 - Death: -1.0
 - Optional shaping: small bonuses for floor progression and act completion
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [README.md](README.md) | This file |
-| [RESEARCH.md](RESEARCH.md) | Research notes, prior work, algorithm selection |
-| [DECOMPILED_ARCHITECTURE.md](DECOMPILED_ARCHITECTURE.md) | Decompiled C# analysis for simulator |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide, dev setup, adding content |
-| [docs/SIMULATOR_ARCHITECTURE.md](docs/SIMULATOR_ARCHITECTURE.md) | Python simulator internal architecture |
-| [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md) | Comprehensive RL training guide |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | TCP bridge communication protocol |
-| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Current known issues and limitations |
-| [docs/MOD_BUILD_GUIDE.md](docs/MOD_BUILD_GUIDE.md) | How to build and install the bridge mod |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common problems and solutions |
-| [docs/GAME_BRIDGE_REFERENCE.md](docs/GAME_BRIDGE_REFERENCE.md) | Bridge architecture and design notes |
-| [docs/AUTOSLAY_BRIDGE.md](docs/AUTOSLAY_BRIDGE.md) | AutoSlay-based bridge design |
-| [docs/GAME_SYSTEMS_REFERENCE.md](docs/GAME_SYSTEMS_REFERENCE.md) | Game mechanics reference |
+
+| Document                                                         | Description                                     |
+| ---------------------------------------------------------------- | ----------------------------------------------- |
+| [README.md](README.md)                                           | This file                                       |
+| [RESEARCH.md](RESEARCH.md)                                       | Research notes, prior work, algorithm selection |
+| [DECOMPILED_ARCHITECTURE.md](DECOMPILED_ARCHITECTURE.md)         | Decompiled C# analysis for simulator            |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                               | Contribution guide, dev setup, adding content   |
+| [docs/SIMULATOR_ARCHITECTURE.md](docs/SIMULATOR_ARCHITECTURE.md) | Python simulator internal architecture          |
+| [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md)                 | Comprehensive RL training guide                 |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md)                             | TCP bridge communication protocol               |
+| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)                     | Current known issues and limitations            |
+| [docs/MOD_BUILD_GUIDE.md](docs/MOD_BUILD_GUIDE.md)               | How to build and install the bridge mod         |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)               | Common problems and solutions                   |
+| [docs/GAME_BRIDGE_REFERENCE.md](docs/GAME_BRIDGE_REFERENCE.md)   | Bridge architecture and design notes            |
+| [docs/AUTOSLAY_BRIDGE.md](docs/AUTOSLAY_BRIDGE.md)               | AutoSlay-based bridge design                    |
+| [docs/GAME_SYSTEMS_REFERENCE.md](docs/GAME_SYSTEMS_REFERENCE.md) | Game mechanics reference                        |
+
 
 ## License
 
@@ -347,3 +356,4 @@ This project is for research and educational purposes. Slay the Spire 2 is the p
 - [CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod) -- STS1 game bridge protocol design
 - [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) -- STS2 mod framework
 - [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) -- RL training framework
+
