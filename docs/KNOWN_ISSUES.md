@@ -145,17 +145,25 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 ### 10. Some card effects may not match the real game exactly
 
-**Severity:** Medium (simulator fidelity)
+**Severity:** Medium (simulator fidelity) — **mitigated (audited surface clean; live bridge pass pending)**
 
-**Problem:** The headless simulator reimplements card effects based on the decompiled C# source, but exact parity is still broader than the currently audited test surface. The earlier helper-level gaps are fixed, but some card and relic interactions still need direct decompiled-backed regression tests before they should be treated as exact.
+**Problem:** Exact parity is no longer blocked on missing core helpers or audited fingerprint deltas. The only remaining open item is recording a live-game bridge smoke pass to field-verify the simulator against the running client.
 
-**Examples of still-audited-not-proven-exact areas:**
+**Mitigation (implemented):**
 
-- selected colorless/event cards such as `Alchemize`, `BeatDown`, and `HandOfGreed`
-- selected Defect and Silent follow-up effects such as `Compact`, `WhiteNoise`, and `TheHunt`
-- wider relic-hook interactions outside the targeted parity suites
+- Behavioral audit scripts: [`scripts/audit_onplay_behavior_coverage.py`](../scripts/audit_onplay_behavior_coverage.py), [`scripts/audit_relic_hook_coverage.py`](../scripts/audit_relic_hook_coverage.py), optional [`scripts/audit_wiki_card_metadata.py`](../scripts/audit_wiki_card_metadata.py) (wiki is informational only; decompiled source wins).
+- Generated backlog: [`docs/PARITY_BACKLOG.md`](PARITY_BACKLOG.md) now reports **0** card fingerprint mismatches (543/543) and **0** relic hook mismatches (287/287). Both audits accept `--fail-on-mismatch` to keep them at zero on sync.
+- Every non-deprecated OnPlay card and every hook-bearing relic has at least one `Matches {Class}.cs` regression (hand-written suites plus [`tests/test_generated_onplay_smoke_parity.py`](../tests/test_generated_onplay_smoke_parity.py) and [`tests/test_generated_relic_smoke_parity.py`](../tests/test_generated_relic_smoke_parity.py)).
+- Recent decompiled-backed fixes: `Stoke` now exhausts the hand and generates/upgrades that many new character cards; `Snap` now lets the player pick a hand card to gain Retain; `Permafrost` now resets its per-combat flag on combat-room entry; plus earlier `Compact`, `KnifeTrap`, `Glow` / `GuidingStar`, and `SpoilsOfBattle` fixes.
+- The relic audit now resolves Python hooks through the class MRO and a broadened `PY_HOOK_ALIASES`, so equivalent-behavior naming differences no longer show as gaps.
+- Live-bridge smoke pipeline: build gate [`scripts/bridge_live_smoke.ps1`](../scripts/bridge_live_smoke.ps1), procedure [`docs/BRIDGE_LIVE_SMOKE.md`](BRIDGE_LIVE_SMOKE.md), committed golden fixture, and offline + opt-in live tests in [`tests/test_bridge_live_smoke.py`](../tests/test_bridge_live_smoke.py). The C# bridge mod now compiles cleanly.
 
-**Impact:** The trained model may develop strategies that exploit simulator inaccuracies and fail to transfer to the real game. The bridge mod's real-game evaluation is the ground truth.
+**Remaining gaps:**
+
+- Live-game bridge smoke record-and-compare pass has not been run yet (no game was listening here). Run `scripts/bridge_live_smoke.ps1 -Live` on a machine with STS2 installed (see [PARITY_GAPS.md](PARITY_GAPS.md) §3).
+- Deep edge-case coverage beyond smoke tests remains a continuous effort for the most complex cards.
+
+**Impact:** Residual drift can still affect RL transfer; use bridge evaluation as ground truth for training claims.
 
 ### 11. Reconnection timing issues
 

@@ -241,9 +241,18 @@ def sculpting_strike(card: CardInstance, combat: CombatState, target: Creature |
 
 @register_effect(CardId.SNAP)
 def snap(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    """OstyAttack — select card from hand."""
+    """OstyAttack — deal damage, then choose a hand card to gain Retain."""
     assert target is not None
     _deal_osty_damage_single(card, combat, target, 7)
+    candidates = [hand_card for hand_card in combat.hand if not hand_card.is_retain]
+    if not candidates:
+        return
+
+    def _apply_retain(selected: CardInstance | None) -> None:
+        if selected is not None:
+            selected.keywords = frozenset(set(selected.keywords) | {'retain'})
+
+    combat.request_card_choice(prompt='Choose a card to Retain', cards=candidates, source_pile='hand', resolver=_apply_retain)
 
 @register_effect(CardId.SOW)
 def sow(card: CardInstance, combat: CombatState, target: Creature | None) -> None:

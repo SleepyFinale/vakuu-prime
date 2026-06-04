@@ -210,21 +210,30 @@ In particular, these areas now have direct automated coverage:
 
 ## Current Confirmed Blockers
 
-### 1. Exact parity still exceeds the current audited surface
+### 1. Fingerprint and hook-name deltas (closed)
 
-The codebase is no longer blocked on the old “core helper missing” category, but broad exact-match claims still require more decompiled-backed tests across:
+As of the latest behavioral audit pass, both card and relic surfaces report
+zero deltas (see [`PARITY_BACKLOG.md`](PARITY_BACKLOG.md)):
 
-- colorless and event cards outside the targeted choice-flow subset
-- full Regent and Necrobinder regression coverage
-- relic interactions across combat, shop, rewards, and rest-site hooks
-- broader bridge smoke testing against a live game
-- broader random-call boundary audits outside the currently fixed event / combat stream / clone-dupe id routes
+- **543 / 543** non-deprecated OnPlay cards have a `Matches {Card}.cs` test, with **0** C#/Python fingerprint mismatches.
+- **287 / 287** hook-bearing relics have a `Matches {Relic}.cs` smoke or focused test, with **0** hook mismatches.
 
-This is primarily a coverage gap, not proof of incorrect behavior, but it prevents claiming an exact match.
+The remaining card delta was a real `Stoke` bug (now generates and adds new
+character cards on exhaust) plus a missing `Snap` Retain selection (now
+implemented). The relic deltas were naming/representation differences resolved
+by resolving Python relic hooks through the class MRO, expanding
+`PY_HOOK_ALIASES`, and treating generic dispatch/UI-status hooks (e.g.
+`AfterRoomEntered`) as satisfied when the relic implements the effect through a
+more specific timing hook. `Permafrost` additionally now resets its per-combat
+flag in `after_room_entered` to mirror the decompiled source.
 
-### 2. Implemented but not yet fully parity-audited cards
+Run `python scripts/audit_onplay_behavior_coverage.py --fail-on-mismatch` and
+`python scripts/audit_relic_hook_coverage.py --fail-on-mismatch` after sync to
+keep both at zero.
 
-There are still implemented cards that need deeper decompiled-backed coverage, but the previously tracked `Compact`, `WhiteNoise`, and `TheHunt` items are now covered by dedicated parity tests.
+### 2. Deep edge-case coverage beyond smoke tests
+
+Smoke tests prove play resolution; complex cards still need targeted edge tests (combat ends mid-effect, relic modifiers, seeded RNG) in the existing `test_*_parity.py` suites. Previously tracked `Compact`, `WhiteNoise`, and `TheHunt` remain covered there.
 
 ### 3. Bridge/runtime validation gap
 
@@ -246,12 +255,27 @@ flows. `tests/test_bridge_autoslay_coverage.py` guards that wiring, but this is
 still weaker than a live-game smoke test that exercises those paths in the
 running client.
 
-Local bridge build validation is currently blocked. On 2026-05-22, this
-machine still did not have `dotnet` on `PATH`, so the C# bridge mod could not be
-compiled here.
+A live-smoke pipeline now exists (see
+[`BRIDGE_LIVE_SMOKE.md`](BRIDGE_LIVE_SMOKE.md)):
 
-Until a C# build and live-game smoke pass are available, bridge support should
-be considered implemented and Python-tested, but not fully field-verified.
+- The C# bridge mod now compiles cleanly with `dotnet build` (three stale
+  source errors were fixed: a missing `CardModel` and `NClickableControl`
+  using directive, and an invalid `?.` on the non-nullable `TargetType` enum).
+  Producing the loadable `.pck` still requires the Godot 4.5.1 mono editor;
+  [`scripts/bridge_live_smoke.ps1`](../scripts/bridge_live_smoke.ps1) warns (does
+  not fail) when only that packaging step is unavailable.
+- A deterministic smoke scenario ([`sts2_env/parity/bridge_smoke.py`](../sts2_env/parity/bridge_smoke.py))
+  produces a committed golden trace
+  ([`tests/fixtures/bridge_replays/smoke_combat.json`](../tests/fixtures/bridge_replays/smoke_combat.json))
+  that CI replays offline via [`tests/test_bridge_live_smoke.py`](../tests/test_bridge_live_smoke.py).
+- The live record-and-compare step (`python scripts/record_bridge_smoke.py
+  --live`, or `pytest --run-live-bridge`) is implemented and documented; it was
+  not run here because no game was listening on the bridge port. Run it on a
+  machine with STS2 installed to complete the field verification.
+
+Until that live pass is recorded, bridge support should be considered
+implemented, Python-tested, and offline-golden-tested, but not yet
+field-verified end to end.
 
 ### 4. Reachability / semantic audit backlog
 

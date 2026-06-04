@@ -153,16 +153,19 @@ def glitterstream(card: CardInstance, combat: CombatState, target: Creature | No
 
 @register_effect(CardId.GLOW)
 def glow(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    combat.gain_stars(_owner(card, combat), card.effect_vars.get('stars', 1))
-    cards = card.effect_vars.get('cards', 2)
-    combat._draw_cards(cards)
+    owner = _owner(card, combat)
+    cards = card.effect_vars.get('cards', 1)
+    stars = card.effect_vars.get('stars', 1)
+    combat.gain_stars(owner, stars)
+    combat.draw_cards(owner, cards)
+    combat.apply_power_to(owner, PowerId.DRAW_CARDS_NEXT_TURN, cards)
 
 @register_effect(CardId.GUIDING_STAR)
 def guiding_star(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
     assert target is not None
     _deal_damage_single(card, combat, target)
     cards = card.effect_vars.get('cards', 2)
-    combat.apply_power_to(_owner(card, combat), PowerId.DRAW_CARDS_NEXT_TURN, cards)
+    combat.draw_cards(_owner(card, combat), cards)
 
 @register_effect(CardId.HIDDEN_CACHE)
 def hidden_cache(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
@@ -209,7 +212,9 @@ def solar_strike(card: CardInstance, combat: CombatState, target: Creature | Non
 
 @register_effect(CardId.SPOILS_OF_BATTLE)
 def spoils_of_battle(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    combat.forge(_owner(card, combat), card.effect_vars.get('forge', 10), source=card)
+    owner = _owner(card, combat)
+    combat.forge(owner, card.effect_vars.get('forge', 5), source=card)
+    combat.draw_cards(owner, card.effect_vars.get('cards', 2))
 
 @register_effect(CardId.WROUGHT_IN_WAR)
 def wrought_in_war(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
@@ -760,7 +765,8 @@ def make_gather_light(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.GATHER_LIGHT, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.COMMON, base_block=8, upgraded=upgraded, effect_vars={'stars': 1}, instance_id=_get_next_id())
 
 def make_glow(upgraded: bool=False) -> CardInstance:
-    return CardInstance(card_id=CardId.GLOW, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.COMMON, upgraded=upgraded, effect_vars={'cards': 1, 'stars': 1}, instance_id=_get_next_id())
+    stars = 2 if upgraded else 1
+    return CardInstance(card_id=CardId.GLOW, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.COMMON, upgraded=upgraded, effect_vars={'cards': 1, 'stars': stars}, instance_id=_get_next_id())
 
 def make_guiding_star(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.GUIDING_STAR, cost=1, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.COMMON, base_damage=12, upgraded=upgraded, star_cost=2, effect_vars={'cards': 2}, instance_id=_get_next_id())

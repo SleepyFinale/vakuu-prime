@@ -12,7 +12,7 @@ from sts2_env.cards.regent import (
 )
 from sts2_env.cards.ironclad_basic import make_strike_ironclad
 from sts2_env.core.combat import CombatState
-from sts2_env.core.enums import CardId
+from sts2_env.core.enums import CardId, PowerId
 from sts2_env.core.rng import Rng
 from sts2_env.monsters.act1_weak import create_shrinker_beetle
 
@@ -48,23 +48,22 @@ class TestRegentStarGainAndStardustParity:
         starting_stars = combat.stars
 
         assert combat.play_card(0)
-        assert combat.player.block == 7
+        assert combat.player.block == 8
         assert combat.stars == starting_stars + 1
 
-    def test_glow_gains_stars_and_draws_cards(self):
-        """Matches Glow.cs: gain stars, then draw the configured number of cards."""
+    def test_glow_gains_stars_draws_and_applies_next_turn_draw_power(self):
+        """Matches Glow.cs: gain stars, draw now, and apply DrawCardsNextTurnPower."""
         combat = _make_combat()
         first_draw = make_strike_ironclad()
-        second_draw = make_strike_ironclad()
         combat.hand = [make_glow(upgraded=True)]
-        combat.draw_pile = [first_draw, second_draw]
+        combat.draw_pile = [first_draw]
         combat.energy = 1
         starting_stars = combat.stars
 
         assert combat.play_card(0)
         assert combat.stars == starting_stars + 2
         assert first_draw in combat.hand
-        assert second_draw in combat.hand
+        assert combat.player.get_power_amount(PowerId.DRAW_CARDS_NEXT_TURN) == 1
 
     def test_make_it_so_returns_from_discard_after_every_three_skills_played(self):
         """Matches MakeItSo.cs: return this card from discard each third Skill played."""

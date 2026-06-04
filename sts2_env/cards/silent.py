@@ -604,14 +604,14 @@ def grand_finale_is_playable(card: CardInstance, owner_state, combat: CombatStat
 
 @register_effect(CardId.KNIFE_TRAP)
 def knife_trap(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    owner = _owner(card, combat)
-    for shiv in [exhausted for exhausted in combat.exhaust_pile if exhausted.is_shiv]:
-        if card.upgraded and (not shiv.upgraded):
+    shivs = [exhausted for exhausted in combat.exhaust_pile if exhausted.is_shiv]
+    for shiv in shivs:
+        if card.upgraded and not shiv.upgraded:
             shiv.upgraded = True
             shiv.base_damage = 6
-        if target is not None and target.is_alive:
-            dmg = calculate_damage(shiv.base_damage, owner, target, ValueProp.MOVE, combat)
-            apply_damage(target, dmg, ValueProp.MOVE, combat, owner)
+        if combat.is_over:
+            break
+        combat.auto_play_card(shiv, target=target)
 
 @register_effect(CardId.MALAISE)
 def malaise(card: CardInstance, combat: CombatState, target: Creature | None) -> None:

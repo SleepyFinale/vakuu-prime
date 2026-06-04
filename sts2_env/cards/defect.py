@@ -517,7 +517,10 @@ def compact(card: CardInstance, combat: CombatState, target: Creature | None) ->
     from sts2_env.cards.status import make_fuel
     blk = calculate_block(card.base_block, _owner(card, combat), ValueProp.MOVE, combat, card_source=card)
     _gain_resolved_block(_owner(card, combat), blk, combat)
-    status_cards = [c for c in list(combat.hand) if c.card_type == CardType.STATUS]
+    status_cards = [
+        c for c in list(combat.hand)
+        if c.card_type == CardType.STATUS and c.is_removable
+    ]
     for status_card in status_cards:
         combat.transform_card(status_card, make_fuel(upgraded=card.upgraded))
 

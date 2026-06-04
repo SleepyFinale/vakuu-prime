@@ -9,6 +9,7 @@ from sts2_env.cards.silent import (
     make_dagger_throw,
     make_defend_silent,
     make_hidden_daggers,
+    make_knife_trap,
     make_prepared,
     make_the_hunt,
 )
@@ -170,6 +171,22 @@ class TestSilentDiscardChoiceParity:
         assert len(rewards) == 1
         assert isinstance(rewards[0], CardReward)
         assert rewards[0].context == "elite"
+
+    def test_knife_trap_autoplays_exhausted_shivs(self):
+        """Matches KnifeTrap.cs: upgrade then AutoPlay each exhausted Shiv at the target."""
+        combat = _make_combat()
+        combat.start_combat()
+        from sts2_env.cards.status import make_shiv
+
+        shiv = make_shiv()
+        enemy = combat.enemies[0]
+        starting_hp = enemy.current_hp
+        combat.exhaust_pile = [shiv]
+        combat.hand = [make_knife_trap()]
+        combat.energy = 2
+
+        assert combat.play_card(0, 0)
+        assert enemy.current_hp < starting_hp
 
     def test_the_hunt_uses_fallback_extra_reward_counter_without_room(self):
         """Matches TheHunt.cs fatal semantics even when only the combat fallback counter is available."""

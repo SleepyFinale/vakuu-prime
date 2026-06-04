@@ -1,0 +1,242 @@
+{
+  "initial_state": {
+    "discard_pile_count": 0,
+    "draw_pile_count": 5,
+    "enemies": [
+      {
+        "block": 0,
+        "hp": 39,
+        "id": "SHRINKER_BEETLE",
+        "intent": "DEBUFF_STRONG",
+        "intent_damage": 0,
+        "intent_hits": 1,
+        "is_alive": true,
+        "max_hp": 39,
+        "powers": []
+      }
+    ],
+    "exhaust_pile_count": 0,
+    "hand": [
+      {
+        "base_damage": 6,
+        "cost": 1,
+        "id": "STRIKE_IRONCLAD",
+        "playable": true,
+        "target": "AnyEnemy",
+        "type": "Attack"
+      },
+      {
+        "base_block": 5,
+        "cost": 1,
+        "id": "DEFEND_IRONCLAD",
+        "playable": true,
+        "target": "Self",
+        "type": "Skill"
+      },
+      {
+        "base_damage": 8,
+        "cost": 2,
+        "id": "BASH",
+        "playable": true,
+        "target": "AnyEnemy",
+        "type": "Attack"
+      }
+    ],
+    "player": {
+      "block": 0,
+      "energy": 3,
+      "hp": 80,
+      "max_energy": 3,
+      "max_hp": 80,
+      "powers": []
+    },
+    "round": 1,
+    "type": "combat_action"
+  },
+  "metadata": {
+    "scenario_factory": "sts2_env.parity.bridge_smoke:make_smoke_combat",
+    "source": "simulator"
+  },
+  "mode": "combat",
+  "steps": [
+    {
+      "action": {
+        "action": "play",
+        "card_index": 0,
+        "target_index": 0
+      },
+      "resulting_state": {
+        "discard_pile_count": 1,
+        "draw_pile_count": 5,
+        "enemies": [
+          {
+            "block": 0,
+            "hp": 33,
+            "id": "SHRINKER_BEETLE",
+            "intent": "DEBUFF_STRONG",
+            "intent_damage": 0,
+            "intent_hits": 1,
+            "is_alive": true,
+            "max_hp": 39,
+            "powers": []
+          }
+        ],
+        "exhaust_pile_count": 0,
+        "hand": [
+          {
+            "base_block": 5,
+            "cost": 1,
+            "id": "DEFEND_IRONCLAD",
+            "playable": true,
+            "target": "Self",
+            "type": "Skill"
+          },
+          {
+            "base_damage": 8,
+            "cost": 2,
+            "id": "BASH",
+            "playable": true,
+            "target": "AnyEnemy",
+            "type": "Attack"
+          }
+        ],
+        "player": {
+          "block": 0,
+          "energy": 2,
+          "hp": 80,
+          "max_energy": 3,
+          "max_hp": 80,
+          "powers": []
+        },
+        "round": 1,
+        "type": "combat_action"
+      }
+    },
+    {
+      "action": {
+        "action": "play",
+        "card_index": 0,
+        "target_index": -1
+      },
+      "resulting_state": {
+        "discard_pile_count": 2,
+        "draw_pile_count": 5,
+        "enemies": [
+          {
+            "block": 0,
+            "hp": 33,
+            "id": "SHRINKER_BEETLE",
+            "intent": "DEBUFF_STRONG",
+            "intent_damage": 0,
+            "intent_hits": 1,
+            "is_alive": true,
+            "max_hp": 39,
+            "powers": []
+          }
+        ],
+        "exhaust_pile_count": 0,
+        "hand": [
+          {
+            "base_damage": 8,
+            "cost": 2,
+            "id": "BASH",
+            "playable": false,
+            "target": "AnyEnemy",
+            "type": "Attack"
+          }
+        ],
+        "player": {
+          "block": 5,
+          "energy": 1,
+          "hp": 80,
+          "max_energy": 3,
+          "max_hp": 80,
+          "powers": []
+        },
+        "round": 1,
+        "type": "combat_action"
+      }
+    },
+    {
+      "action": {
+        "action": "end_turn"
+      },
+      "resulting_state": {
+        "discard_pile_count": 3,
+        "draw_pile_count": 0,
+        "enemies": [
+          {
+            "block": 0,
+            "hp": 33,
+            "id": "SHRINKER_BEETLE",
+            "intent": "ATTACK",
+            "intent_damage": 7,
+            "intent_hits": 1,
+            "is_alive": true,
+            "max_hp": 39,
+            "powers": []
+          }
+        ],
+        "exhaust_pile_count": 0,
+        "hand": [
+          {
+            "base_block": 5,
+            "cost": 1,
+            "id": "DEFEND_IRONCLAD",
+            "playable": true,
+            "target": "Self",
+            "type": "Skill"
+          },
+          {
+            "base_block": 5,
+            "cost": 1,
+            "id": "DEFEND_IRONCLAD",
+            "playable": true,
+            "target": "Self",
+            "type": "Skill"
+          },
+          {
+            "base_damage": 6,
+            "cost": 1,
+            "id": "STRIKE_IRONCLAD",
+            "playable": true,
+            "target": "AnyEnemy",
+            "type": "Attack"
+          },
+          {
+            "base_block": 5,
+            "cost": 1,
+            "id": "DEFEND_IRONCLAD",
+            "playable": true,
+            "target": "Self",
+            "type": "Skill"
+          },
+          {
+            "base_damage": 6,
+            "cost": 1,
+            "id": "STRIKE_IRONCLAD",
+            "playable": true,
+            "target": "AnyEnemy",
+            "type": "Attack"
+          }
+        ],
+        "player": {
+          "block": 0,
+          "energy": 3,
+          "hp": 80,
+          "max_energy": 3,
+          "max_hp": 80,
+          "powers": [
+            {
+              "amount": -1,
+              "id": "SHRINK"
+            }
+          ]
+        },
+        "round": 2,
+        "type": "combat_action"
+      }
+    }
+  ],
+  "version": 1
+}

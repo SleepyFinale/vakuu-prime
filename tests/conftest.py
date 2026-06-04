@@ -19,6 +19,24 @@ from sts2_env.core.rng import Rng
 from sts2_env.monsters.act1_weak import create_shrinker_beetle
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-live-bridge",
+        action="store_true",
+        default=False,
+        help="Run live-bridge tests that require a running STS2 game.",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-live-bridge"):
+        return
+    skip_live = pytest.mark.skip(reason="needs --run-live-bridge and a running STS2 game")
+    for item in items:
+        if "live_bridge" in item.keywords:
+            item.add_marker(skip_live)
+
+
 @pytest.fixture(autouse=True)
 def reset_ids():
     """Reset card instance counter before each test."""

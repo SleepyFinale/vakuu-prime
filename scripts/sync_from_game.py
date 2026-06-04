@@ -177,12 +177,25 @@ def _run_audits() -> int:
         "scripts/audit_card_static_metadata.py",
         "scripts/audit_card_dynamic_vars.py",
         "scripts/parity_reference_audit.py",
+        "scripts/audit_onplay_behavior_coverage.py",
+        "scripts/audit_relic_hook_coverage.py",
     ]
     failed = False
     for script in scripts:
         print(f"Running {script}...")
         result = subprocess.run(
             [sys.executable, str(REPO_ROOT / script)],
+            cwd=REPO_ROOT,
+        )
+        if result.returncode != 0:
+            failed = True
+    for script, extra in (
+        ("scripts/audit_onplay_behavior_coverage.py", ["--generate-smoke-tests"]),
+        ("scripts/audit_relic_hook_coverage.py", ["--generate-smoke-tests", "--no-write-backlog"]),
+    ):
+        print(f"Running {script} {' '.join(extra)}...")
+        result = subprocess.run(
+            [sys.executable, str(REPO_ROOT / script), *extra],
             cwd=REPO_ROOT,
         )
         if result.returncode != 0:

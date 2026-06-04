@@ -27,3 +27,6 @@ include = ["sts2_env*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "live_bridge: requires a running STS2 game with the bridge mod (skipped unless --run-live-bridge)",
+]

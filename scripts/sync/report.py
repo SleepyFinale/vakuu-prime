@@ -60,6 +60,29 @@ def diff_surfaces(prev_root: Path | None = None) -> list[SurfaceDiff]:
     return diffs
 
 
+def run_behavior_audit_json() -> dict | None:
+    summaries: dict = {}
+    for script, key in (
+        ("scripts/audit_onplay_behavior_coverage.py", "cards_onplay"),
+        ("scripts/audit_relic_hook_coverage.py", "relics"),
+    ):
+        path = REPO_ROOT / script
+        if not path.is_file():
+            continue
+        try:
+            result = subprocess.run(
+                [sys.executable, str(path), "--json", "--no-write-backlog"],
+                check=True,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+            )
+            summaries[key] = json.loads(result.stdout)
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            continue
+    return summaries or None
+
+
 def run_parity_audit_json() -> dict | None:
     script = REPO_ROOT / "scripts" / "parity_reference_audit.py"
     if not script.is_file():
@@ -151,6 +174,27 @@ def write_sync_report(
                 )
             else:
                 lines.append(f"- {row}")
+        lines.append("")
+
+    behavior = run_behavior_audit_json()
+    if behavior:
+        lines.append("## Behavioral parity backlog")
+        lines.append("")
+        cards = behavior.get("cards_onplay", {})
+        relics = behavior.get("relics", {})
+        if cards:
+            lines.append(
+                f"- **cards OnPlay**: {cards.get('with_matches_test', 0)}/"
+                f"{cards.get('onplay_total', 0)} with Matches tests, "
+                f"{cards.get('fingerprint_mismatch', 0)} fingerprint mismatches"
+            )
+        if relics:
+            lines.append(
+                f"- **relics**: {relics.get('with_matches_test', 0)}/"
+                f"{relics.get('hook_relics_total', 0)} with Matches tests"
+            )
+        lines.append("")
+        lines.append("See [docs/PARITY_BACKLOG.md](../docs/PARITY_BACKLOG.md).")
         lines.append("")
 
     if scaffold_summary:

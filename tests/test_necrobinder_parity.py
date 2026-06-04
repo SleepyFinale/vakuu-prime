@@ -522,3 +522,25 @@ class TestNecrobinderParity:
         assert combat.play_card(0, 0)
         expected_damage = card.effect_vars.get("calc_base", card.base_damage or 8) + 2 * card.effect_vars.get("extra_damage", 3)
         assert enemy.current_hp == starting_hp - expected_damage
+
+    def test_snap_lets_player_choose_a_hand_card_to_gain_retain(self):
+        """Matches Snap.cs: deal Osty damage, then choose a non-Retain hand card to gain Retain."""
+        combat = _make_combat()
+        snap = create_card(CardId.SNAP)
+        other = make_strike_ironclad()
+        another = make_strike_ironclad()
+        already_retained = make_strike_ironclad()
+        already_retained.keywords = frozenset(set(already_retained.keywords) | {"retain"})
+        combat.hand = [snap, other, another, already_retained]
+        combat.energy = snap.cost
+
+        assert combat.play_card(0, 0)
+        assert combat.pending_choice is not None
+        offered = [option.card for option in combat.pending_choice.options]
+        assert other in offered
+        assert another in offered
+        assert already_retained not in offered
+
+        assert combat.resolve_pending_choice(0)
+        assert combat.pending_choice is None
+        assert other.is_retain

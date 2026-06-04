@@ -295,7 +295,7 @@ public class RlCombatHandler : IRoomHandler, IHandler
         string targetType = "Self";
         try
         {
-            targetType = potion.TargetType?.ToString() ?? "Self";
+            targetType = potion.TargetType.ToString();
         }
         catch
         {
@@ -607,7 +607,7 @@ public class RlCombatHandler : IRoomHandler, IHandler
                     bool canUse = true;
                     try
                     {
-                        targetType = potion.TargetType?.ToString() ?? "Self";
+                        targetType = potion.TargetType.ToString();
                     }
                     catch { }
 

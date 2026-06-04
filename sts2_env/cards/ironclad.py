@@ -961,10 +961,16 @@ def make_pyre(upgraded: bool=False) -> CardInstance:
 
 @register_effect(CardId.STOKE)
 def stoke(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    count = len(combat.hand)
+    from sts2_env.cards.factory import create_character_cards
+    owner = _owner(card, combat)
+    exhaust_count = len(combat.hand)
     for hand_card in list(combat.hand):
         combat.exhaust_card(hand_card)
-    _draw_cards(combat, count)
+    generated = create_character_cards(combat.character_id, combat.combat_card_generation_rng, exhaust_count, distinct=False, is_multiplayer=combat.is_multiplayer)
+    for generated_card in generated:
+        if card.upgraded:
+            combat.upgrade_card(generated_card)
+        combat.add_generated_card_to_creature_hand(owner, generated_card)
 
 def make_stoke(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.STOKE, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.RARE, keywords=frozenset({'exhaust'}), upgraded=upgraded, instance_id=_get_next_id())

@@ -310,6 +310,10 @@ class Permafrost(RelicInstance):
         super().__init__(relic_id)
         self._activated_this_combat: bool = False
 
+    def after_room_entered(self, owner: Creature, room_type: object) -> None:
+        if getattr(room_type, "is_combat", False):
+            self._activated_this_combat = False
+
     def after_card_played(self, owner: Creature, card: object, combat: CombatState) -> None:
         if (not self._activated_this_combat
                 and getattr(card, "owner", None) is owner

@@ -45,6 +45,7 @@ from sts2_env.cards.ironclad import (
     make_pyre,
     make_setup_strike,
     make_spite,
+    make_stoke,
     make_stomp,
     make_stampede,
     make_stone_armor,
@@ -1003,6 +1004,31 @@ class TestIroncladCombatEdgeCardModelParity:
         assert combat.can_play_card(card) is False
         combat.exhaust_pile.append(make_anger())
         assert combat.can_play_card(card) is True
+
+    def test_stoke_exhausts_hand_and_generates_that_many_character_cards(self):
+        """Matches Stoke.cs: exhaust the whole hand, then generate that many new cards into hand."""
+        combat = _make_combat()
+        other_cards = [make_strike_ironclad(), make_defend_ironclad(), make_anger()]
+        stoke = make_stoke()
+        combat.hand = [stoke, *other_cards]
+        combat.energy = 1
+        exhaust_count = len(other_cards)
+
+        assert combat.play_card(0)
+        for original in other_cards:
+            assert original in combat.exhaust_pile
+        assert len(combat.hand) == exhaust_count
+        assert all(generated not in other_cards for generated in combat.hand)
+
+    def test_stoke_upgraded_generates_upgraded_cards(self):
+        """Matches Stoke.cs: upgraded Stoke upgrades each generated card."""
+        combat = _make_combat()
+        combat.hand = [make_stoke(upgraded=True), make_strike_ironclad(), make_defend_ironclad()]
+        combat.energy = 1
+
+        assert combat.play_card(0)
+        assert len(combat.hand) == 2
+        assert all(generated.upgraded for generated in combat.hand)
 
     def test_forgotten_ritual_only_gains_energy_after_owner_exhausted_card_this_turn(self):
         combat = _make_combat()

@@ -137,6 +137,21 @@ class TestDefectChoiceParity:
         assert strike in combat.hand
         assert draw_status in combat.draw_pile
 
+    def test_compact_skips_eternal_status_cards_in_hand(self):
+        """Matches Compact.cs: only transformable Status cards become Fuel."""
+        combat = _make_combat()
+        from sts2_env.cards.status import make_dazed
+
+        eternal_status = make_dazed()
+        eternal_status.keywords = frozenset({"eternal"})
+        normal_status = make_dazed()
+        combat.hand = [make_compact(), eternal_status, normal_status]
+        combat.energy = 1
+
+        assert combat.play_card(0)
+        assert eternal_status in combat.hand
+        assert sum(1 for c in combat.hand if c.card_id.name == "FUEL") == 1
+
     def test_compact_does_not_transform_status_cards_after_block_ends_combat(self):
         combat = _make_combat()
         enemy = combat.enemies[0]

@@ -99,6 +99,23 @@ class TestRelicStarterCommonOpeningTurnHooksParity:
         assert combat.play_card(0)
         assert combat.player.block == 6
 
+    def test_permafrost_resets_on_combat_room_entered(self):
+        """Matches Permafrost.cs: AfterRoomEntered clears the per-combat flag for combat rooms."""
+        combat = _make_ironclad_combat(["Permafrost"], seed=309)
+        permafrost = next(relic for relic in combat.relics if relic.relic_id.name == "PERMAFROST")
+        combat.hand = [make_inflame()]
+        combat.energy = 1
+
+        assert combat.play_card(0)
+        assert combat.player.block == 6
+        assert permafrost._activated_this_combat is True
+
+        permafrost.after_room_entered(combat.player, RoomVisitContext(RoomType.REST_SITE))
+        assert permafrost._activated_this_combat is True
+
+        permafrost.after_room_entered(combat.player, RoomVisitContext(RoomType.MONSTER))
+        assert permafrost._activated_this_combat is False
+
     def test_permafrost_block_triggers_after_block_gained_hooks(self):
         combat = _make_ironclad_combat(["Permafrost"], seed=306)
         enemy = combat.enemies[0]
