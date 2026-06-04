@@ -238,7 +238,10 @@ class Creature:
                 existing.ignore_next_instance = True
             existing.amount += amount
             applied_delta = amount
-            if existing.amount == 0 and not existing.allow_negative:
+            if existing.allow_negative:
+                if existing.amount == 0:
+                    del self.powers[power_id]
+            elif existing.amount <= 0:
                 del self.powers[power_id]
         else:
             if cls is not None:
@@ -256,12 +259,17 @@ class Creature:
 
     def tick_down_power(self, power_id: PowerId) -> None:
         """Decrement a duration power by 1, remove if <= 0."""
+        from sts2_env.powers.base import PowerInstance, tick_down_duration
+
         p = self.powers.get(power_id)
         if p is None:
             return
-        p.on_turn_end_enemy_side(self)
-        if p.amount <= 0:
-            del self.powers[power_id]
+        if (
+            type(p).after_turn_end is PowerInstance.after_turn_end
+            and type(p).on_turn_end_enemy_side is PowerInstance.on_turn_end_enemy_side
+        ):
+            return
+        tick_down_duration(p, self, getattr(self, "combat_state", None))
 
     def gain_max_hp(self, amount: int) -> None:
         before = self.current_hp

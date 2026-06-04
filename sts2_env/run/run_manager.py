@@ -71,6 +71,7 @@ from sts2_env.run.reward_objects import (
 from sts2_env.run.rest_site import MendOption, RestSiteOption, generate_rest_site_options
 from sts2_env.run.rewards import generate_combat_reward_cards
 from sts2_env.run.rooms import CombatRoom, Room, RoomVisitContext, create_room
+from sts2_env.characters.all import ALL_CHARACTERS, get_character
 from sts2_env.run.run_state import RunState
 from sts2_env.run.shop import (
     SHOP_ENTRY_SOLD_OUT_PRICE,
@@ -91,43 +92,7 @@ CARD_REWARD_ACTION_SKIP = "skip"
 CARD_REWARD_ACTION_SACRIFICE = "sacrifice_card_reward"
 
 
-# ---------------------------------------------------------------------------
-# Character configuration
-# ---------------------------------------------------------------------------
-
-_CHARACTER_CONFIG: dict[str, dict[str, Any]] = {
-    DEFAULT_CHARACTER_ID: {
-        "hp": 80,
-        "gold": 99,
-        "starter_relic": "BurningBlood",
-        "heal_after_combat": 6,
-    },
-    "Silent": {
-        "hp": 70,
-        "gold": 99,
-        "starter_relic": "RingOfTheSnake",
-        "heal_after_combat": 0,
-    },
-    "Defect": {
-        "hp": 75,
-        "gold": 99,
-        "starter_relic": "CrackedCore",
-        "heal_after_combat": 0,
-    },
-    "Necrobinder": {
-        "hp": 75,
-        "gold": 99,
-        "starter_relic": "BoundPhylactery",
-        "heal_after_combat": 0,
-    },
-    "Regent": {
-        "hp": 75,
-        "gold": 99,
-        "starter_relic": "DivineRight",
-        "heal_after_combat": 0,
-    },
-}
-SUPPORTED_CHARACTER_IDS = tuple(_CHARACTER_CONFIG)
+SUPPORTED_CHARACTER_IDS = tuple(cfg.character_id for cfg in ALL_CHARACTERS)
 
 RUN_MANAGER_RNG_SEED_OFFSET = 9999
 
@@ -239,22 +204,21 @@ class RunManager:
         self._rng = Rng(seed + RUN_MANAGER_RNG_SEED_OFFSET)
 
         # Build RunState
-        config = _CHARACTER_CONFIG.get(character_id, _CHARACTER_CONFIG[DEFAULT_CHARACTER_ID])
+        char_cfg = get_character(character_id)
         self._run_state = RunState(
             seed=seed,
             ascension_level=ascension_level,
             character_id=character_id,
         )
         self._run_state.enable_deck_choice_requests = True
-        self._run_state.player.max_hp = config["hp"]
-        self._run_state.player.current_hp = config["hp"]
-        self._run_state.player.gold = config["gold"]
+        self._run_state.player.max_hp = char_cfg.starting_hp
+        self._run_state.player.current_hp = char_cfg.starting_hp
+        self._run_state.player.gold = char_cfg.starting_gold
 
         # Starter deck and relic
         reset_instance_counter()
         self._run_state.player.deck = _get_starter_deck(character_id)
-        self._run_state.player.obtain_relic(config["starter_relic"])
-        self._heal_after_combat: int = config["heal_after_combat"]
+        self._run_state.player.obtain_relic(char_cfg.starting_relic)
 
         # Initialize the run (ascension effects + first map)
         self._run_state.initialize_run()
@@ -264,6 +228,7 @@ class RunManager:
         self._combat: CombatState | None = None
         self._current_room: Room | None = None
         self._current_room_type: RoomType | None = None
+        self._current_map_point_type: MapPointType | None = None
 
         # Scratch state for each phase
         self._available_coords: list[MapCoord] = []
@@ -772,10 +737,13 @@ class RunManager:
         self._phase = self.PHASE_REST_SITE
         self._rest_options = generate_rest_site_options(self._run_state.player)
 
-    def _enter_event(self) -> None:
+    def _enter_event(self, map_point_type: MapPointType | None = None) -> None:
         self._phase = self.PHASE_EVENT
         act_cfg = self._run_state.current_act
-        event = pick_event(self._run_state, pool=act_cfg.event_ids)
+        if map_point_type == MapPointType.ANCIENT and act_cfg.ancient_id:
+            event = get_event(act_cfg.ancient_id)
+        else:
+            event = pick_event(self._run_state, pool=act_cfg.event_ids)
         self._event_model = event
         if event is not None:
             event.reset_rng_for_run(self._run_state)
@@ -810,9 +778,15 @@ class RunManager:
         ]).generate_without_offering(self._run_state)
         self._current_reward = generated[0] if generated else None
 
-    def _enter_room(self, room_type: RoomType) -> None:
+    def _enter_room(
+        self,
+        room_type: RoomType,
+        map_point_type: MapPointType | None = None,
+    ) -> None:
         """Dispatch to the correct phase based on room type."""
         self._current_room_type = room_type
+        if map_point_type is not None:
+            self._current_map_point_type = map_point_type
         context = RoomVisitContext(room_type)
         if room_type == RoomType.SHOP:
             self._enter_shop()
@@ -831,7 +805,7 @@ class RunManager:
             self._enter_rest_site()
         elif room_type == RoomType.EVENT:
             self._fire_modifiers_after_room_entered(context)
-            self._enter_event()
+            self._enter_event(map_point_type)
         elif room_type == RoomType.TREASURE:
             self._fire_modifiers_after_room_entered(context)
             should_skip_treasure = any(
@@ -1205,11 +1179,13 @@ class RunManager:
         # Resolve room type
         act_map = self._run_state.map
         point = act_map.get_point(coord) if act_map else None
+        map_point_type = MapPointType.MONSTER
         if point is None:
             room_type = RoomType.MONSTER
         else:
+            map_point_type = point.point_type
             room_type = self._run_state.resolve_room_type(
-                point.point_type,
+                map_point_type,
                 blacklist=self._run_state.build_room_type_blacklist(point.children),
             )
         if not self._run_state.add_visited_coord(coord, room_type=room_type):
@@ -1218,7 +1194,7 @@ class RunManager:
                 "description": f"Coordinate ({col},{row}) was already visited.",
             }
 
-        self._enter_room(room_type)
+        self._enter_room(room_type, map_point_type)
 
         return {
             "phase": self.phase,
@@ -1376,11 +1352,6 @@ class RunManager:
         player.max_potion_slots = combat.max_potion_slots
         self._apply_deck_cards_after_combat_end()
 
-        # Post-combat heal (BurningBlood-style)
-        healed = 0
-        if self._heal_after_combat > 0 and player.current_hp > 0:
-            healed = player.heal(self._heal_after_combat)
-
         if self._current_room is None:
             self._current_room = create_room(room_type)
 
@@ -1427,17 +1398,12 @@ class RunManager:
         info: dict[str, Any] = {
             "player_won": True,
             "gold_earned": gold_reward.amount if gold_reward is not None else 0,
-            "healed": healed,
             "potion_dropped": potion_reward is not None,
             "potion_reward": potion_reward.potion_id if potion_reward is not None else None,
         }
 
         info["phase"] = self.phase
-        info["description"] = (
-            f"Victory! Gained {info['gold_earned']} gold"
-            + (f", healed {healed} HP" if healed else "")
-            + "."
-        )
+        info["description"] = f"Victory! Gained {info['gold_earned']} gold."
         return info
 
     def _apply_deck_cards_after_combat_end(self) -> None:

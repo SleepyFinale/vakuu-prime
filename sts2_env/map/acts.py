@@ -7,6 +7,42 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+# Events shared across all acts (ModelDb.AllSharedEvents).
+SHARED_EVENT_IDS: list[str] = [
+    "BrainLeech",
+    "CrystalSphere",
+    "DollRoom",
+    "FakeMerchant",
+    "PotionCourier",
+    "RanwidTheElder",
+    "RelicTrader",
+    "RoomFullOfCheese",
+    "SelfHelpBook",
+    "SlipperyBridge",
+    "StoneOfAllTime",
+    "Symbiote",
+    "TeaMaster",
+    "TheFutureOfPotions",
+    "TheLegendsWereTrue",
+    "ThisOrThat",
+    "WarHistorianRepy",
+    "WelcomeToWongos",
+]
+
+# Ancient events never appear from Unknown "?" rooms (PullNextEvent only).
+ANCIENT_EVENT_IDS: frozenset[str] = frozenset({
+    "Neow",
+    "Orobas",
+    "Pael",
+    "Tezcatara",
+    "Nonupeipe",
+    "Tanx",
+    "Vakuu",
+    "Darv",
+})
+
+SHARED_ANCIENT_IDS: list[str] = ["Darv"]
+
 
 @dataclass
 class ActConfig:
@@ -19,7 +55,10 @@ class ActConfig:
     elite_ids: list[str] = field(default_factory=list)
     weak_encounter_ids: list[str] = field(default_factory=list)
     strong_encounter_ids: list[str] = field(default_factory=list)
+    act_event_ids: list[str] = field(default_factory=list)
     event_ids: list[str] = field(default_factory=list)
+    ancient_ids: list[str] = field(default_factory=list)
+    ancient_id: str | None = None
     events_visited: int = 0
 
     def to_mutable(self) -> "ActConfig":
@@ -31,7 +70,10 @@ class ActConfig:
             elite_ids=list(self.elite_ids),
             weak_encounter_ids=list(self.weak_encounter_ids),
             strong_encounter_ids=list(self.strong_encounter_ids),
+            act_event_ids=list(self.act_event_ids),
             event_ids=list(self.event_ids),
+            ancient_ids=list(self.ancient_ids),
+            ancient_id=self.ancient_id,
             events_visited=self.events_visited,
         )
 
@@ -51,22 +93,22 @@ ACT_0 = ActConfig(
         "BlueSlaver", "RedSlaver", "FungiBeast",
         "LooterGroup", "ExordiumWildlife", "LotOfSlimes",
     ],
-    event_ids=[
-        "AbyssalBaths", "Amalgamator", "BattlewornDummy", "BrainLeech",
-        "Bugslayer", "ByrdonisNest", "ColorfulPhilosophers",
-        "ColossalFlower", "Darv", "DenseVegetation",
-        "DoorsOfLightAndDark", "DrowningBeacon",
-        "GraveOfTheForgotten", "HungryForMushrooms",
-        "InfestedAutomaton", "LostWisp", "Nonupeipe",
-        "Orobas", "Pael", "PunchOff", "Reflections",
-        "RoomFullOfCheese", "RoundTeaParty", "SapphireSeed",
-        "SelfHelpBook", "SpiritGrafter", "SunkenStatue",
-        "SunkenTreasury", "TabletOfTruth", "Tanx",
-        "TeaMaster", "Tezcatara", "TheLegendsWereTrue",
-        "ThisOrThat", "TinkerTime", "TrashHeap", "Trial",
-        "UnrestSite", "Vakuu", "Wellspring",
-        "WoodCarvings", "ZenWeaver",
+    act_event_ids=[
+        "AromaOfChaos",
+        "ByrdonisNest",
+        "DenseVegetation",
+        "JungleMazeAdventure",
+        "LuminousChoir",
+        "MorphicGrove",
+        "SapphireSeed",
+        "SunkenStatue",
+        "TabletOfTruth",
+        "UnrestSite",
+        "Wellspring",
+        "WhisperingHollow",
+        "WoodCarvings",
     ],
+    ancient_ids=["Neow"],
 )
 
 ACT_1 = ActConfig(
@@ -81,29 +123,19 @@ ACT_1 = ActConfig(
     strong_encounter_ids=[
         "SlaverGroup", "BookOfStabbing", "MushroomGroup",
     ],
-    event_ids=[
-        "AbyssalBaths", "Amalgamator", "AromaOfChaos",
-        "BattlewornDummy", "Bugslayer", "ByrdonisNest",
-        "ColorfulPhilosophers", "ColossalFlower", "CrystalSphere",
-        "Darv", "DenseVegetation", "DollRoom",
-        "DoorsOfLightAndDark", "DrowningBeacon", "EndlessConveyor",
-        "FakeMerchant", "FieldOfManSizedHoles",
-        "GraveOfTheForgotten", "HungryForMushrooms",
-        "InfestedAutomaton", "JungleMazeAdventure",
-        "LostWisp", "LuminousChoir", "MorphicGrove",
-        "Nonupeipe", "Orobas", "Pael", "PotionCourier",
-        "PunchOff", "RanwidTheElder", "Reflections",
-        "RelicTrader", "RoundTeaParty", "SapphireSeed",
-        "SelfHelpBook", "SlipperyBridge", "SpiralingWhirlpool",
-        "SpiritGrafter", "StoneOfAllTime", "SunkenStatue",
-        "SunkenTreasury", "Symbiote", "TabletOfTruth",
-        "Tanx", "Tezcatara", "TheFutureOfPotions",
-        "TheLanternKey", "ThisOrThat", "TinkerTime",
-        "TrashHeap", "Trial", "UnrestSite", "Vakuu",
-        "WaterloggedScriptorium", "WelcomeToWongos",
-        "Wellspring", "WhisperingHollow", "WoodCarvings",
+    act_event_ids=[
+        "Amalgamator",
+        "Bugslayer",
+        "ColorfulPhilosophers",
+        "ColossalFlower",
+        "FieldOfManSizedHoles",
+        "InfestedAutomaton",
+        "LostWisp",
+        "SpiritGrafter",
+        "TheLanternKey",
         "ZenWeaver",
     ],
+    ancient_ids=["Orobas", "Pael", "Tezcatara"],
 )
 
 ACT_2 = ActConfig(
@@ -118,27 +150,16 @@ ACT_2 = ActConfig(
     strong_encounter_ids=[
         "WrithingMass", "Transient", "Maw",
     ],
-    event_ids=[
-        "AbyssalBaths", "Amalgamator", "AromaOfChaos",
-        "BattlewornDummy", "Bugslayer", "ByrdonisNest",
-        "ColorfulPhilosophers", "ColossalFlower", "CrystalSphere",
-        "Darv", "DenseVegetation", "DoorsOfLightAndDark",
-        "DrowningBeacon", "EndlessConveyor", "FakeMerchant",
-        "FieldOfManSizedHoles", "GraveOfTheForgotten",
-        "HungryForMushrooms", "InfestedAutomaton",
-        "JungleMazeAdventure", "LostWisp", "LuminousChoir",
-        "MorphicGrove", "Nonupeipe", "Orobas", "Pael",
-        "PotionCourier", "PunchOff", "RanwidTheElder",
-        "Reflections", "RelicTrader", "RoundTeaParty",
-        "SapphireSeed", "SelfHelpBook", "SlipperyBridge",
-        "SpiralingWhirlpool", "SpiritGrafter",
-        "SunkenStatue", "SunkenTreasury", "Symbiote",
-        "TabletOfTruth", "Tanx", "Tezcatara",
-        "TheFutureOfPotions", "TheLanternKey", "ThisOrThat",
-        "TinkerTime", "TrashHeap", "Trial", "UnrestSite",
-        "Vakuu", "WaterloggedScriptorium", "Wellspring",
-        "WhisperingHollow", "WoodCarvings", "ZenWeaver",
+    act_event_ids=[
+        "BattlewornDummy",
+        "GraveOfTheForgotten",
+        "HungryForMushrooms",
+        "Reflections",
+        "RoundTeaParty",
+        "Trial",
+        "TinkerTime",
     ],
+    ancient_ids=["Nonupeipe", "Tanx", "Vakuu"],
 )
 
 ALL_ACTS = [ACT_0, ACT_1, ACT_2]
@@ -148,3 +169,8 @@ def get_act_config(act_index: int) -> ActConfig:
     if 0 <= act_index < len(ALL_ACTS):
         return ALL_ACTS[act_index]
     raise ValueError(f"Invalid act index: {act_index}")
+
+
+def build_act_event_pool(act: ActConfig) -> list[str]:
+    """Per-act regular event pool (act events + shared), excluding ancients."""
+    return list(act.act_event_ids) + list(SHARED_EVENT_IDS)

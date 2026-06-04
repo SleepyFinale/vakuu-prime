@@ -1,7 +1,7 @@
 """Run act configuration parity tests."""
 
 from sts2_env.events.act2 import LuminousChoir, RanwidTheElder
-from sts2_env.map.acts import ALL_ACTS
+from sts2_env.map.acts import ALL_ACTS, SHARED_EVENT_IDS, build_act_event_pool
 from sts2_env.potions.base import create_potion
 from sts2_env.relics.base import RelicId
 from sts2_env.run.events import pick_event
@@ -15,14 +15,19 @@ FIRE_POTION_ID = "FirePotion"
 
 def test_initialize_run_generates_shuffled_act_event_rooms_like_csharp_runmanager():
     run_state = RunState(seed=RUN_SEED)
-    static_event_ids = [event_id for act in ALL_ACTS for event_id in act.event_ids]
+    static_event_ids = [event_id for act in ALL_ACTS for event_id in build_act_event_pool(act)]
 
     run_state.initialize_run()
 
     generated_event_ids = [event_id for act in run_state.acts for event_id in act.event_ids]
     assert sorted(generated_event_ids) == sorted(static_event_ids)
     assert generated_event_ids != static_event_ids
-    assert run_state.rng.up_front.counter == len(static_event_ids) - len(run_state.acts)
+    shuffle_rng_calls = sum(
+        max(0, len(build_act_event_pool(act)) - 1) for act in ALL_ACTS
+    )
+    shared_ancient_rng_calls = 2 + 3  # 2 subset rolls (acts 1-2) + 3 ancient choices
+    assert run_state.rng.up_front.counter == shuffle_rng_calls + shared_ancient_rng_calls
+    assert all(act.ancient_id is not None for act in run_state.acts)
 
 
 def test_initialize_run_does_not_regenerate_event_rooms_after_first_initialization():
@@ -44,7 +49,7 @@ def test_run_state_uses_mutable_act_copies_like_csharp_runstate():
     first_run.acts[ACT_TWO_INDEX].event_ids = [RanwidTheElder.event_id]
 
     assert second_run.acts[ACT_TWO_INDEX].event_ids != [RanwidTheElder.event_id]
-    assert LuminousChoir.event_id in second_run.acts[ACT_TWO_INDEX].event_ids
+    assert "Amalgamator" in second_run.acts[ACT_TWO_INDEX].act_event_ids
 
 
 def test_pick_event_advances_through_current_act_event_order_like_csharp_roomset():

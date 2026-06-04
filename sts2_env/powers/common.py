@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sts2_env.core.enums import PowerId, PowerType, PowerStackType, ValueProp
+from sts2_env.core.enums import PowerId, PowerType, PowerStackType, ValueProp, CombatSide
 from sts2_env.core.constants import VULNERABLE_MULTIPLIER, WEAK_MULTIPLIER, FRAIL_MULTIPLIER
-from sts2_env.powers.base import PowerInstance
+from sts2_env.powers.base import PowerInstance, tick_down_duration
 
 if TYPE_CHECKING:
     from sts2_env.core.creature import Creature
+    from sts2_env.core.combat import CombatState
 
 
 class StrengthPower(PowerInstance):
@@ -66,6 +67,8 @@ class VulnerablePower(PowerInstance):
     def modify_damage_multiplicative(
         self, owner: Creature, dealer: Creature | None, target: Creature, props: ValueProp
     ) -> float:
+        if self.amount <= 0:
+            return 1.0
         if target is owner and props.is_powered_attack():
             multiplier = VULNERABLE_MULTIPLIER
             if dealer is not None:
@@ -77,11 +80,12 @@ class VulnerablePower(PowerInstance):
             return multiplier
         return 1.0
 
+    def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
+        if side == CombatSide.ENEMY:
+            tick_down_duration(self, owner, combat)
+
     def on_turn_end_enemy_side(self, owner: Creature) -> None:
-        if self.skip_next_tick:
-            self.skip_next_tick = False
-            return
-        self.amount -= 1
+        tick_down_duration(self, owner, None)
 
 
 class WeakPower(PowerInstance):
@@ -96,6 +100,8 @@ class WeakPower(PowerInstance):
     def modify_damage_multiplicative(
         self, owner: Creature, dealer: Creature | None, target: Creature, props: ValueProp
     ) -> float:
+        if self.amount <= 0:
+            return 1.0
         if dealer is owner and props.is_powered_attack():
             multiplier = WEAK_MULTIPLIER
             if owner.has_power(PowerId.DEBILITATE):
@@ -103,11 +109,12 @@ class WeakPower(PowerInstance):
             return multiplier
         return 1.0
 
+    def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
+        if side == CombatSide.ENEMY:
+            tick_down_duration(self, owner, combat)
+
     def on_turn_end_enemy_side(self, owner: Creature) -> None:
-        if self.skip_next_tick:
-            self.skip_next_tick = False
-            return
-        self.amount -= 1
+        tick_down_duration(self, owner, None)
 
 
 class FrailPower(PowerInstance):
@@ -124,15 +131,18 @@ class FrailPower(PowerInstance):
         card_source: object | None = None, card_play: object | None = None,
         combat: CombatState | None = None,
     ) -> float:
+        if self.amount <= 0:
+            return 1.0
         if target is owner and props.is_powered_card_or_monster_move_block():
             return FRAIL_MULTIPLIER
         return 1.0
 
+    def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
+        if side == CombatSide.ENEMY:
+            tick_down_duration(self, owner, combat)
+
     def on_turn_end_enemy_side(self, owner: Creature) -> None:
-        if self.skip_next_tick:
-            self.skip_next_tick = False
-            return
-        self.amount -= 1
+        tick_down_duration(self, owner, None)
 
 
 class ArtifactPower(PowerInstance):

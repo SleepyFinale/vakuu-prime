@@ -17,6 +17,35 @@ if TYPE_CHECKING:
     from sts2_env.potions.base import PotionInstance
 
 
+def should_remove_due_to_amount(power: PowerInstance) -> bool:
+    """Match C# PowerModel.ShouldRemoveDueToAmount."""
+    if power.allow_negative:
+        return power.amount == 0
+    return power.amount <= 0
+
+
+def tick_down_duration(
+    power: PowerInstance,
+    owner: Creature,
+    combat: CombatState | None = None,
+) -> bool:
+    """Decrement a duration counter by 1; remove when amount hits zero threshold.
+
+    Returns True if the power was removed from the owner.
+    """
+    if power.skip_next_tick:
+        power.skip_next_tick = False
+        return False
+    power.amount -= 1
+    if not should_remove_due_to_amount(power):
+        return False
+    if combat is not None:
+        combat._remove_power(owner, power.power_id)
+    else:
+        owner.powers.pop(power.power_id, None)
+    return True
+
+
 class PowerInstance:
     """A single power (buff/debuff) instance on a creature.
 

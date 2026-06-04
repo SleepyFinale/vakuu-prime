@@ -91,11 +91,10 @@ class NoBlockPower(PowerInstance):
         return 0.0
 
     def after_turn_end(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
-        if side == CombatSide.ENEMY:
-            self.amount -= 1
+        from sts2_env.powers.base import tick_down_duration
 
-    def on_turn_end_enemy_side(self, owner: Creature) -> None:
-        self.amount -= 1
+        if side == CombatSide.ENEMY:
+            tick_down_duration(self, owner, combat)
 
 
 # ── ColossusPower ────────────────────────────────────────────────────────

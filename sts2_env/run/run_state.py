@@ -24,7 +24,12 @@ from sts2_env.core.enums import MapPointType, RoomType
 from sts2_env.characters.all import get_character
 from sts2_env.map.map_point import MapCoord, MapPoint
 from sts2_env.map.generator import ActMap, generate_act_map
-from sts2_env.map.acts import ActConfig, ALL_ACTS
+from sts2_env.map.acts import (
+    ActConfig,
+    ALL_ACTS,
+    SHARED_ANCIENT_IDS,
+    build_act_event_pool,
+)
 from sts2_env.potions.base import PotionInstance
 from sts2_env.relics.base import RelicId, RelicRarity
 from sts2_env.cards.base import (
@@ -1512,9 +1517,22 @@ class RunState:
     def _generate_rooms(self) -> None:
         if self._rooms_generated:
             return
+        shared_ancients = list(SHARED_ANCIENT_IDS)
+        self.rng.up_front.shuffle(shared_ancients)
+        remaining_shared_ancients = list(shared_ancients)
+        shared_ancient_subsets: dict[int, list[str]] = {}
+        for act in self.acts[1:]:
+            count = self.rng.up_front.next_int_exclusive(0, len(remaining_shared_ancients) + 1)
+            subset = remaining_shared_ancients[:count]
+            remaining_shared_ancients = remaining_shared_ancients[count:]
+            shared_ancient_subsets[act.act_index] = subset
         for act in self.acts:
+            act.event_ids = build_act_event_pool(act)
             self.rng.up_front.shuffle(act.event_ids)
             act.events_visited = 0
+            ancient_pool = list(act.ancient_ids) + shared_ancient_subsets.get(act.act_index, [])
+            if ancient_pool:
+                act.ancient_id = self.rng.up_front.choice(ancient_pool)
         self._rooms_generated = True
 
     def _apply_ascension_effects(self) -> None:

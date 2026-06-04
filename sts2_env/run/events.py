@@ -240,6 +240,8 @@ def get_allowed_events(run_state: RunState, pool: list[str] | None = None) -> li
 
 def pick_event(run_state: RunState, pool: list[str] | None = None) -> EventModel | None:
     """Pick the next allowed event from the current act event order."""
+    from sts2_env.map.acts import ANCIENT_EVENT_IDS
+
     act = run_state.current_act
     if pool is None:
         pool = act.event_ids
@@ -251,6 +253,9 @@ def pick_event(run_state: RunState, pool: list[str] | None = None) -> EventModel
     event_index = act.events_visited if uses_act_event_order else 0
     for _ in range(len(pool)):
         event_id = pool[event_index % len(pool)]
+        if event_id in ANCIENT_EVENT_IDS:
+            event_index += 1
+            continue
         candidate = _EVENT_REGISTRY.get(event_id)
         if (
             candidate is not None
@@ -261,7 +266,12 @@ def pick_event(run_state: RunState, pool: list[str] | None = None) -> EventModel
             break
         event_index += 1
     if event is None and uses_act_event_order:
-        event = _EVENT_REGISTRY.get(pool[event_index % len(pool)])
+        for _ in range(len(pool)):
+            fallback_id = pool[event_index % len(pool)]
+            if fallback_id not in ANCIENT_EVENT_IDS:
+                event = _EVENT_REGISTRY.get(fallback_id)
+                break
+            event_index += 1
 
     for player in run_state.players:
         for card in player.deck:

@@ -3,7 +3,7 @@
 from sts2_env.cards.ironclad import create_ironclad_starter_deck
 from sts2_env.cards.status import make_guilty
 from sts2_env.core.combat import CombatState
-from sts2_env.core.enums import CardId, RoomType
+from sts2_env.core.enums import CardId, RoomType, ValueProp
 from sts2_env.core.rng import Rng
 from sts2_env.monsters.act1_weak import create_shrinker_beetle
 from sts2_env.potions.base import create_potion
@@ -80,7 +80,6 @@ def test_combat_end_syncs_player_max_hp_back_to_run_state():
     mgr._combat = _won_combat(extra_card_rewards=0)
     mgr._current_room_type = RoomType.MONSTER
     mgr._run_state.potion_reward_odds.current_value = -1.0
-    mgr._heal_after_combat = 0
     mgr._combat.player.max_hp = 86
     mgr._combat.player.current_hp = 70
 
@@ -90,12 +89,44 @@ def test_combat_end_syncs_player_max_hp_back_to_run_state():
     assert mgr.run_state.player.current_hp == 70
 
 
+def test_resolve_combat_end_does_not_double_burning_blood_heal():
+    """Burning Blood heals only via after_combat_victory, not again in RunManager."""
+    mgr = RunManager(seed=6, character_id="Ironclad")
+    combat = CombatState(
+        player_hp=50,
+        player_max_hp=80,
+        deck=create_ironclad_starter_deck(),
+        rng_seed=7,
+        character_id="Ironclad",
+        relics=["BurningBlood"],
+    )
+    creature, ai = create_shrinker_beetle(Rng(7))
+    combat.add_enemy(creature, ai)
+    combat.start_combat()
+    enemy = combat.enemies[0]
+    combat.deal_damage(combat.player, enemy, 999, ValueProp.UNPOWERED)
+    assert combat.is_over and combat.player_won
+    assert combat.player.current_hp == 56
+
+    mgr._combat = combat
+    mgr._current_room_type = RoomType.MONSTER
+    mgr._run_state.potion_reward_odds.current_value = -1.0
+    mgr._resolve_combat_end()
+
+    assert mgr.run_state.player.current_hp == 56
+
+
+def test_necrobinder_starts_at_sixty_six_hp():
+    mgr = RunManager(seed=7, character_id="Necrobinder")
+    assert mgr.run_state.player.max_hp == 66
+    assert mgr.run_state.player.current_hp == 66
+
+
 def test_guilty_counts_combat_victories_and_removes_itself_after_five():
     mgr = RunManager(seed=5, character_id="Ironclad")
     guilty = make_guilty()
     mgr.run_state.player.deck = [guilty]
     mgr.run_state.potion_reward_odds.current_value = -1.0
-    mgr._heal_after_combat = 0
 
     for expected_seen in range(1, 5):
         mgr._combat = _won_combat(extra_card_rewards=0)

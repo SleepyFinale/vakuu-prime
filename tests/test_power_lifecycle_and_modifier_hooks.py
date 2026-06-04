@@ -519,34 +519,47 @@ class TestPowerApplication:
 class TestDebuffTicking:
     """Vulnerable/Weak/Frail tick down at enemy turn end only; Strength does not tick."""
 
-    def test_vulnerable_ticks_down(self, enemy):
+    def test_vulnerable_ticks_down(self, simple_combat):
+        enemy = simple_combat.enemies[0]
         enemy.apply_power(PowerId.VULNERABLE, 3)
-        enemy.tick_down_power(PowerId.VULNERABLE)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert enemy.get_power_amount(PowerId.VULNERABLE) == 2
 
-    def test_vulnerable_removed_at_zero(self, enemy):
+    def test_vulnerable_removed_at_zero(self, simple_combat):
+        enemy = simple_combat.enemies[0]
         enemy.apply_power(PowerId.VULNERABLE, 1)
-        enemy.tick_down_power(PowerId.VULNERABLE)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert not enemy.has_power(PowerId.VULNERABLE)
 
-    def test_skip_first_tick(self, enemy):
+    def test_skip_first_tick(self, simple_combat):
         """Debuffs applied during player turn skip first tick."""
+        enemy = simple_combat.enemies[0]
         enemy.apply_power(PowerId.VULNERABLE, 2)
         p = enemy.powers[PowerId.VULNERABLE]
         p.skip_next_tick = True
-        enemy.tick_down_power(PowerId.VULNERABLE)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert enemy.get_power_amount(PowerId.VULNERABLE) == 2  # skipped
-        enemy.tick_down_power(PowerId.VULNERABLE)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert enemy.get_power_amount(PowerId.VULNERABLE) == 1  # now ticked
 
-    def test_weak_ticks_down(self, player):
+    def test_vulnerable_never_goes_negative_after_extra_enemy_turn_end(self, simple_combat):
+        enemy = simple_combat.enemies[0]
+        enemy.apply_power(PowerId.VULNERABLE, 1)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
+        assert PowerId.VULNERABLE not in enemy.powers
+        assert enemy.get_power_amount(PowerId.VULNERABLE) == 0
+
+    def test_weak_ticks_down(self, simple_combat):
+        player = simple_combat.player
         player.apply_power(PowerId.WEAK, 2)
-        player.tick_down_power(PowerId.WEAK)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert player.get_power_amount(PowerId.WEAK) == 1
 
-    def test_frail_ticks_down(self, player):
+    def test_frail_ticks_down(self, simple_combat):
+        player = simple_combat.player
         player.apply_power(PowerId.FRAIL, 2)
-        player.tick_down_power(PowerId.FRAIL)
+        fire_after_turn_end(CombatSide.ENEMY, simple_combat)
         assert player.get_power_amount(PowerId.FRAIL) == 1
 
     def test_strength_does_not_tick(self, player):

@@ -853,7 +853,7 @@ def fire_before_turn_end(side: CombatSide, combat: CombatState) -> None:
 
 
 def fire_after_turn_end(side: CombatSide, combat: CombatState) -> None:
-    from sts2_env.powers.base import PowerInstance
+    from sts2_env.powers.base import PowerInstance, should_remove_due_to_amount, tick_down_duration
 
     for owner, power in _iter_power_listeners(combat):
         used_turn_hook = type(power).after_turn_end is not PowerInstance.after_turn_end
@@ -864,10 +864,14 @@ def fire_after_turn_end(side: CombatSide, combat: CombatState) -> None:
             and type(power).after_turn_end is PowerInstance.after_turn_end
             and type(power).on_turn_end_enemy_side is not PowerInstance.on_turn_end_enemy_side
         ):
-            power.on_turn_end_enemy_side(owner)
+            tick_down_duration(power, owner, combat)
             used_legacy_tick = True
-        should_remove = power.amount == 0 if power.allow_negative else power.amount <= 0
-        if (used_turn_hook or used_legacy_tick) and should_remove and owner.powers.get(power.power_id) is power:
+        if (
+            used_turn_hook
+            and not used_legacy_tick
+            and should_remove_due_to_amount(power)
+            and owner.powers.get(power.power_id) is power
+        ):
             combat._remove_power(owner, power.power_id)
     for owner, relic in _iter_relic_listeners(combat):
         relic.after_turn_end(owner, side, combat)
