@@ -432,6 +432,10 @@ class CombatState:
         return [e for e in self.enemies if e.is_alive]
 
     @property
+    def alive_primary_enemies(self) -> list[Creature]:
+        return [e for e in self.enemies if e.is_primary_enemy and e.is_alive]
+
+    @property
     def enemies_with_turns(self) -> list[Creature]:
         return [enemy for enemy in self.enemies if not enemy.escaped]
 
@@ -3881,12 +3885,14 @@ class CombatState:
         blocking_dead_enemies = [
             enemy
             for enemy in self.enemies
-            if not enemy.is_alive and any(
+            if enemy.is_primary_enemy
+            and not enemy.is_alive
+            and any(
                 _blocks_combat_end(enemy, power)
                 for power in enemy.powers.values()
             )
         ]
-        if not self.alive_enemies and not blocking_dead_enemies:
+        if not self.alive_primary_enemies and not blocking_dead_enemies:
             self._end_combat(player_won=True)
         elif self.primary_player.is_dead:
             self._end_combat(player_won=False)

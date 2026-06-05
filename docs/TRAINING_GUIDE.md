@@ -129,10 +129,43 @@ python scripts/benchmark.py  # Quick throughput check
 # The script automatically runs 100 evaluation episodes after training.
 ```
 
-The training script saves two model checkpoints:
+The training script saves several model checkpoints:
 
 - `output/combat_ppo/final_model.zip` -- model at the end of training
 - `output/combat_ppo/best_model/best_model.zip` -- best model during training (based on eval callback)
+- `output/combat_ppo/checkpoints/checkpoint_<steps>_steps.zip` -- periodic resumable checkpoints (every `--checkpoint-freq` steps, newest `--keep-checkpoints` retained)
+- `output/combat_ppo/interrupted_checkpoint.zip` -- written when you stop training with Ctrl+C
+
+### Pause and Resume
+
+Long runs can be stopped and continued over several days. Both PPO trainers
+(`train_combat.py` and `train_full_run.py`) support this:
+
+```bash
+# Day 1: start a run (a run_config.json records the settings)
+python scripts/train_combat.py --output-dir output/combat_ppo
+
+# Press Ctrl+C whenever you need to stop. The current progress is saved to
+# output/combat_ppo/interrupted_checkpoint.zip and a resume command is printed.
+
+# Day 2: resume from the latest checkpoint in the same output dir
+python scripts/train_combat.py --resume --output-dir output/combat_ppo
+
+# Train further than the original target by raising --total-timesteps
+python scripts/train_combat.py --resume --output-dir output/combat_ppo --total-timesteps 6000000
+```
+
+`--resume` automatically loads the most recent checkpoint (preferring the
+interrupted checkpoint, then the newest periodic checkpoint, then `final_model`
+or `best_model`) and replays the original settings from `run_config.json`, so
+you only need to pass `--output-dir`. It continues the timestep counter rather
+than restarting. `--resume` and `--load-model` are mutually exclusive; keep
+using `--load-model` for curriculum fine-tuning into a *new* output directory.
+
+The same idea applies to the card-value trainer. Data collection writes a
+`*.partial.npz` every 100 episodes (`--resume-collection` continues it), and
+supervised training writes `training_checkpoint.pt` each epoch (`--resume`
+continues from the next epoch).
 
 ### TensorBoard
 

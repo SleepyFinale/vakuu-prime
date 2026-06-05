@@ -56,11 +56,23 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Location:** `sts2_env/bridge/state_adapter.py` lines 69-71
 
+### 5. Fogmog + Eye With Teeth combat soft-lock
+
+**Status:** Fixed
+
+**Problem:** After killing Fogmog, combat would not end if Eye With Teeth was dead but mid-revive (`IllusionPower.is_reviving`). The next enemy turn would run `REVIVE_MOVE` and bring Eye back, making the fight unwinnable.
+
+**Root cause:** `_check_combat_end()` required all enemies dead (including minions) and `IllusionPower.should_stop_combat_ending()` blocked victory while reviving. The game only requires all primary (non-minion) enemies to be dead; illusion minions do not block combat end in the decompiled `IllusionPower`.
+
+**Fix:** Added `Creature.is_primary_enemy` / `is_secondary_enemy` (minion = secondary), victory checks `alive_primary_enemies`, and removed illusion combat-end blocking.
+
+**Location:** `sts2_env/core/creature.py`, `sts2_env/core/combat.py`, `sts2_env/powers/monster.py`
+
 ---
 
 ## Open Issues
 
-### 5. AnimationSpeedPatch fails to apply
+### 6. AnimationSpeedPatch fails to apply
 
 **Severity:** Low (affects real-game speed only)
 
@@ -72,7 +84,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Location:** `bridge_mod/MainFile.cs` `AnimationSpeedPatch` class
 
-### 6. Mod abandon-run popup path may not match all versions
+### 7. Mod abandon-run popup path may not match all versions
 
 **Severity:** Low
 
@@ -84,7 +96,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Location:** `bridge_mod/RlAutoSlayer.cs` `PlayMainMenuAsync()` lines 455-472
 
-### 7. Full-run training needs significantly more steps and better reward shaping
+### 8. Full-run training needs significantly more steps and better reward shaping
 
 **Severity:** High (fundamental training challenge)
 
@@ -104,7 +116,8 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 - **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py): floor progress, combat clear, and HP preservation bonuses (`--reward-shaping`, default on).
 - **Act-count curriculum** via `RunManager.max_acts` and `--act-count` (train Act 1 before full game).
 - **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
-- **Curriculum fine-tune:** `--load-model` to resume from a Phase 1 checkpoint.
+- **Curriculum fine-tune:** `--load-model` to fine-tune from a Phase 1 checkpoint into a new output dir.
+- **Pause/resume:** Ctrl+C saves an `interrupted_checkpoint.zip`; `--resume --output-dir <dir>` continues from the latest checkpoint (periodic checkpoints every `--checkpoint-freq` steps), so multi-day training no longer has to run in one sitting. See [`docs/TRAINING_GUIDE.md`](TRAINING_GUIDE.md) ("Pause and Resume").
 
 **Also implemented (extensions):**
 

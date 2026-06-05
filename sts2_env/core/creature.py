@@ -91,6 +91,16 @@ class Creature:
         return self.current_hp <= 0
 
     @property
+    def is_secondary_enemy(self) -> bool:
+        """True when this enemy is a minion (does not block combat victory)."""
+        return self.side == CombatSide.ENEMY and self.has_power(PowerId.MINION)
+
+    @property
+    def is_primary_enemy(self) -> bool:
+        """True for non-minion enemies; combat ends when none are alive."""
+        return self.side == CombatSide.ENEMY and not self.is_secondary_enemy
+
+    @property
     def creature(self) -> Creature:
         """Compatibility shim for code paths that expect owner.creature."""
         return self

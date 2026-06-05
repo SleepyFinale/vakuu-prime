@@ -156,7 +156,13 @@ from sts2_env.monsters.act2 import (
     create_decimillipede_segment,
     create_rocket,
 )
-from sts2_env.monsters.act1 import create_eye_with_teeth, create_parafright
+from sts2_env.encounters.act1 import setup_fogmog_normal
+from sts2_env.monsters.act1 import (
+    FOGMOG_ILLUSION_MOVE,
+    create_eye_with_teeth,
+    create_fogmog,
+    create_parafright,
+)
 from sts2_env.monsters.act3 import create_door
 from sts2_env.monsters.act3 import (
     TEST_SUBJECT_MULTI_CLAW_MOVE,
@@ -963,7 +969,7 @@ class TestUntargetableReviveStates:
         assert enemy not in combat.hittable_enemies
         assert combat._resolve_target(strike, 0) is None  # noqa: SLF001
 
-    def test_illusion_power_enters_revive_move_and_blocks_combat_end(self):
+    def test_illusion_power_enters_revive_move_while_primary_alive(self):
         combat = CombatState(
             player_hp=80,
             player_max_hp=80,
@@ -971,7 +977,9 @@ class TestUntargetableReviveStates:
             rng_seed=91,
             character_id="Ironclad",
         )
-        eye, eye_ai = create_eye_with_teeth(Rng(91))
+        fogmog, fogmog_ai = create_fogmog(Rng(91))
+        eye, eye_ai = create_eye_with_teeth(Rng(92))
+        combat.add_enemy(fogmog, fogmog_ai)
         combat.add_enemy(eye, eye_ai)
         combat.start_combat()
 
@@ -985,6 +993,31 @@ class TestUntargetableReviveStates:
 
         assert eye.current_hp == eye.max_hp
         assert eye.powers[PowerId.ILLUSION].is_reviving is False
+
+    def test_fogmog_combat_ends_when_fogmog_killed_while_eye_reviving(self):
+        combat = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=create_ironclad_starter_deck(),
+            rng_seed=93,
+            character_id="Ironclad",
+        )
+        setup_fogmog_normal(combat, Rng(93))
+        fogmog = combat.enemies[0]
+        fogmog_ai = combat.enemy_ais[fogmog.combat_id]
+        combat.start_combat()
+
+        fogmog_ai.states[FOGMOG_ILLUSION_MOVE].perform(combat)
+        eye = next(e for e in combat.enemies if e.monster_id == "EYE_WITH_TEETH")
+
+        assert combat.kill_creature(eye)
+        assert eye.powers[PowerId.ILLUSION].is_reviving is True
+        assert combat.is_over is False
+
+        assert combat.kill_creature(fogmog)
+        assert combat.is_over is True
+        assert combat.player_won is True
+        assert eye.current_hp == 0
 
     def test_half_dead_enemy_ignores_damage(self):
         combat = _make_combat(create_ironclad_starter_deck(), "Ironclad")

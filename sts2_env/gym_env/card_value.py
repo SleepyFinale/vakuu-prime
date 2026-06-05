@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -148,8 +148,8 @@ def build_card_value_net(config: CardValueConfig | None = None):
             ctx_expanded = ctx_emb.unsqueeze(1).expand(-1, cfg.max_card_options, -1)
             combined = torch.cat([ctx_expanded, card_emb], dim=-1)
             card_logits = self.card_head(combined).squeeze(-1)
-            skip_logit = self.skip_head(ctx_emb)
-            logits = torch.cat([card_logits, skip_logit.unsqueeze(1)], dim=1)
+            skip_logit = self.skip_head(ctx_emb)  # (batch, 1)
+            logits = torch.cat([card_logits, skip_logit], dim=1)
             full_mask = torch.ones(batch, num_actions, device=context.device)
             full_mask[:, : cfg.max_card_options] = mask
             full_mask[:, cfg.skip_label] = 1.0
@@ -224,6 +224,39 @@ def save_card_value_model(
         ),
         encoding="utf-8",
     )
+
+
+def save_training_checkpoint(
+    path: str | Path,
+    *,
+    model: Any,
+    optimizer: Any,
+    epoch: int,
+    best_val_acc: float,
+    config: CardValueConfig,
+) -> None:
+    """Save a resumable supervised-training checkpoint (weights + optimizer + progress)."""
+    import torch
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "epoch": epoch,
+            "best_val_acc": best_val_acc,
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "config": asdict(config),
+        },
+        out,
+    )
+
+
+def load_training_checkpoint(path: str | Path) -> dict:
+    """Load a checkpoint saved by :func:`save_training_checkpoint`."""
+    import torch
+
+    return torch.load(path, map_location="cpu", weights_only=False)
 
 
 def load_card_value_model(path: str | Path) -> tuple[Any, CardValueConfig]:

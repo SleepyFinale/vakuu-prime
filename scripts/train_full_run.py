@@ -105,7 +105,10 @@ def apply_preset(args) -> None:
     args.act_count = preset["act_count"]
     args.total_timesteps = preset["total_timesteps"]
     if args.preset == "phase2" and not args.load_model:
-        print("Warning: --preset phase2 is intended for fine-tuning; pass --load-model")
+        print(
+            "Warning: --preset phase2 is intended for fine-tuning; pass --load-model "
+            "(or --resume to continue an existing run in the same --output-dir)"
+        )
 
 
 def make_masked_env(
@@ -180,12 +183,18 @@ def train(args):
     try:
         from sb3_contrib import MaskablePPO
         from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-        from stable_baselines3.common.callbacks import CallbackList, EvalCallback
         from sts2_env.training.callbacks import RunWinRateCallback
     except ImportError:
         print("Training requires sb3-contrib and stable-baselines3.")
         print("Install with: pip install 'sts2-rl-agent[train]'")
         sys.exit(1)
+
+    from sts2_env.training.checkpointing import (
+        build_ppo_callbacks,
+        print_pause_message,
+        print_resume_progress,
+        save_run_config,
+    )
 
     combat_model, combat_models, combat_models_by_character = _resolve_combat_paths(args)
     character_id, character_ids = _resolve_run_characters(args)
@@ -228,6 +237,9 @@ def train(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if not getattr(args, "resume", False):
+        save_run_config(output_dir, args)
+
     env_kwargs = dict(
         act_count=args.act_count,
         reward_shaping=args.reward_shaping,
@@ -262,6 +274,7 @@ def train(args):
             tensorboard_log=str(output_dir / "tb_logs"),
         )
         reset_timesteps = False
+        print_resume_progress(model, args.total_timesteps)
     else:
         model = MaskablePPO(
             "MlpPolicy",
@@ -282,20 +295,25 @@ def train(args):
         )
         reset_timesteps = True
 
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=str(output_dir / "best_model"),
-        log_path=str(output_dir / "eval_logs"),
-        eval_freq=max(args.eval_freq // args.n_envs, 1),
-        n_eval_episodes=args.eval_episodes,
-        deterministic=False,
-    )
+    # RunWinRateCallback expects a Gymnasium-style env (reset(seed=...) -> (obs, info),
+    # step(...) -> obs, reward, terminated, truncated, info). EvalCallback operates
+    # on the vectorized env, but the win-rate callback should use the single wrapped
+    # environment instance directly to avoid VecEnv API mismatches.
     win_rate_callback = RunWinRateCallback(
-        eval_env,
-        eval_freq=max(args.eval_freq // args.n_envs, 1),
-        n_eval_episodes=args.eval_episodes,
+        eval_env.envs[0],
+        eval_freq=max((args.eval_freq * 5) // args.n_envs, 1),
+        n_eval_episodes=max(args.eval_episodes // 2, 1),
     )
-    callbacks = CallbackList([eval_callback, win_rate_callback])
+    callbacks, interrupt_callback = build_ppo_callbacks(
+        output_dir=output_dir,
+        eval_env=eval_env,
+        eval_freq=args.eval_freq,
+        eval_episodes=args.eval_episodes,
+        n_envs=args.n_envs,
+        checkpoint_freq=args.checkpoint_freq,
+        keep_checkpoints=args.keep_checkpoints,
+        extra_callbacks=(win_rate_callback,),
+    )
 
     start = time.perf_counter()
     model.learn(
@@ -305,6 +323,13 @@ def train(args):
         reset_num_timesteps=reset_timesteps,
     )
     elapsed = time.perf_counter() - start
+
+    if interrupt_callback.interrupted:
+        print(f"\nTraining interrupted after {elapsed:.1f}s")
+        print_pause_message("scripts/train_full_run.py", args.output_dir, model, args.total_timesteps)
+        train_env.close()
+        eval_env.close()
+        return True
 
     final_path = str(output_dir / "final_model")
     model.save(final_path)
@@ -329,6 +354,7 @@ def train(args):
 
     train_env.close()
     eval_env.close()
+    return False
 
 
 def _make_eval_env(
@@ -658,11 +684,27 @@ def main():
         "--baseline-only", action="store_true",
         help="Only run random baseline evaluation (no training)",
     )
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Resume the run in --output-dir from its latest checkpoint",
+    )
+    parser.add_argument(
+        "--checkpoint-freq", type=int, default=250_000,
+        help="Save a resumable checkpoint every N steps (default: 250000)",
+    )
+    parser.add_argument(
+        "--keep-checkpoints", type=int, default=3,
+        help="Number of periodic checkpoints to retain (default: 3)",
+    )
     args = parser.parse_args()
     args.delegate_combat = not args.no_combat_delegate
     args.use_noncombat_heuristic = not args.no_noncombat_heuristic
 
-    apply_preset(args)
+    from sts2_env.training.checkpointing import resolve_resume_args
+
+    resuming = resolve_resume_args(args)
+    if not resuming:
+        apply_preset(args)
 
     combat_model, combat_models, combat_models_by_character = _resolve_combat_paths(args)
     character_id, character_ids = _resolve_run_characters(args)
@@ -699,8 +741,8 @@ def main():
             n_episodes=50,
         )
         print()
-        train(args)
-        if args.eval_with_heuristics:
+        interrupted = train(args)
+        if not interrupted and args.eval_with_heuristics:
             print("\n--- Heuristic-Assisted Evaluation ---")
             from sb3_contrib import MaskablePPO
             model = MaskablePPO.load(str(Path(args.output_dir) / "final_model"))

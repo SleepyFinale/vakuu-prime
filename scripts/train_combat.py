@@ -68,11 +68,17 @@ def train(args):
         from sb3_contrib import MaskablePPO
         from sb3_contrib.common.wrappers import ActionMasker
         from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-        from stable_baselines3.common.callbacks import EvalCallback
     except ImportError:
         print("Training requires sb3-contrib and stable-baselines3.")
         print("Install with: pip install 'sts2-rl-agent[train]'")
         sys.exit(1)
+
+    from sts2_env.training.checkpointing import (
+        build_ppo_callbacks,
+        print_pause_message,
+        print_resume_progress,
+        save_run_config,
+    )
 
     encounter_acts = parse_acts(args.acts)
     character_id, character_ids = resolve_training_characters(args)
@@ -93,6 +99,9 @@ def train(args):
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not getattr(args, "resume", False):
+        save_run_config(output_dir, args)
 
     def mask_fn(env):
         return env.action_masks()
@@ -120,37 +129,56 @@ def train(args):
 
     eval_env = DummyVecEnv([make_masked_env(9999)])
 
-    model = MaskablePPO(
-        "MlpPolicy",
-        train_env,
-        learning_rate=args.lr,
-        n_steps=args.n_steps,
-        batch_size=args.batch_size,
-        n_epochs=args.n_epochs,
-        gamma=args.gamma,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=args.ent_coef,
-        verbose=1,
-        tensorboard_log=str(output_dir / "tb_logs"),
-    )
+    if args.load_model:
+        model = MaskablePPO.load(
+            args.load_model,
+            env=train_env,
+            tensorboard_log=str(output_dir / "tb_logs"),
+        )
+        reset_timesteps = False
+        print_resume_progress(model, args.total_timesteps)
+    else:
+        model = MaskablePPO(
+            "MlpPolicy",
+            train_env,
+            learning_rate=args.lr,
+            n_steps=args.n_steps,
+            batch_size=args.batch_size,
+            n_epochs=args.n_epochs,
+            gamma=args.gamma,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=args.ent_coef,
+            verbose=1,
+            tensorboard_log=str(output_dir / "tb_logs"),
+        )
+        reset_timesteps = True
 
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=str(output_dir / "best_model"),
-        log_path=str(output_dir / "eval_logs"),
-        eval_freq=max(args.eval_freq // args.n_envs, 1),
-        n_eval_episodes=args.eval_episodes,
-        deterministic=False,
+    callbacks, interrupt_callback = build_ppo_callbacks(
+        output_dir=output_dir,
+        eval_env=eval_env,
+        eval_freq=args.eval_freq,
+        eval_episodes=args.eval_episodes,
+        n_envs=args.n_envs,
+        checkpoint_freq=args.checkpoint_freq,
+        keep_checkpoints=args.keep_checkpoints,
     )
 
     start = time.perf_counter()
     model.learn(
         total_timesteps=args.total_timesteps,
-        callback=eval_callback,
+        callback=callbacks,
         progress_bar=True,
+        reset_num_timesteps=reset_timesteps,
     )
     elapsed = time.perf_counter() - start
+
+    if interrupt_callback.interrupted:
+        print(f"\nTraining interrupted after {elapsed:.1f}s")
+        print_pause_message("scripts/train_combat.py", args.output_dir, model, args.total_timesteps)
+        train_env.close()
+        eval_env.close()
+        return
 
     final_path = str(output_dir / "final_model")
     model.save(final_path)
@@ -290,7 +318,27 @@ def main():
         "--output-dir", type=str, default=None,
         help="Output directory (auto-selected from character/acts if omitted)",
     )
+    parser.add_argument(
+        "--load-model", type=str, default=None,
+        help="Resume training from a saved MaskablePPO zip (continues timestep count)",
+    )
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Resume the run in --output-dir from its latest checkpoint",
+    )
+    parser.add_argument(
+        "--checkpoint-freq", type=int, default=250_000,
+        help="Save a resumable checkpoint every N steps (default: 250000)",
+    )
+    parser.add_argument(
+        "--keep-checkpoints", type=int, default=3,
+        help="Number of periodic checkpoints to retain (default: 3)",
+    )
     args = parser.parse_args()
+
+    from sts2_env.training.checkpointing import resolve_resume_args
+
+    resolve_resume_args(args)
 
     encounter_acts = parse_acts(args.acts)
     character_id, character_ids = resolve_training_characters(args)

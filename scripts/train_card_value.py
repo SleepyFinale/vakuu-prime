@@ -18,6 +18,10 @@ DEFAULT_DATA_PATH = "output/card_value_data/episodes.npz"
 DEFAULT_OUTPUT_DIR = "output/card_value"
 
 
+def _partial_path(data_path: Path) -> Path:
+    return data_path.with_name(data_path.stem + ".partial.npz")
+
+
 def collect_episodes(
     n_episodes: int,
     data_path: Path,
@@ -25,6 +29,7 @@ def collect_episodes(
     character_id: str = "Ironclad",
     seed: int = 0,
     loss_weight: float = 0.3,
+    resume: bool = False,
 ) -> None:
     from sts2_env.gym_env.card_value import (
         encode_card_reward_sample,
@@ -43,6 +48,23 @@ def collect_episodes(
     labels: list[int] = []
     weights: list[float] = []
     pending_indices: list[int] = []
+
+    partial_path = _partial_path(data_path)
+    start_ep = 0
+    if resume and partial_path.exists():
+        partial = np.load(partial_path)
+        contexts = list(partial["contexts"])
+        card_features = list(partial["card_features"])
+        masks = list(partial["masks"])
+        labels = list(partial["labels"])
+        weights = list(partial["weights"])
+        start_ep = int(partial["episodes_done"])
+        print(
+            f"Resuming collection from episode {start_ep}/{n_episodes} "
+            f"({len(labels)} samples already collected)"
+        )
+        if start_ep >= n_episodes:
+            print("Partial dataset already has the requested episode count.")
 
     def observe_card_reward(mgr: RunManager) -> None:
         if not mgr._offered_cards:
@@ -66,7 +88,19 @@ def collect_episodes(
         card_reward_observer=observe_card_reward,
     )
 
-    for ep in range(n_episodes):
+    def save_partial(episodes_done: int) -> None:
+        partial_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            partial_path,
+            contexts=np.stack(contexts) if contexts else np.empty((0,)),
+            card_features=np.stack(card_features) if card_features else np.empty((0,)),
+            masks=np.stack(masks) if masks else np.empty((0,)),
+            labels=np.array(labels, dtype=np.int64),
+            weights=np.array(weights, dtype=np.float32),
+            episodes_done=np.int64(episodes_done),
+        )
+
+    for ep in range(start_ep, n_episodes):
         rng = np.random.RandomState(seed + ep)
         obs, info = env.reset(seed=seed + ep)
         done = False
@@ -89,6 +123,7 @@ def collect_episodes(
 
         if (ep + 1) % 100 == 0:
             print(f"Collected {ep + 1}/{n_episodes} episodes, {len(labels)} samples")
+            save_partial(ep + 1)
 
     data_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
@@ -99,6 +134,8 @@ def collect_episodes(
         labels=np.array(labels, dtype=np.int64),
         weights=np.array(weights, dtype=np.float32),
     )
+    if partial_path.exists():
+        partial_path.unlink()
     print(f"Saved {len(labels)} samples to {data_path}")
 
 
@@ -109,6 +146,8 @@ def train_model(
     epochs: int,
     lr: float,
     val_fraction: float,
+    resume: bool = False,
+    checkpoint_every: int = 1,
 ) -> None:
     try:
         import torch
@@ -121,7 +160,9 @@ def train_model(
     from sts2_env.gym_env.card_value import (
         SKIP_LABEL,
         build_card_value_net,
+        load_training_checkpoint,
         save_card_value_model,
+        save_training_checkpoint,
         CardValueConfig,
     )
 
@@ -163,9 +204,22 @@ def train_model(
     criterion = nn.CrossEntropyLoss(reduction="none")
 
     best_val_acc = -1.0
+    start_epoch = 0
     output_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = output_dir / "training_checkpoint.pt"
 
-    for epoch in range(epochs):
+    if resume and checkpoint_path.exists():
+        ckpt = load_training_checkpoint(checkpoint_path)
+        model.load_state_dict(ckpt["model_state"])
+        optimizer.load_state_dict(ckpt["optimizer_state"])
+        start_epoch = int(ckpt["epoch"]) + 1
+        best_val_acc = float(ckpt["best_val_acc"])
+        print(
+            f"Resuming training from epoch {start_epoch}/{epochs} "
+            f"(best_val_acc={best_val_acc:.3f})"
+        )
+
+    for epoch in range(start_epoch, epochs):
         model.train()
         train_loss = 0.0
         train_correct = 0
@@ -205,6 +259,16 @@ def train_model(
         if val_acc >= best_val_acc:
             best_val_acc = val_acc
             save_card_value_model(model, output_dir, config)
+
+        if (epoch + 1) % checkpoint_every == 0:
+            save_training_checkpoint(
+                checkpoint_path,
+                model=model,
+                optimizer=optimizer,
+                epoch=epoch,
+                best_val_acc=best_val_acc,
+                config=config,
+            )
 
     print(f"Best val accuracy: {best_val_acc:.3f}")
     print(f"Model saved to {output_dir}")
@@ -255,6 +319,18 @@ def main():
         "--seed", type=int, default=0,
         help="Collection RNG seed",
     )
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Resume training from output-dir/training_checkpoint.pt",
+    )
+    parser.add_argument(
+        "--resume-collection", action="store_true",
+        help="Resume data collection from a *.partial.npz checkpoint",
+    )
+    parser.add_argument(
+        "--checkpoint-every", type=int, default=1,
+        help="Save a resumable training checkpoint every N epochs (default: 1)",
+    )
     args = parser.parse_args()
 
     data_path = Path(args.data)
@@ -266,6 +342,7 @@ def main():
             character_id=args.character,
             seed=args.seed,
             loss_weight=args.loss_weight,
+            resume=args.resume_collection,
         )
 
     if not data_path.exists():
@@ -280,6 +357,8 @@ def main():
         epochs=args.epochs,
         lr=args.lr,
         val_fraction=args.val_fraction,
+        resume=args.resume,
+        checkpoint_every=args.checkpoint_every,
     )
 
 
