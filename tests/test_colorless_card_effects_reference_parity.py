@@ -181,6 +181,7 @@ class TestColorlessCardEffectsReferenceParity:
         assert combat.draw_pile == [owner_attack]
 
     def test_catastrophe_autoplays_two_draw_pile_cards_preferring_playable(self):
+        """Matches Catastrophe.cs: stable-shuffle auto-play from draw pile."""
         combat = _make_combat()
         first = make_strike_ironclad()
         second = make_defend_ironclad()
@@ -204,6 +205,7 @@ class TestColorlessCardEffectsReferenceParity:
         assert combat.player.get_power_amount(PowerId.PLATING) == 7
 
     def test_jackpot_deals_damage_and_adds_three_zero_cost_cards(self):
+        """Matches Jackpot.cs: deal damage and generate three upgraded cards."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.current_hp = enemy.max_hp = 100

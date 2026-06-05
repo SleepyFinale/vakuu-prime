@@ -320,15 +320,21 @@ def flechettes(card: CardInstance, combat: CombatState, target: Creature | None)
 @register_effect(CardId.FOLLOW_THROUGH)
 def follow_through(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
     owner = _owner(card, combat)
-    for enemy in combat.hittable_enemies:
-        dmg = calculate_damage(card.base_damage, owner, enemy, ValueProp.MOVE, combat)
-        apply_damage(enemy, dmg, ValueProp.MOVE, combat, owner)
-    previous = combat.last_card_play_started_this_turn(owner, exclude_card=card)
-    if previous is None or previous.card_type != CardType.SKILL:
-        return
-    weak = card.effect_vars.get('weak', 1)
-    for enemy in combat.hittable_enemies:
-        combat.apply_power_to(enemy, PowerId.WEAK, weak)
+    other_hand_cards = sum(1 for hand_card in combat.hand if hand_card is not card)
+    hits = 2 if other_hand_cards >= card.effect_vars.get('card_count', 5) else 1
+    if card.target_type == TargetType.ALL_ENEMIES:
+        targets = list(combat.hittable_enemies)
+    else:
+        if target is None:
+            targets = list(combat.hittable_enemies[:1])
+        else:
+            targets = [target]
+    for hit_target in targets:
+        for _ in range(hits):
+            if owner.is_dead or hit_target.is_dead:
+                break
+            dmg = calculate_damage(card.base_damage, owner, hit_target, ValueProp.MOVE, combat)
+            apply_damage(hit_target, dmg, ValueProp.MOVE, combat, owner)
 
 @register_effect(CardId.FOOTWORK)
 def footwork(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
@@ -547,7 +553,11 @@ def assassinate(card: CardInstance, combat: CombatState, target: Creature | None
 
 @register_effect(CardId.BLADE_OF_INK)
 def blade_of_ink(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    combat.apply_power_to(_owner(card, combat), PowerId.BLADE_OF_INK, card.effect_vars.get('strength', 2))
+    combat.apply_power_to(
+        _owner(card, combat),
+        PowerId.BLADE_OF_INK,
+        card.effect_vars.get('cards', 2),
+    )
 
 @register_effect(CardId.BULLET_TIME)
 def bullet_time(card: CardInstance, combat: CombatState, target: Creature | None) -> None:

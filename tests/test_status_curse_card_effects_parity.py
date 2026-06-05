@@ -332,6 +332,7 @@ class TestStatusCurseCardEffectsParity:
         assert combat.player.get_power_amount(PowerId.DEXTERITY) == 2
 
     def test_distraction_uses_combat_generation_pool(self):
+        """Matches Distraction.cs: generated Skill comes from combat card generation."""
         combat = _make_combat()
         card = create_card(CardId.DISTRACTION)
         combat.hand = [card]

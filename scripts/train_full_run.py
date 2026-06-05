@@ -33,27 +33,51 @@ PRESETS = {
 }
 
 
-def _resolve_combat_paths(args) -> tuple[str | None, dict[int, str] | None]:
+def _resolve_combat_paths(args) -> tuple[
+    str | None, dict[int, str] | None, dict[str, str] | None,
+]:
+    combat_models_by_character = None
+    if args.combat_models_by_character:
+        from sts2_env.gym_env.hierarchical_run_env import (
+            parse_combat_models_by_character,
+        )
+
+        parsed = parse_combat_models_by_character(args.combat_models_by_character)
+        combat_models_by_character = {
+            char_id: str(path) for char_id, path in parsed.items()
+        }
+        return None, None, combat_models_by_character
     if args.combat_models:
         from sts2_env.gym_env.hierarchical_run_env import parse_combat_models_spec
 
         parsed = parse_combat_models_spec(args.combat_models)
-        return None, {act: str(path) for act, path in parsed.items()}
+        return None, {act: str(path) for act, path in parsed.items()}, None
     combat_model = args.combat_model
     if combat_model is None and args.delegate_combat:
         combat_model = DEFAULT_COMBAT_MODEL
-    return combat_model, None
+    return combat_model, None, None
+
+
+def _resolve_run_characters(args) -> tuple[str, tuple[str, ...] | None]:
+    if args.characters is not None:
+        from sts2_env.characters.all import parse_character_ids
+
+        return "Ironclad", parse_character_ids(args.characters)
+    return args.character, None
 
 
 def _validate_combat_paths(
     combat_model: str | None,
     combat_models: dict[int, str] | None,
+    combat_models_by_character: dict[str, str] | None,
     delegate_combat: bool,
 ) -> None:
     if not delegate_combat:
         return
     paths: list[str] = []
-    if combat_models:
+    if combat_models_by_character:
+        paths.extend(combat_models_by_character.values())
+    elif combat_models:
         paths.extend(combat_models.values())
     elif combat_model:
         paths.append(combat_model)
@@ -91,6 +115,9 @@ def make_masked_env(
     reward_shaping: bool = True,
     combat_model: str | None = None,
     combat_models: dict[int, str] | None = None,
+    combat_models_by_character: dict[str, str] | None = None,
+    character_id: str = "Ironclad",
+    character_ids: tuple[str, ...] | None = None,
     delegate_combat: bool = True,
     use_noncombat_heuristic: bool = True,
     card_value_model: str | None = None,
@@ -117,9 +144,12 @@ def make_masked_env(
             env = STS2HierarchicalRunEnv(
                 combat_model_path=combat_model,
                 combat_models=combat_models,
+                combat_models_by_character=combat_models_by_character,
                 delegate_combat=True,
                 use_noncombat_heuristic=use_noncombat_heuristic,
                 card_value_model_path=card_value_model,
+                character_id=character_id,
+                character_ids=character_ids,
                 act_count=act_count,
                 reward_shaping=reward_shaping,
                 max_steps=max_steps,
@@ -131,6 +161,8 @@ def make_masked_env(
             from sts2_env.gym_env.run_env import STS2RunEnv
 
             env = STS2RunEnv(
+                character_id=character_id,
+                character_ids=character_ids,
                 act_count=act_count,
                 reward_shaping=reward_shaping,
                 max_steps=max_steps,
@@ -155,13 +187,23 @@ def train(args):
         print("Install with: pip install 'sts2-rl-agent[train]'")
         sys.exit(1)
 
-    combat_model, combat_models = _resolve_combat_paths(args)
-    _validate_combat_paths(combat_model, combat_models, args.delegate_combat)
+    combat_model, combat_models, combat_models_by_character = _resolve_combat_paths(args)
+    character_id, character_ids = _resolve_run_characters(args)
+    _validate_combat_paths(
+        combat_model,
+        combat_models,
+        combat_models_by_character,
+        args.delegate_combat,
+    )
 
     print("Training MaskablePPO on STS2 Hierarchical Full Run")
     if args.preset:
         print(f"  preset:           {args.preset}")
     print(f"  act_count:        {args.act_count}")
+    if character_ids is not None:
+        print(f"  characters:       {character_ids}")
+    else:
+        print(f"  character:        {character_id}")
     print(f"  n_envs:           {args.n_envs}")
     print(f"  total_timesteps:  {args.total_timesteps}")
     print(f"  learning_rate:    {args.lr}")
@@ -169,7 +211,9 @@ def train(args):
     print(f"  reward_shaping:   {args.reward_shaping}")
     print(f"  delegate_combat:  {args.delegate_combat}")
     print(f"  noncombat_heur:   {args.use_noncombat_heuristic}")
-    if combat_models:
+    if combat_models_by_character:
+        print(f"  combat_by_char:   {combat_models_by_character}")
+    elif combat_models:
         print(f"  combat_models:    {combat_models}")
     else:
         print(f"  combat_model:     {combat_model}")
@@ -189,6 +233,9 @@ def train(args):
         reward_shaping=args.reward_shaping,
         combat_model=combat_model,
         combat_models=combat_models,
+        combat_models_by_character=combat_models_by_character,
+        character_id=character_id,
+        character_ids=character_ids,
         delegate_combat=args.delegate_combat,
         use_noncombat_heuristic=args.use_noncombat_heuristic,
         card_value_model=args.card_value_model,
@@ -271,6 +318,9 @@ def train(args):
         act_count=args.act_count,
         combat_model=combat_model,
         combat_models=combat_models,
+        combat_models_by_character=combat_models_by_character,
+        character_id=character_id,
+        character_ids=character_ids,
         delegate_combat=args.delegate_combat,
         card_value_model=args.card_value_model,
         use_noncombat_heuristic=False,
@@ -285,6 +335,9 @@ def _make_eval_env(
     act_count: int,
     combat_model: str | None,
     combat_models: dict[int, str] | None,
+    combat_models_by_character: dict[str, str] | None,
+    character_id: str,
+    character_ids: tuple[str, ...] | None,
     delegate_combat: bool,
     card_value_model: str | None = None,
     use_noncombat_heuristic: bool = False,
@@ -300,9 +353,12 @@ def _make_eval_env(
         base = STS2HierarchicalRunEnv(
             combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
             combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
             delegate_combat=True,
             use_noncombat_heuristic=use_noncombat_heuristic,
             card_value_model_path=card_value_model,
+            character_id=character_id,
+            character_ids=character_ids,
             act_count=act_count,
             reward_shaping=False,
             max_steps=DEFAULT_MAX_STEPS,
@@ -314,6 +370,8 @@ def _make_eval_env(
         from sts2_env.gym_env.run_env import STS2RunEnv
 
         base = STS2RunEnv(
+            character_id=character_id,
+            character_ids=character_ids,
             act_count=act_count,
             reward_shaping=False,
             max_steps=DEFAULT_MAX_STEPS,
@@ -333,6 +391,9 @@ def evaluate(
     act_count: int = 1,
     combat_model: str | None = None,
     combat_models: dict[int, str] | None = None,
+    combat_models_by_character: dict[str, str] | None = None,
+    character_id: str = "Ironclad",
+    character_ids: tuple[str, ...] | None = None,
     delegate_combat: bool = True,
     card_value_model: str | None = None,
     use_noncombat_heuristic: bool = False,
@@ -346,6 +407,9 @@ def evaluate(
         act_count,
         combat_model,
         combat_models,
+        combat_models_by_character,
+        character_id,
+        character_ids,
         delegate_combat,
         card_value_model=card_value_model,
         use_noncombat_heuristic=use_noncombat_heuristic,
@@ -393,6 +457,9 @@ def random_baseline(
     act_count: int = 1,
     combat_model: str | None = None,
     combat_models: dict[int, str] | None = None,
+    combat_models_by_character: dict[str, str] | None = None,
+    character_id: str = "Ironclad",
+    character_ids: tuple[str, ...] | None = None,
     delegate_combat: bool = True,
     use_noncombat_heuristic: bool = False,
     n_episodes: int = 100,
@@ -407,8 +474,11 @@ def random_baseline(
         env = STS2HierarchicalRunEnv(
             combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
             combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
             delegate_combat=True,
             use_noncombat_heuristic=use_noncombat_heuristic,
+            character_id=character_id,
+            character_ids=character_ids,
             act_count=act_count,
             reward_shaping=False,
             max_steps=DEFAULT_MAX_STEPS,
@@ -420,6 +490,8 @@ def random_baseline(
         from sts2_env.gym_env.run_env import STS2RunEnv
 
         env = STS2RunEnv(
+            character_id=character_id,
+            character_ids=character_ids,
             act_count=act_count,
             reward_shaping=False,
             max_steps=DEFAULT_MAX_STEPS,
@@ -499,6 +571,22 @@ def main():
         help="Per-act combat models: '0:path0,1:path1,2:path2'",
     )
     parser.add_argument(
+        "--combat-models-by-character", type=str, default=None,
+        help="Per-character combat models: 'Ironclad:path0,Silent:path1'",
+    )
+    from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS
+
+    character_group = parser.add_mutually_exclusive_group()
+    character_group.add_argument(
+        "--character", type=str, default="Ironclad",
+        choices=SUPPORTED_TRAINING_CHARACTERS,
+        help="Character for full-run training (default: Ironclad)",
+    )
+    character_group.add_argument(
+        "--characters", type=str, default=None,
+        help="Mixed-character full-run pool: 'Ironclad,Silent' or 'all'",
+    )
+    parser.add_argument(
         "--no-combat-delegate", action="store_true",
         help="Train flat policy without combat delegation (ablation)",
     )
@@ -576,26 +664,36 @@ def main():
 
     apply_preset(args)
 
-    combat_model, combat_models = _resolve_combat_paths(args)
-
-    combat_model, combat_models = _resolve_combat_paths(args)
+    combat_model, combat_models, combat_models_by_character = _resolve_combat_paths(args)
+    character_id, character_ids = _resolve_run_characters(args)
 
     if args.baseline_only:
         random_baseline(
             act_count=args.act_count,
             combat_model=combat_model,
             combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
+            character_id=character_id,
+            character_ids=character_ids,
             delegate_combat=args.delegate_combat,
             use_noncombat_heuristic=args.use_noncombat_heuristic,
         )
     else:
         if args.delegate_combat:
-            _validate_combat_paths(combat_model, combat_models, True)
+            _validate_combat_paths(
+                combat_model,
+                combat_models,
+                combat_models_by_character,
+                True,
+            )
         print("Running random baseline for reference...")
         random_baseline(
             act_count=args.act_count,
             combat_model=combat_model,
             combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
+            character_id=character_id,
+            character_ids=character_ids,
             delegate_combat=args.delegate_combat,
             use_noncombat_heuristic=False,
             n_episodes=50,
@@ -611,6 +709,9 @@ def main():
                 act_count=args.act_count,
                 combat_model=combat_model,
                 combat_models=combat_models,
+                combat_models_by_character=combat_models_by_character,
+                character_id=character_id,
+                character_ids=character_ids,
                 delegate_combat=args.delegate_combat,
                 use_noncombat_heuristic=True,
                 n_episodes=50,

@@ -373,22 +373,25 @@ class TestIroncladCombatEdgeCardModelParity:
         assert defend in combat.hand
         assert enemy.current_hp == 94
 
-    def test_cinder_exhausts_top_draw_card_after_shuffle_if_needed(self):
+    def test_cinder_exhausts_random_hand_card_after_damage(self):
+        """Matches Cinder.cs: attack then exhaust one random card from hand."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.max_hp = 100
         enemy.current_hp = 100
         kept = make_strike_ironclad()
         to_exhaust = make_defend_ironclad()
-        combat.hand = [make_cinder(), kept]
-        combat.draw_pile = []
-        combat.discard_pile = [to_exhaust]
+        combat.hand = [make_cinder(), kept, to_exhaust]
         combat.energy = 2
 
         assert combat.play_card(0, 0)
-        assert enemy.current_hp == 83
-        assert combat.hand == [kept]
-        assert to_exhaust in combat.exhaust_pile
+        assert enemy.current_hp == 82
+        assert len(combat.hand) == 1
+        remaining_ids = {id(card) for card in combat.hand}
+        exhausted_ids = {id(card) for card in combat.exhaust_pile}
+        assert remaining_ids | exhausted_ids == {id(kept), id(to_exhaust)}
+        assert len(remaining_ids) == 1
+        assert len(exhausted_ids) == 1
 
     def test_thunderclap_applies_vulnerable_after_all_damage_to_survivors(self):
         combat = _make_combat(extra_enemies=1)
@@ -656,6 +659,7 @@ class TestIroncladCombatEdgeCardModelParity:
         assert skill in combat.exhaust_pile
 
     def test_infernal_blade_adds_random_ironclad_attack_and_makes_it_free_this_turn(self):
+        """Matches InfernalBlade.cs: generate a random Attack and set its cost to 0 this turn."""
         combat = _make_combat()
         combat.hand = [make_infernal_blade()]
         combat.energy = 1
@@ -915,28 +919,28 @@ class TestIroncladCombatEdgeCardModelParity:
         assert stop in combat.hand
         assert combat.draw_pile == [remaining]
 
-    def test_spite_draws_only_after_owner_took_unblocked_damage_this_turn(self):
+    def test_spite_hits_once_without_hp_loss_and_twice_after_unblocked_damage(self):
+        """Matches Spite.cs: Repeat hits only when owner lost unblocked HP this turn."""
         combat = _make_combat()
         enemy = combat.enemies[0]
-        missed_draw = make_defend_ironclad()
+        enemy.max_hp = 100
+        enemy.current_hp = 100
         combat.hand = [make_spite()]
-        combat.draw_pile = [missed_draw]
         combat.energy = 0
 
         assert combat.play_card(0, 0)
-        assert combat.hand == []
-        assert combat.draw_pile == [missed_draw]
+        assert enemy.current_hp == 95
 
         damaged_combat = _make_combat()
         enemy = damaged_combat.enemies[0]
-        drawn = make_defend_ironclad()
+        enemy.max_hp = 100
+        enemy.current_hp = 100
         damaged_combat.hand = [make_bloodletting(), make_spite()]
-        damaged_combat.draw_pile = [drawn]
         damaged_combat.energy = 1
 
         assert damaged_combat.play_card(0)
         assert damaged_combat.play_card(0, 0)
-        assert damaged_combat.hand == [drawn]
+        assert enemy.current_hp == 90
 
     def test_not_yet_heals_owner_for_reference_amount(self):
         """NotYet.cs: heal the owner for the reference amount."""
@@ -960,6 +964,7 @@ class TestIroncladCombatEdgeCardModelParity:
         assert combat.energy == 0
 
     def test_brand_still_gains_strength_when_selection_returns_none(self):
+        """Matches Brand.cs: apply Strength then exhaust a random hand card."""
         combat = _make_combat()
         strike = make_strike_ironclad()
         defend = make_defend_ironclad()
@@ -981,6 +986,7 @@ class TestIroncladCombatEdgeCardModelParity:
         assert combat.player.powers[PowerId.STRENGTH].amount == 1
 
     def test_brand_does_not_open_selection_after_self_damage_ends_combat(self):
+        """Matches Brand.cs: skip exhaust selection when combat ends mid-play."""
         combat = _make_combat()
         strike = make_strike_ironclad()
         combat.player.current_hp = 1

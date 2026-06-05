@@ -6658,6 +6658,65 @@ class TestFixedRotation:
             "FLEE_MOVE",
         ]
 
+    def test_cultists_ritual_converts_to_strength_after_enemy_turn_ends(self):
+        combat = _make_combat(61)
+        setup_cultists_normal(combat, Rng(61))
+        calcified = combat.enemies[0]
+        damp = combat.enemies[1]
+
+        combat.end_player_turn()
+        assert calcified.get_power_amount(PowerId.RITUAL) == 2
+        assert damp.get_power_amount(PowerId.RITUAL) == 5
+        assert calcified.get_power_amount(PowerId.STRENGTH) == 0
+        assert damp.get_power_amount(PowerId.STRENGTH) == 0
+
+        combat.end_player_turn()
+        assert calcified.get_power_amount(PowerId.STRENGTH) == 2
+        assert damp.get_power_amount(PowerId.STRENGTH) == 5
+
+    def test_devoted_sculptor_ritual_converts_to_strength_after_enemy_turn_end(self):
+        combat = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=create_ironclad_starter_deck(),
+            rng_seed=40,
+        )
+        creature, ai = create_devoted_sculptor(Rng(40))
+        combat.add_enemy(creature, ai)
+        combat.start_combat()
+        combat.end_player_turn()
+        assert creature.get_power_amount(PowerId.RITUAL) == 9
+        assert creature.get_power_amount(PowerId.STRENGTH) == 0
+        combat.end_player_turn()
+        assert creature.get_power_amount(PowerId.STRENGTH) == 9
+
+    def test_magi_knight_dampen_applied_via_full_enemy_turn(self):
+        combat = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=create_ironclad_starter_deck(),
+            rng_seed=24,
+        )
+        creature, ai = create_magi_knight(Rng(24))
+        combat.add_enemy(creature, ai)
+        combat.start_combat()
+        combat.end_player_turn()
+        assert combat.player.get_power_amount(PowerId.DAMPEN) == 0
+        combat.end_player_turn()
+        assert combat.player.get_power_amount(PowerId.DAMPEN) == MAGI_KNIGHT_DAMPEN
+
+    def test_lagavulin_matriarch_starts_asleep_with_plating(self):
+        combat = CombatState(
+            player_hp=80,
+            player_max_hp=80,
+            deck=create_ironclad_starter_deck(),
+            rng_seed=70,
+        )
+        creature, ai = create_lagavulin_matriarch(Rng(70))
+        combat.add_enemy(creature, ai)
+        assert creature.get_power_amount(PowerId.ASLEEP) == 3
+        assert creature.get_power_amount(PowerId.PLATING) > 0
+
     def test_act4_normal_punch_construct_and_sewer_clam_match_original_moves(self):
         punch, punch_ai = create_punch_construct(Rng(68))
         punch_combat = _make_combat(68)

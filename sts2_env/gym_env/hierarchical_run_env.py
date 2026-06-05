@@ -52,7 +52,33 @@ def parse_combat_models_spec(spec: str) -> dict[int, Path]:
     return models
 
 
-def load_combat_model(model_path: str | Path, encounter_acts: tuple[int, ...] = (0,)):
+def parse_combat_models_by_character(spec: str) -> dict[str, Path]:
+    """Parse ``'Ironclad:path0,Silent:path1'`` into character-indexed model paths."""
+    from sts2_env.characters.all import get_character
+
+    models: dict[str, Path] = {}
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        char_str, _, path_str = part.partition(":")
+        if not path_str:
+            raise ValueError(
+                f"Invalid combat-models-by-character entry {part!r}; "
+                "expected 'CharacterId:path'"
+            )
+        char_id = get_character(char_str.strip()).character_id
+        models[char_id] = Path(path_str.strip())
+    if not models:
+        raise ValueError(f"No combat models parsed from: {spec!r}")
+    return models
+
+
+def load_combat_model(
+    model_path: str | Path,
+    encounter_acts: tuple[int, ...] = (0,),
+    character_id: str = "Ironclad",
+):
     """Load a trained MaskablePPO combat policy."""
     from sb3_contrib import MaskablePPO
     from sb3_contrib.common.wrappers import ActionMasker
@@ -66,7 +92,10 @@ def load_combat_model(model_path: str | Path, encounter_acts: tuple[int, ...] = 
         return env.action_masks()
 
     dummy_env = ActionMasker(
-        STS2CombatEnv(encounter_acts=encounter_acts),
+        STS2CombatEnv(
+            encounter_acts=encounter_acts,
+            character_id=character_id,
+        ),
         mask_fn,
     )
     return MaskablePPO.load(str(path), env=dummy_env)
@@ -76,12 +105,31 @@ def load_combat_models(
     models: dict[int, str | Path],
     *,
     default_encounter_acts: tuple[int, ...] = (0,),
+    character_id: str = "Ironclad",
 ) -> dict[int, Any]:
     """Load one combat policy per act index."""
     loaded: dict[int, Any] = {}
     for act_index, path in models.items():
         acts = (act_index,) if act_index in default_encounter_acts else default_encounter_acts
-        loaded[act_index] = load_combat_model(path, encounter_acts=acts)
+        loaded[act_index] = load_combat_model(
+            path, encounter_acts=acts, character_id=character_id,
+        )
+    return loaded
+
+
+def load_combat_models_by_character(
+    models: dict[str, str | Path],
+    *,
+    default_encounter_acts: tuple[int, ...] = (0,),
+) -> dict[str, Any]:
+    """Load one combat policy per character id."""
+    loaded: dict[str, Any] = {}
+    for char_id, path in models.items():
+        loaded[char_id] = load_combat_model(
+            path,
+            encounter_acts=default_encounter_acts,
+            character_id=char_id,
+        )
     return loaded
 
 
@@ -103,6 +151,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         use_noncombat_heuristic: bool = True,
         noncombat_heuristic_config: NoncombatHeuristicConfig | None = None,
         character_id: str = "Ironclad",
+        character_ids: tuple[str, ...] | None = None,
         ascension_level: int = 0,
         max_steps: int = DEFAULT_MAX_STEPS,
         max_combat_turns: int = 200,
@@ -115,6 +164,8 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         underdocks_discovered: bool = True,
         combat_model: Any | None = None,
         combat_models_loaded: dict[int, Any] | None = None,
+        combat_models_by_character: dict[str, str | Path] | None = None,
+        combat_models_by_character_loaded: dict[str, Any] | None = None,
         card_value_model_path: str | Path | None = None,
         card_value_model: Any | None = None,
         card_reward_observer: Callable[[RunManager], None] | None = None,
@@ -122,6 +173,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         super().__init__()
         self._run_env = STS2RunEnv(
             character_id=character_id,
+            character_ids=character_ids,
             ascension_level=ascension_level,
             max_steps=INNER_MAX_STEPS,
             max_combat_turns=max_combat_turns,
@@ -151,15 +203,32 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
 
         self._combat_model = combat_model
         self._combat_models: dict[int, Any] = dict(combat_models_loaded or {})
+        self._combat_models_by_character: dict[str, Any] = dict(
+            combat_models_by_character_loaded or {},
+        )
         self._combat_model_path = combat_model_path
         self._combat_models_paths = combat_models
+        self._combat_models_by_character_paths = combat_models_by_character
 
         if delegate_combat:
-            if combat_models and not self._combat_models:
-                self._combat_models = load_combat_models(combat_models)
-            elif self._combat_model is None and combat_model_path is None and not self._combat_models:
+            if combat_models_by_character and not self._combat_models_by_character:
+                self._combat_models_by_character = load_combat_models_by_character(
+                    combat_models_by_character,
+                )
+            elif combat_models and not self._combat_models:
+                self._combat_models = load_combat_models(
+                    combat_models,
+                    character_id=character_id,
+                )
+            elif (
+                self._combat_model is None
+                and combat_model_path is None
+                and not self._combat_models
+                and not self._combat_models_by_character
+            ):
                 raise ValueError(
-                    "combat_model_path or combat_models required when delegate_combat=True"
+                    "combat_model_path, combat_models, or combat_models_by_character "
+                    "required when delegate_combat=True"
                 )
             if combat_model_path is not None:
                 self._combat_model_path = combat_model_path
@@ -178,15 +247,28 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
     def _ensure_combat_models(self) -> None:
         if not self.delegate_combat:
             return
+        if self._combat_models_by_character:
+            return
         if self._combat_models:
             return
         if self._combat_model is not None:
             return
+        if self._combat_models_by_character_paths:
+            self._combat_models_by_character = load_combat_models_by_character(
+                self._combat_models_by_character_paths,
+            )
+            return
         if self._combat_models_paths:
-            self._combat_models = load_combat_models(self._combat_models_paths)
+            self._combat_models = load_combat_models(
+                self._combat_models_paths,
+                character_id=self._run_env._character_id,
+            )
             return
         if self._combat_model_path is not None:
-            self._combat_model = load_combat_model(self._combat_model_path)
+            self._combat_model = load_combat_model(
+                self._combat_model_path,
+                character_id=self._run_env._character_id,
+            )
 
     def _configure_learned_card_picker(
         self,
@@ -214,6 +296,22 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
                 return self._combat_models[0]
             return next(iter(self._combat_models.values()))
         return self._combat_model
+
+    def _combat_policy_for_character(self, character_id: str) -> Any:
+        self._ensure_combat_models()
+        if self._combat_models_by_character:
+            if character_id in self._combat_models_by_character:
+                return self._combat_models_by_character[character_id]
+            if "Ironclad" in self._combat_models_by_character:
+                return self._combat_models_by_character["Ironclad"]
+            return next(iter(self._combat_models_by_character.values()))
+        return self._combat_policy_for_act(0)
+
+    def _combat_policy_for_run(self, mgr: RunManager) -> Any:
+        character_id = mgr.run_state.player.character_id
+        if self._combat_models_by_character or self._combat_models_by_character_paths:
+            return self._combat_policy_for_character(character_id)
+        return self._combat_policy_for_act(mgr.run_state.current_act_index)
 
     def reset(
         self,
@@ -318,8 +416,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
                 break
 
             prev_snapshot = snapshot_from_manager(mgr)
-            act_index = mgr.run_state.current_act_index
-            combat_policy = self._combat_policy_for_act(act_index)
+            combat_policy = self._combat_policy_for_run(mgr)
 
             if self._run_env.needs_player_select():
                 action = layout.player_select_start

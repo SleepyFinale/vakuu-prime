@@ -121,17 +121,22 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 ### 8. Only Ironclad combat model trained
 
-**Severity:** Medium
+**Status:** Mitigated (training pipeline and bridge mod support all characters)
 
-**Problem:** The combat training pipeline only creates Ironclad starter decks. All training and evaluation use the Ironclad character.
+**Problem:** The combat training pipeline only created Ironclad starter decks. All training and evaluation used the Ironclad character.
 
-**Impact:** The trained model is specific to Ironclad. It cannot play Silent, Defect, Necrobinder, or Regent effectively because:
+**Mitigation (implemented):**
 
-- Different starter decks and starting HP
-- Character-specific mechanics (orbs, stars, pets)
-- Different card pools with different effect distributions
+- **Character selection** in [`STS2CombatEnv`](../sts2_env/gym_env/combat_env.py): `--character` (single) and `--characters all` (mixed) in [`scripts/train_combat.py`](../scripts/train_combat.py).
+- **Starter deck, HP, and starting relic** per character via [`sts2_env/characters/all.py`](../sts2_env/characters/all.py).
+- **Observation v2 (148 dims):** character one-hot, stars, orb queue, and Osty features in [`sts2_env/gym_env/observation.py`](../sts2_env/gym_env/observation.py).
+- **Full-run wiring:** `--character`, `--characters`, and `--combat-models-by-character` in [`scripts/train_full_run.py`](../scripts/train_full_run.py) and [`scripts/eval_full_run.py`](../scripts/eval_full_run.py).
+- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, and `osty` ([`bridge_mod/BridgeStateSerializer.cs`](../bridge_mod/BridgeStateSerializer.cs)); Python adapter encodes the 148-dim mechanics slice ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
 
-**Workaround:** The simulator supports all 5 characters (cards, powers, monsters are all implemented). Training scripts need to be extended to support character selection.
+**Remaining gaps:**
+
+- Pre-existing 131-dim combat checkpoints must be retrained for the new observation size.
+- Live bridge eval requires matching the mod's `STS2_BRIDGE_CHARACTER` to the agent's trained character and `--character` / `--combat-models-by-character` model path.
 
 ### 9. Combat potion actions were missing from the RL action space
 
@@ -160,8 +165,8 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 **Remaining gaps:**
 
-- Live-game bridge smoke record-and-compare pass has not been run yet (no game was listening here). Run `scripts/bridge_live_smoke.ps1 -Live` on a machine with STS2 installed (see [PARITY_GAPS.md](PARITY_GAPS.md) §3).
-- Deep edge-case coverage beyond smoke tests remains a continuous effort for the most complex cards.
+- Live-game bridge smoke record-and-compare pass has not been run yet (offline gate passed 2026-06-04; no game was listening for `--live`). Run `python scripts/record_bridge_smoke.py --live` on a machine with STS2 + the mod installed (see [PARITY_GAPS.md](PARITY_GAPS.md) §3).
+- Direct-reference parity gate is closed ([PARITY_COVERAGE_BACKLOG.md](PARITY_COVERAGE_BACKLOG.md)); use `scripts/audit_behavioral_edge_coverage.py --smoke-only` after adding high-impact cards.
 
 **Impact:** Residual drift can still affect RL transfer; use bridge evaluation as ground truth for training claims.
 

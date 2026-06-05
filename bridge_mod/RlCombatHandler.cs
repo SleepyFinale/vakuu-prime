@@ -439,6 +439,7 @@ public class RlCombatHandler : IRoomHandler, IHandler
                 ["energy"] = pcs?.Energy ?? 0,
                 ["max_energy"] = pcs?.MaxEnergy ?? 3,
             };
+            BridgeStateSerializer.AddCharacterMechanics(playerObj, player, pcs);
 
             // Player powers
             var powers = new List<Dictionary<string, object>>();

@@ -176,15 +176,28 @@ def _run_audits() -> int:
     scripts = [
         "scripts/audit_card_static_metadata.py",
         "scripts/audit_card_dynamic_vars.py",
-        "scripts/parity_reference_audit.py",
-        "scripts/audit_onplay_behavior_coverage.py",
-        "scripts/audit_relic_hook_coverage.py",
+        (
+            "scripts/parity_reference_audit.py",
+            [
+                "--direct-test-references",
+                "--include-deprecated",
+                "--code-implementation-references",
+                "--fail-on-missing",
+            ],
+        ),
+        ("scripts/audit_onplay_behavior_coverage.py", ["--fail-on-mismatch", "--fail-on-missing-tests"]),
+        ("scripts/audit_relic_hook_coverage.py", ["--fail-on-mismatch"]),
+        "scripts/audit_card_effect_vars.py",
     ]
     failed = False
-    for script in scripts:
+    for entry in scripts:
+        if isinstance(entry, tuple):
+            script, extra = entry
+        else:
+            script, extra = entry, []
         print(f"Running {script}...")
         result = subprocess.run(
-            [sys.executable, str(REPO_ROOT / script)],
+            [sys.executable, str(REPO_ROOT / script), *extra],
             cwd=REPO_ROOT,
         )
         if result.returncode != 0:

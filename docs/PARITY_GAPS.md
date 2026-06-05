@@ -233,7 +233,15 @@ keep both at zero.
 
 ### 2. Deep edge-case coverage beyond smoke tests
 
-Smoke tests prove play resolution; complex cards still need targeted edge tests (combat ends mid-effect, relic modifiers, seeded RNG) in the existing `test_*_parity.py` suites. Previously tracked `Compact`, `WhiteNoise`, and `TheHunt` remain covered there.
+Smoke tests prove play resolution; complex cards still need targeted edge tests (combat ends mid-effect, relic modifiers, seeded RNG) in the existing `test_*_parity.py` suites.
+
+Triage high-impact cards that lack asserted behavioral tests:
+
+```powershell
+python scripts/audit_behavioral_edge_coverage.py --smoke-only
+```
+
+As of 2026-06-04 this reports **0** smoke-only high-impact OnPlay cards: behavioral suites with `Matches {Card}.cs` docstrings now cover generation, choice, auto-play, and transform flows previously counted only by generated smoke plays. Continue adding edge tests when new high-impact cards land or when decompiled timing semantics outgrow smoke coverage.
 
 ### 3. Bridge/runtime validation gap
 
@@ -276,6 +284,8 @@ A live-smoke pipeline now exists (see
 Until that live pass is recorded, bridge support should be considered
 implemented, Python-tested, and offline-golden-tested, but not yet
 field-verified end to end.
+
+Offline gate (2026-06-04): `scripts/bridge_live_smoke.ps1` builds the C# mod (warns if Godot `.pck` export is unavailable), regenerates the golden fixture, and runs `tests/test_bridge_live_smoke.py` — **31 passed, 1 skipped**. Live `record_bridge_smoke.py --live` still requires STS2 with the mod loaded on port 9002.
 
 ### 4. Reachability / semantic audit backlog
 

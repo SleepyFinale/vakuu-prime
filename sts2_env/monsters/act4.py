@@ -526,7 +526,12 @@ def create_calcified_cultist(rng: Rng, ascension_level: int = 0) -> tuple[Creatu
     creature = Creature(max_hp=hp, monster_id=CALCIFIED_CULTIST_MONSTER_ID)
 
     def incantation(combat: CombatState) -> None:
-        creature.apply_power(PowerId.RITUAL, CALCIFIED_CULTIST_INCANTATION_RITUAL)
+        combat.apply_power_to(
+            creature,
+            PowerId.RITUAL,
+            CALCIFIED_CULTIST_INCANTATION_RITUAL,
+            applier=creature,
+        )
 
     def dark_strike(combat: CombatState) -> None:
         dark_strike_dmg = _ascension_value(
@@ -597,7 +602,7 @@ def create_damp_cultist(rng: Rng, ascension_level: int = 0) -> tuple[Creature, M
             DAMP_CULTIST_DEADLY_INCANTATION_RITUAL,
             DAMP_CULTIST_BASE_INCANTATION_RITUAL,
         )
-        creature.apply_power(PowerId.RITUAL, ritual)
+        combat.apply_power_to(creature, PowerId.RITUAL, ritual, applier=creature)
 
     def dark_strike(combat: CombatState) -> None:
         dark_strike_dmg = _ascension_value(

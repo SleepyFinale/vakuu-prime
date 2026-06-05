@@ -48,9 +48,9 @@ Steps/sec:      28101
 
 ## Combat-Only Training
 
-Train an agent to play single combat encounters (Ironclad starter deck).
+Train an agent to play single combat encounters. Default character is Ironclad; all five characters are supported.
 
-### Command (Act 1 only)
+### Command (Act 1 only, Ironclad)
 
 ```bash
 python scripts/train_combat.py \
@@ -58,6 +58,22 @@ python scripts/train_combat.py \
     --total-timesteps 2000000 \
     --n-envs 8 \
     --output-dir output/combat_ppo
+```
+
+### Command (per-character)
+
+```bash
+python scripts/train_combat.py --character Silent --output-dir output/combat_ppo_silent
+python scripts/train_combat.py --character Defect --output-dir output/combat_ppo_defect
+```
+
+### Command (mixed characters, single model)
+
+```bash
+python scripts/train_combat.py \
+    --characters all \
+    --total-timesteps 4000000 \
+    --output-dir output/combat_ppo_mixed_chars
 ```
 
 ### Command (acts 0–2 mixed, recommended for full-run delegate)
@@ -77,8 +93,10 @@ Boss encounters are excluded from the RL pool (they are scripted in full runs).
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `--acts` | `0` | Encounter acts: `0`, `0,1,2`, or `all` |
+| `--character` | `Ironclad` | Single character for all episodes |
+| `--characters` | — | Mixed pool: `Ironclad,Silent` or `all` (mutually exclusive with `--character`) |
 | `--act1-biome` | random | Act 1 biome for index 0: random (both biomes), overgrowth, or underdocks |
-| `--total-timesteps` | 2M (act 0) / 3M (mixed) | Total environment steps |
+| `--total-timesteps` | 2M (act 0) / 3M (mixed acts) / 4M (mixed chars) | Total environment steps |
 | `--n-envs` | 4 | Parallel environments (set to CPU core count) |
 | `--lr` | 3e-4 | Learning rate |
 | `--batch-size` | 256 | Minibatch size |
@@ -177,6 +195,9 @@ python scripts/train_full_run.py --preset phase1 \
 | `--total-timesteps` | 2,000,000 | Meta-policy training steps |
 | `--combat-model` | `output/combat_ppo_mixed/...` | Single frozen combat PPO |
 | `--combat-models` | - | Per-act models: `0:path0,1:path1,2:path2` |
+| `--combat-models-by-character` | - | Per-character models: `Ironclad:path0,Silent:path1` |
+| `--character` | `Ironclad` | Character for the run |
+| `--characters` | - | Mixed-character runs: `all` or comma-separated list |
 | `--act-count` | 1 | Acts before curriculum win (1 = Act 1, 3 = full game) |
 | `--act1-biome` | random | Act 1 biome: random, overgrowth, or underdocks (full-run training) |
 | `--reward-shaping` | True | Floor/combat-clear/HP shaping (see `run_reward.py`) |
@@ -305,4 +326,40 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 
-7. **Multi-character support:** Extend training to Silent, Defect, Necrobinder, and Regent. Each character has fundamentally different mechanics requiring adapted observation encodings.
+7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 148 dims (includes orbs, stars, Osty); retrain after upgrading from 131-dim checkpoints.
+
+---
+
+## Live bridge evaluation
+
+After training a character-specific combat model, evaluate it against the real game:
+
+1. Set the bridge mod character before launching STS2 (defaults to Ironclad):
+
+   ```powershell
+   $env:STS2_BRIDGE_CHARACTER = "Defect"
+   ```
+
+2. Build and install the bridge mod ([docs/MOD_BUILD_GUIDE.md](MOD_BUILD_GUIDE.md)), then start the game.
+
+3. Run the agent with a model trained for the same character:
+
+   ```bash
+   python -m sts2_env.bridge.agent_runner \
+       --model-path output/combat_ppo_defect/best_model/best_model.zip \
+       --character Defect \
+       --verbose
+   ```
+
+   For full-run delegates, pass `--combat-models-by-character` with per-character
+   checkpoint paths so combat phases route to the correct model.
+
+The mod emits `character_id`, `stars`, `orb_queue`, and `osty` in combat JSON;
+the Python adapter encodes them into observation dims 131–147. Mismatch between
+`STS2_BRIDGE_CHARACTER` and the loaded model produces incorrect one-hot/mechanics
+features and poor play.
+
+See [docs/BRIDGE_LIVE_SMOKE.md](BRIDGE_LIVE_SMOKE.md) for the offline smoke gate
+and [docs/AGENT_USAGE_GUIDE.md](AGENT_USAGE_GUIDE.md) for agent runner options.
+
+**Observation v2 note:** Combat `OBS_SIZE` is now **148** (131 base + 17 character-mechanics features). Existing 131-dim PPO checkpoints are incompatible; retrain combat models with the updated encoder.

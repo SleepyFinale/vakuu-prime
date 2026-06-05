@@ -13,6 +13,17 @@ if TYPE_CHECKING:
 
 # Power class registry — populated by powers/common.py and other power modules
 _POWER_CLASSES: dict[PowerId, type] = {}
+_POWER_REGISTRY_LOADED = False
+
+
+def _ensure_power_registry() -> None:
+    """Load all power modules once (play_run does not import sts2_env.powers directly)."""
+    global _POWER_REGISTRY_LOADED
+    if _POWER_REGISTRY_LOADED:
+        return
+    import sts2_env.powers  # noqa: F401
+
+    _POWER_REGISTRY_LOADED = True
 
 
 def register_power_class(power_id: PowerId, cls: type) -> None:
@@ -21,6 +32,7 @@ def register_power_class(power_id: PowerId, cls: type) -> None:
 
 
 def get_power_class(power_id: PowerId) -> type | None:
+    _ensure_power_registry()
     return _POWER_CLASSES.get(power_id)
 
 

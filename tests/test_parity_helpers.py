@@ -1869,6 +1869,7 @@ class TestPendingChoiceFlow:
         assert len(strikes) == 2
 
     def test_graveblast_auto_selects_single_discard_card(self):
+        """Matches Graveblast.cs: choose a discard card to return to hand."""
         combat = _make_combat(create_necrobinder_starter_deck(), "Necrobinder")
         graveblast = make_graveblast()
         strike = make_strike_ironclad()
@@ -2229,6 +2230,7 @@ class TestPendingChoiceFlow:
         assert len(sacrifices) == 2
 
     def test_distraction_generates_free_skill_in_hand(self):
+        """Matches Distraction.cs: generate a zero-cost Skill into hand."""
         combat = _make_combat(create_defect_starter_deck(), "Silent")
         distraction = make_distraction()
         combat.hand = [distraction]
@@ -2247,6 +2249,7 @@ class TestPendingChoiceFlow:
         assert any(card.card_type == CardType.POWER and card.cost == 0 for card in combat.hand)
 
     def test_metamorphosis_adds_zero_cost_attacks_to_draw_pile(self):
+        """Matches Metamorphosis.cs: generate Attacks with cost 0 into draw pile."""
         combat = _make_combat(create_ironclad_starter_deck(), "Ironclad")
         metamorphosis = make_metamorphosis()
         combat.hand = [metamorphosis]
@@ -2257,6 +2260,7 @@ class TestPendingChoiceFlow:
         assert len(generated) >= 3
 
     def test_jack_of_all_trades_generates_colorless_card(self):
+        """Matches JackOfAllTrades.cs: generate a colorless card into hand."""
         combat = _make_combat(create_ironclad_starter_deck(), "Ironclad")
         jack = CardInstance(
             card_id=CardId.JACK_OF_ALL_TRADES,
@@ -2804,6 +2808,7 @@ class TestStatusParity:
         assert len(combat.hand) >= 2
 
     def test_brand_exhausts_random_hand_card_after_buff(self):
+        """Matches Brand.cs: gain Strength then exhaust a random hand card."""
         combat = _make_combat(create_ironclad_starter_deck(), "Ironclad")
         card = make_brand()
         target_card = make_strike_ironclad()
@@ -2816,6 +2821,7 @@ class TestStatusParity:
         assert combat.player.has_power(PowerId.STRENGTH)
 
     def test_primal_force_transforms_attacks_in_hand_into_giant_rock(self):
+        """Matches PrimalForce.cs: transform Attacks in hand into Giant Rock."""
         combat = _make_combat(create_ironclad_starter_deck(), "Ironclad")
         card = make_primal_force()
         attack = make_strike_ironclad()

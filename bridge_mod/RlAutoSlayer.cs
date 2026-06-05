@@ -73,7 +73,6 @@ public class RlAutoSlayer
     private const string CharacterButtonContainerPath = "CharSelectButtons/ButtonContainer";
     private const string CharacterConfirmButtonPath =
         "Submenus/CharacterSelectScreen/ConfirmButton";
-    private const string PreferredCharacterId = "Ironclad";
     private const int FinalRunFloor = 49;
     private const int RunTimeoutMinutes = 60;
     private const int RunStateTimeoutSeconds = 60;
@@ -565,7 +564,7 @@ public class RlAutoSlayer
             }
         }
 
-        // Select Ironclad (first character) — our agent was trained on Ironclad
+        // Select configured character (STS2_BRIDGE_CHARACTER, default Ironclad)
         Node buttonContainer = charSelectScreen.GetNode(
             CharacterButtonContainerPath);
         List<NCharacterSelectButton> buttons =
@@ -577,9 +576,9 @@ public class RlAutoSlayer
         List<NCharacterSelectButton> available =
             buttons.Where(b => !b.IsLocked).ToList();
 
-        // Pick Ironclad (first available) instead of random
+        string preferredCharacter = BridgeConfig.PreferredCharacterId;
         NCharacterSelectButton selectedChar = available.FirstOrDefault(
-            b => b.Character.Id.Entry.Contains(PreferredCharacterId,
+            b => b.Character.Id.Entry.Contains(preferredCharacter,
                 StringComparison.OrdinalIgnoreCase))
             ?? available.First();
         Logger.Log($"[RlAutoSlayer] Selecting character: {selectedChar.Character.Id}");

@@ -148,8 +148,16 @@ ALL_CHARACTERS: Sequence[CharacterConfig] = (
     NECROBINDER,
 )
 
+SUPPORTED_TRAINING_CHARACTERS: tuple[str, ...] = tuple(
+    cfg.character_id for cfg in ALL_CHARACTERS
+)
+
 _BY_ID: dict[str, CharacterConfig] = {
     cfg.character_id.lower(): cfg for cfg in ALL_CHARACTERS
+}
+
+_CANONICAL_ID: dict[str, str] = {
+    cfg.character_id.lower(): cfg.character_id for cfg in ALL_CHARACTERS
 }
 
 
@@ -172,6 +180,39 @@ def get_character(character_id: str) -> CharacterConfig:
             f"Valid ids: {valid}"
         )
     return cfg
+
+
+def parse_character_ids(characters_spec: str) -> tuple[str, ...]:
+    """Parse ``'Ironclad'``, ``'Ironclad,Silent'``, or ``'all'`` into character ids."""
+    normalized = characters_spec.strip().lower()
+    if normalized == "all":
+        return SUPPORTED_TRAINING_CHARACTERS
+    ids: list[str] = []
+    for part in normalized.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        canonical = _CANONICAL_ID.get(part)
+        if canonical is None:
+            valid = ", ".join(SUPPORTED_TRAINING_CHARACTERS)
+            raise ValueError(
+                f"Unknown character {part!r}. Valid ids: {valid}, or 'all'"
+            )
+        ids.append(canonical)
+    if not ids:
+        raise ValueError(f"No character ids parsed from: {characters_spec!r}")
+    return tuple(dict.fromkeys(ids))
+
+
+def resolve_character_for_episode(
+    rng,
+    character_ids: tuple[str, ...],
+) -> str:
+    """Pick a character uniformly at random from the training pool."""
+    if not character_ids:
+        raise ValueError("character_ids must not be empty")
+    index = int(rng.integers(0, len(character_ids)))
+    return character_ids[index]
 
 
 def create_starting_deck(character_id: str) -> list[CardInstance]:

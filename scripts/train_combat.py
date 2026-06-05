@@ -17,7 +17,9 @@ from pathlib import Path
 import numpy as np
 
 DEFAULT_ACTS = "0"
+DEFAULT_CHARACTER = "Ironclad"
 MIXED_ACTS_DEFAULT_TIMESTEPS = 3_000_000
+MIXED_CHARS_DEFAULT_TIMESTEPS = 4_000_000
 SINGLE_ACT_DEFAULT_TIMESTEPS = 2_000_000
 
 
@@ -27,20 +29,38 @@ def parse_acts(acts_spec: str) -> tuple[int, ...]:
     return parse_act_indices(acts_spec)
 
 
-def make_env(
-    seed: int = 0,
-    encounter_acts: tuple[int, ...] = (0,),
-    act1_biome: str = "random",
-):
-    """Create a single STS2CombatEnv."""
-    from sts2_env.gym_env.combat_env import STS2CombatEnv
+def parse_characters(characters_spec: str) -> tuple[str, ...]:
+    from sts2_env.characters.all import parse_character_ids
 
-    def _init():
-        env = STS2CombatEnv(encounter_acts=encounter_acts, act1_biome=act1_biome)
-        env.reset(seed=seed)
-        return env
+    return parse_character_ids(characters_spec)
 
-    return _init
+
+def resolve_training_characters(args) -> tuple[str | None, tuple[str, ...] | None]:
+    """Return (fixed character_id, character_ids pool) from CLI args."""
+    if args.characters is not None:
+        return None, parse_characters(args.characters)
+    return args.character, None
+
+
+def default_output_dir(
+    encounter_acts: tuple[int, ...],
+    character_id: str | None,
+    character_ids: tuple[str, ...] | None,
+) -> str:
+    if character_ids is not None:
+        if len(character_ids) == len(parse_characters("all")):
+            return "output/combat_ppo_mixed_chars"
+        chars_slug = "_".join(c.lower() for c in character_ids)
+        return f"output/combat_ppo_{chars_slug}"
+
+    mixed_acts = len(encounter_acts) > 1 or any(a > 0 for a in encounter_acts)
+    if mixed_acts:
+        return "output/combat_ppo_mixed"
+
+    if character_id and character_id != DEFAULT_CHARACTER:
+        return f"output/combat_ppo_{character_id.lower()}"
+
+    return "output/combat_ppo"
 
 
 def train(args):
@@ -55,10 +75,15 @@ def train(args):
         sys.exit(1)
 
     encounter_acts = parse_acts(args.acts)
+    character_id, character_ids = resolve_training_characters(args)
 
     print("Training MaskablePPO on STS2 combat")
     print(f"  acts:            {encounter_acts}")
     print(f"  act1_biome:      {args.act1_biome}")
+    if character_ids is not None:
+        print(f"  characters:      {character_ids}")
+    else:
+        print(f"  character:       {character_id}")
     print(f"  n_envs:          {args.n_envs}")
     print(f"  total_timesteps: {args.total_timesteps}")
     print(f"  learning_rate:   {args.lr}")
@@ -79,6 +104,8 @@ def train(args):
             env = STS2CombatEnv(
                 encounter_acts=encounter_acts,
                 act1_biome=args.act1_biome,
+                character_id=character_id or DEFAULT_CHARACTER,
+                character_ids=character_ids,
             )
             env = ActionMasker(env, mask_fn)
             return env
@@ -136,6 +163,8 @@ def train(args):
         model,
         encounter_acts=encounter_acts,
         act1_biome=args.act1_biome,
+        character_id=character_id,
+        character_ids=character_ids,
         n_episodes=100,
     )
 
@@ -147,6 +176,8 @@ def evaluate(
     model,
     encounter_acts: tuple[int, ...] = (0,),
     act1_biome: str = "random",
+    character_id: str | None = DEFAULT_CHARACTER,
+    character_ids: tuple[str, ...] | None = None,
     n_episodes: int = 100,
 ):
     """Evaluate trained model."""
@@ -157,7 +188,12 @@ def evaluate(
         return env.action_masks()
 
     env = ActionMasker(
-        STS2CombatEnv(encounter_acts=encounter_acts, act1_biome=act1_biome),
+        STS2CombatEnv(
+            encounter_acts=encounter_acts,
+            act1_biome=act1_biome,
+            character_id=character_id or DEFAULT_CHARACTER,
+            character_ids=character_ids,
+        ),
         mask_fn,
     )
     wins = 0
@@ -179,11 +215,17 @@ def evaluate(
 
     print(f"Episodes:    {n_episodes}")
     print(f"Acts:        {encounter_acts}")
+    if character_ids is not None:
+        print(f"Characters:  {character_ids}")
+    else:
+        print(f"Character:   {character_id}")
     print(f"Win rate:    {wins / n_episodes:.1%}")
     print(f"Avg reward:  {np.mean(total_rewards):.3f}")
 
 
 def main():
+    from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS
+
     parser = argparse.ArgumentParser(description="Train MaskablePPO on STS2 combat")
     parser.add_argument(
         "--acts", type=str, default=DEFAULT_ACTS,
@@ -194,9 +236,19 @@ def main():
         choices=("random", "overgrowth", "underdocks"),
         help="Act 1 biome for index 0: random mixes both, or force one (default: random)",
     )
+    character_group = parser.add_mutually_exclusive_group()
+    character_group.add_argument(
+        "--character", type=str, default=DEFAULT_CHARACTER,
+        choices=SUPPORTED_TRAINING_CHARACTERS,
+        help=f"Single character to train (default: {DEFAULT_CHARACTER})",
+    )
+    character_group.add_argument(
+        "--characters", type=str, default=None,
+        help="Mixed-character pool: 'Ironclad,Silent' or 'all'",
+    )
     parser.add_argument(
         "--total-timesteps", type=int, default=None,
-        help="Total training timesteps (default: 2M for act 0 only, 3M for mixed)",
+        help="Total training timesteps (default: 2M single, 3M mixed acts, 4M mixed chars)",
     )
     parser.add_argument(
         "--n-envs", type=int, default=4,
@@ -236,22 +288,25 @@ def main():
     )
     parser.add_argument(
         "--output-dir", type=str, default=None,
-        help="Output directory (default: output/combat_ppo or combat_ppo_mixed)",
+        help="Output directory (auto-selected from character/acts if omitted)",
     )
     args = parser.parse_args()
 
     encounter_acts = parse_acts(args.acts)
+    character_id, character_ids = resolve_training_characters(args)
+
     if args.total_timesteps is None:
-        if len(encounter_acts) > 1 or any(a > 0 for a in encounter_acts):
+        if character_ids is not None:
+            args.total_timesteps = MIXED_CHARS_DEFAULT_TIMESTEPS
+        elif len(encounter_acts) > 1 or any(a > 0 for a in encounter_acts):
             args.total_timesteps = MIXED_ACTS_DEFAULT_TIMESTEPS
         else:
             args.total_timesteps = SINGLE_ACT_DEFAULT_TIMESTEPS
 
     if args.output_dir is None:
-        if len(encounter_acts) == 1 and encounter_acts[0] == 0:
-            args.output_dir = "output/combat_ppo"
-        else:
-            args.output_dir = "output/combat_ppo_mixed"
+        args.output_dir = default_output_dir(
+            encounter_acts, character_id, character_ids,
+        )
 
     train(args)
 

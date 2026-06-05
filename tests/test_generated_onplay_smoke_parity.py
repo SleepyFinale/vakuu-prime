@@ -90,30 +90,6 @@ def _play_smoke(combat: CombatState, card, target_index: int | None = 0) -> None
         combat.resolve_pending_choice(0)
 
 
-def test_snap_onplay_smoke():
-    """Matches Snap.cs: Deal Damage."""
-    card = create_card(CardId.SNAP)
-    combat = _make_combat(_character_for_card("SNAP"))
-    _play_smoke(combat, card)
-
-def test_stoke_onplay_smoke():
-    """Matches Stoke.cs: Add generated card(s) to pile; Exhaust; Upgrade card(s)."""
-    card = create_card(CardId.STOKE)
-    combat = _make_combat(_character_for_card("STOKE"))
-    _play_smoke(combat, card)
-
-def test_malaise_onplay_smoke():
-    """Matches Malaise.cs: Apply power; Upgrade card(s)."""
-    card = create_card(CardId.MALAISE)
-    combat = _make_combat(_character_for_card("MALAISE"))
-    _play_smoke(combat, card)
-
-def test_spinner_onplay_smoke():
-    """Matches Spinner.cs: Apply power; Orb action; Upgrade card(s)."""
-    card = create_card(CardId.SPINNER_CARD)
-    combat = _make_combat(_character_for_card("SPINNER_CARD"))
-    _play_smoke(combat, card)
-
 def test_brand_onplay_smoke():
     """Matches Brand.cs: Apply power; Exhaust."""
     card = create_card(CardId.BRAND)
@@ -196,6 +172,18 @@ def test_shining_strike_onplay_smoke():
     """Matches ShiningStrike.cs: Deal Damage; Exhaust."""
     card = create_card(CardId.SHINING_STRIKE)
     combat = _make_combat(_character_for_card("SHINING_STRIKE"))
+    _play_smoke(combat, card)
+
+def test_snap_onplay_smoke():
+    """Matches Snap.cs: Deal Damage."""
+    card = create_card(CardId.SNAP)
+    combat = _make_combat(_character_for_card("SNAP"))
+    _play_smoke(combat, card)
+
+def test_stoke_onplay_smoke():
+    """Matches Stoke.cs: Add generated card(s) to pile; Exhaust; Upgrade card(s)."""
+    card = create_card(CardId.STOKE)
+    combat = _make_combat(_character_for_card("STOKE"))
     _play_smoke(combat, card)
 
 def test_uproar_onplay_smoke():
@@ -1188,6 +1176,12 @@ def test_mad_science_onplay_smoke():
     combat = _make_combat(_character_for_card("MAD_SCIENCE"))
     _play_smoke(combat, card)
 
+def test_malaise_onplay_smoke():
+    """Matches Malaise.cs: Apply power; Upgrade card(s)."""
+    card = create_card(CardId.MALAISE)
+    combat = _make_combat(_character_for_card("MALAISE"))
+    _play_smoke(combat, card)
+
 def test_mangle_onplay_smoke():
     """Matches Mangle.cs: Deal Damage; Apply power."""
     card = create_card(CardId.MANGLE)
@@ -1750,6 +1744,12 @@ def test_speedster_onplay_smoke():
     """Matches Speedster.cs: Apply power."""
     card = create_card(CardId.SPEEDSTER_CARD)
     combat = _make_combat(_character_for_card("SPEEDSTER_CARD"))
+    _play_smoke(combat, card)
+
+def test_spinner_onplay_smoke():
+    """Matches Spinner.cs: Apply power; Orb action; Upgrade card(s)."""
+    card = create_card(CardId.SPINNER_CARD)
+    combat = _make_combat(_character_for_card("SPINNER_CARD"))
     _play_smoke(combat, card)
 
 def test_spirit_of_ash_onplay_smoke():

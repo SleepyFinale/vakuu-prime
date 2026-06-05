@@ -44,11 +44,24 @@
     ],
     "player": {
       "block": 0,
+      "character_id": "Ironclad",
       "energy": 3,
       "hp": 80,
       "max_energy": 3,
       "max_hp": 80,
-      "powers": []
+      "orb_queue": {
+        "capacity": 0,
+        "count": 0,
+        "orbs": []
+      },
+      "osty": {
+        "alive": false,
+        "block": 0,
+        "hp": 0,
+        "max_hp": 0
+      },
+      "powers": [],
+      "stars": 0
     },
     "round": 1,
     "type": "combat_action"
@@ -102,11 +115,24 @@
         ],
         "player": {
           "block": 0,
+          "character_id": "Ironclad",
           "energy": 2,
           "hp": 80,
           "max_energy": 3,
           "max_hp": 80,
-          "powers": []
+          "orb_queue": {
+            "capacity": 0,
+            "count": 0,
+            "orbs": []
+          },
+          "osty": {
+            "alive": false,
+            "block": 0,
+            "hp": 0,
+            "max_hp": 0
+          },
+          "powers": [],
+          "stars": 0
         },
         "round": 1,
         "type": "combat_action"
@@ -147,11 +173,24 @@
         ],
         "player": {
           "block": 5,
+          "character_id": "Ironclad",
           "energy": 1,
           "hp": 80,
           "max_energy": 3,
           "max_hp": 80,
-          "powers": []
+          "orb_queue": {
+            "capacity": 0,
+            "count": 0,
+            "orbs": []
+          },
+          "osty": {
+            "alive": false,
+            "block": 0,
+            "hp": 0,
+            "max_hp": 0
+          },
+          "powers": [],
+          "stars": 0
         },
         "round": 1,
         "type": "combat_action"
@@ -222,16 +261,29 @@
         ],
         "player": {
           "block": 0,
+          "character_id": "Ironclad",
           "energy": 3,
           "hp": 80,
           "max_energy": 3,
           "max_hp": 80,
+          "orb_queue": {
+            "capacity": 0,
+            "count": 0,
+            "orbs": []
+          },
+          "osty": {
+            "alive": false,
+            "block": 0,
+            "hp": 0,
+            "max_hp": 0
+          },
           "powers": [
             {
               "amount": -1,
               "id": "SHRINK"
             }
-          ]
+          ],
+          "stars": 0
         },
         "round": 2,
         "type": "combat_action"

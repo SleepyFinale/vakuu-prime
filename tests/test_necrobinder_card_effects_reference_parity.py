@@ -804,6 +804,7 @@ class TestNecrobinderCardEffectsReferenceParity:
         assert enemy.current_hp == REFERENCE_ENEMY_HP - 5
 
     def test_sculpting_strike_attacks_then_makes_selected_hand_card_ethereal(self):
+        """Matches SculptingStrike.cs: attack then apply Ethereal to a chosen hand card."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         starting_hp = enemy.current_hp

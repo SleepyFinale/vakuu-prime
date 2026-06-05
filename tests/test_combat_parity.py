@@ -181,6 +181,7 @@ def test_gain_stars_does_not_gain_after_combat_ending():
 
 
 def test_seeker_strike_stable_shuffles_draw_pile_before_choice():
+    """Matches SeekerStrike.cs: stable shuffle then choose a draw-pile card to play."""
     combat = _make_combat()
     combat.rng = _ReverseShuffleRng()
     card = create_card(CardId.SEEKER_STRIKE)

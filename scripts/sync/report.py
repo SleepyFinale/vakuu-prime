@@ -83,21 +83,61 @@ def run_behavior_audit_json() -> dict | None:
     return summaries or None
 
 
-def run_parity_audit_json() -> dict | None:
+def run_parity_audit_json(
+    *,
+    direct_test_references: bool = False,
+    include_deprecated: bool = False,
+    code_implementation_references: bool = False,
+) -> list[dict] | None:
     script = REPO_ROOT / "scripts" / "parity_reference_audit.py"
     if not script.is_file():
         return None
+    command = [sys.executable, str(script), "--json"]
+    if direct_test_references:
+        command.append("--direct-test-references")
+    if include_deprecated:
+        command.append("--include-deprecated")
+    if code_implementation_references:
+        command.append("--code-implementation-references")
     try:
         result = subprocess.run(
-            [sys.executable, str(script), "--json"],
+            command,
             check=True,
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
         )
-        return json.loads(result.stdout)
+        payload = json.loads(result.stdout)
+        return payload if isinstance(payload, list) else None
     except (subprocess.CalledProcessError, json.JSONDecodeError):
         return None
+
+
+def parity_reference_audit_has_gaps(
+    *,
+    direct_test_references: bool = True,
+    include_deprecated: bool = True,
+    code_implementation_references: bool = True,
+) -> tuple[bool, list[str]]:
+    """Return (has_gaps, human-readable gap lines) for the strict reference gate."""
+    audit = run_parity_audit_json(
+        direct_test_references=direct_test_references,
+        include_deprecated=include_deprecated,
+        code_implementation_references=code_implementation_references,
+    )
+    if audit is None:
+        return True, ["parity reference audit failed to run"]
+    lines: list[str] = []
+    for row in audit:
+        missing_impl = row.get("missing_implementation") or []
+        missing_tests = row.get("missing_tests") or []
+        if missing_impl or missing_tests:
+            surface = row.get("surface", "?")
+            lines.append(
+                f"{surface}: {len(missing_impl)} missing implementation, "
+                f"{len(missing_tests)} missing tests"
+            )
+    return (bool(lines), lines)
 
 
 def write_sync_report(
@@ -148,10 +188,19 @@ def write_sync_report(
             lines.append(f"- Changed ({len(diff.changed)}): " + ", ".join(diff.changed[:20]))
         lines.append("")
 
-    audit = run_parity_audit_json()
+    has_gaps, gap_lines = parity_reference_audit_has_gaps()
+    audit = run_parity_audit_json(
+        direct_test_references=True,
+        include_deprecated=True,
+        code_implementation_references=True,
+    )
     if audit:
-        lines.append("## Parity audit")
+        lines.append("## Parity audit (direct-reference gate)")
         lines.append("")
+        if has_gaps:
+            lines.append("**Gate failed:** missing implementation or test references detected.")
+            lines.extend(f"- {line}" for line in gap_lines)
+            lines.append("")
         rows = audit if isinstance(audit, list) else audit.get("summary", [])
         for row in rows:
             if isinstance(row, dict):

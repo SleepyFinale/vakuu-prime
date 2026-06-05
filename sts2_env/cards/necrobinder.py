@@ -278,7 +278,7 @@ def borrowed_time(card: CardInstance, combat: CombatState, target: Creature | No
     owner = _owner(card, combat)
     energy = card.effect_vars.get('energy', 4)
     combat.gain_energy(owner, energy)
-    extra_cost = card.effect_vars.get('extra_cost', card.effect_vars.get('calc_extra', 1))
+    extra_cost = card.effect_vars.get('extra_cost', 1)
     combat.apply_power_to(owner, PowerId.BORROWED_TIME, extra_cost, applier=owner, source=card)
 
 @register_effect(CardId.BURY)

@@ -472,6 +472,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Emit machine-readable JSON instead of the text table.",
     )
+    parser.add_argument(
+        "--fail-on-missing",
+        action="store_true",
+        help="Exit 1 when any surface has missing implementation or test references.",
+    )
     return parser.parse_args()
 
 
@@ -489,6 +494,10 @@ def main() -> int:
         print(json.dumps([asdict(report) for report in reports], indent=2, sort_keys=True))
     else:
         print_text_report(reports, show_missing=args.show_missing)
+    if args.fail_on_missing and any(
+        report.missing_implementation or report.missing_tests for report in reports
+    ):
+        return 1
     return 0
 
 

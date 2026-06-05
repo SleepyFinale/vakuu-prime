@@ -55,9 +55,9 @@ run/                        Full-run state management (depends on all above)
   events.py                 Event handler
 
 gym_env/                    Gymnasium environments (depends on run/, encounters/)
-  combat_env.py             Single-combat env (Discrete(115), obs 131-dim)
-  run_env.py                Full-run env (Discrete(157), obs 151-dim)
-  observation.py            CombatState -> 131-dim float32 vector
+  combat_env.py             Single-combat env (Discrete(115), obs 148-dim)
+  run_env.py                Full-run env (Discrete(157), obs 168-dim)
+  observation.py            CombatState -> 148-dim float32 vector
   action_space.py           Action encoding + masking
   reward.py                 Reward shaping
 
@@ -346,7 +346,7 @@ The first move is held until `on_move_performed()` is called. After that, `roll_
 
 Single-combat training environment.
 
-- **Observation:** `Box(low=-1, high=10, shape=(131,), dtype=float32)`
+- **Observation:** `Box(low=-1, high=10, shape=(148,), dtype=float32)`
 - **Action space:** `Discrete(115)` = 1 end_turn + 10 untargeted card actions + 50 targeted card actions + 54 potion actions (`9 slots * (1 untargeted + 5 enemy targets)`)
 - **Action masking:** `action_masks()` returns `int8[115]` marking legal actions. Required by `MaskablePPO`.
 
@@ -367,15 +367,16 @@ On `step(action)`:
 
 ### Observation encoding (`gym_env/observation.py`)
 
-131-dimensional flat float32 vector:
+148-dimensional flat float32 vector:
 
 | Segment | Dims | Encoding |
 | ------- | ---- | -------- |
 | Player state | 4 | hp/max_hp, block/50, energy/10, max_energy/10 |
 | Player powers | 6 | str/20, dex/20, vuln/20, weak/20, frail/20, artifact/20 |
 | Hand (10 slots) | 50 | 5 features per card: card_id_norm, cost/5, damage/50, block/50, is_attack |
-| Pile summaries | 6 | draw/20, discard/20, exhaust/20, draw_attacks/10, draw_skills/10, discard_attacks/10 |
+| Pile summaries | 6 | draw/20, discard/20, exhaust/20, reserved x3 (zeroed for bridge parity) |
 | Enemies (5 slots) | 65 | 13 features per enemy: alive, hp%, block/50, intent_onehot(5), intent_dmg/30, intent_hits/5, vuln/10, weak/10, str/10 |
+| Character mechanics | 17 | one-hot(5), stars/30, orb cap/count, 3 orb slots (type, evoke), Osty alive/hp/block |
 
 Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a float in (0, 1).
 
@@ -393,7 +394,7 @@ Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a 
 | Topic | CombatEnv | RunEnv |
 | ----- | --------- | ------ |
 | Scope | Single combat | Full multi-act run |
-| Obs size | 131 | 151 (131 combat + 20 run-level) |
+| Obs size | 148 | 168 (148 combat + 20 run-level) |
 | Action space | Discrete(115) | Discrete(157) |
 | Phases | Combat only | Combat + map + card_reward + boss_relic + shop + rest + event + treasure |
 | Reward | +1 win / -1 loss | +1 run win / -1 death or timeout |

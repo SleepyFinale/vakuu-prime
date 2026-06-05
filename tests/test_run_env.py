@@ -655,7 +655,9 @@ class TestObservationEncoding:
         assert not np.array_equal(obs1, obs2)
 
     def test_combat_obs_populated_during_combat(self, env):
-        """The first 131 dims (combat obs) should be non-zero during combat."""
+        """The combat obs prefix should be non-zero during combat."""
+        from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE
+
         obs, info = env.reset(seed=42)
         rng = np.random.RandomState(42)
         for _ in range(200):
@@ -666,16 +668,17 @@ class TestObservationEncoding:
             if terminated or truncated:
                 break
             if info.get("phase") == RunManager.PHASE_COMBAT:
-                # Combat portion of obs should have non-zero values
-                combat_obs = obs[:131]
+                combat_obs = obs[:COMBAT_OBS_SIZE]
                 assert np.any(combat_obs != 0), "Combat obs is all zeros during combat"
                 return
         pytest.skip("No combat phase reached")
 
     def test_run_state_obs_always_present(self, seeded_env):
-        """Run-state portion (last 20 dims) should have some non-zero values."""
+        """Run-state portion should have some non-zero values."""
+        from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE
+
         obs = seeded_env._encode_obs()
-        run_state_obs = obs[131:]
+        run_state_obs = obs[COMBAT_OBS_SIZE:]
         assert np.any(run_state_obs != 0), "Run-state obs is all zeros"
 
 

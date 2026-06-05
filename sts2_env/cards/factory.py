@@ -226,7 +226,7 @@ def _apply_decompiled_static_metadata(
     dynamic_vars = reference_dynamic_vars_by_card_id().get(card.card_id, {})
     if is_upgraded:
         dynamic_vars = upgraded_reference_dynamic_vars_by_card_id().get(card.card_id, dynamic_vars)
-    card.effect_vars = dict(dynamic_vars)
+    card.effect_vars = {**dict(card.effect_vars), **dynamic_vars}
     card.base_damage = dynamic_vars.get("damage", card.base_damage)
     card.base_block = dynamic_vars.get("block", card.base_block)
     return card

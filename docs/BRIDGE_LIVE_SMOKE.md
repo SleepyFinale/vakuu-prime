@@ -30,6 +30,27 @@ and 3 energy. The scripted actions are: play `Strike` at the enemy, play
 `Defend`, then end the turn. Because the factory is fully deterministic, the
 simulator produces a stable golden trace.
 
+The smoke scenario remains **Ironclad-only**; multi-character bridge support
+does not change this golden trace. To evaluate other characters live, set
+`STS2_BRIDGE_CHARACTER` before launching the game (see below) and use a
+character-matched combat model in the agent runner.
+
+## Character selection (live bridge)
+
+The bridge mod reads `STS2_BRIDGE_CHARACTER` at startup (default `Ironclad`).
+Valid values (case-insensitive): `Ironclad`, `Silent`, `Defect`, `Regent`,
+`Necrobinder`. The mod selects that character on the main menu before the agent
+connects; every combat state JSON includes `player.character_id` plus mechanics
+fields (`stars`, `orb_queue`, `osty`) for the 148-dim observation encoder.
+
+```powershell
+$env:STS2_BRIDGE_CHARACTER = "Silent"
+# Launch STS2 with the bridge mod, then run agent_runner with a Silent-trained model
+```
+
+Match the agent's `--character` or `--combat-models-by-character` path to the
+character the mod selected.
+
 ## Offline (CI) usage
 
 ```powershell
@@ -103,7 +124,12 @@ python -m sts2_env.parity.bridge_replay_cli compare artifacts/smoke_run.json --m
 ## Current status
 
 - Build gate, offline golden fixture, and offline parity tests are validated and
-  run without the game.
-- The live record-and-compare step requires the game running with the mod
-  loaded and the Godot editor configured for the `.pck` export; run it manually
-  on a machine that has STS2 installed.
+  run without the game (last run: 2026-06-04, `bridge_live_smoke: OK`, 31 pytest
+  passes + golden self-compare).
+- C# `dotnet build` succeeds; `.pck` export still requires the Godot 4.5.1 mono
+  editor path in `bridge_mod/STS2BridgeMod.csproj`.
+- The live record-and-compare step has **not** been recorded in CI: it requires
+  the game running with the mod loaded. Run manually on a machine that has STS2
+  installed:
+
+  `python scripts/record_bridge_smoke.py --live --host 127.0.0.1 --port 9002`

@@ -444,7 +444,7 @@ def mad_science_gains_block(card: CardInstance, default: bool) -> bool:
 
 def make_mad_science(upgraded: bool=False) -> CardInstance:
     kw = frozenset({'innate'}) if upgraded else frozenset()
-    return CardInstance(card_id=CardId.MAD_SCIENCE, cost=1, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.EVENT, base_damage=12, upgraded=upgraded, keywords=kw, effect_vars={'choking_damage': 6, 'curious_reduction': 1, 'energized_energy': 2, 'expertise_dexterity': 2, 'expertise_strength': 2, 'sapping_vulnerable': 2, 'sapping_weak': 2, 'violence_hits': 3, 'wisdom_cards': 3}, instance_id=_get_next_id(), base_block=8)
+    return CardInstance(card_id=CardId.MAD_SCIENCE, cost=1, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.EVENT, base_damage=12, upgraded=upgraded, keywords=kw, effect_vars={'rider': 0, 'choking_damage': 6, 'curious_reduction': 1, 'energized_energy': 2, 'expertise_dexterity': 2, 'expertise_strength': 2, 'sapping_vulnerable': 2, 'sapping_weak': 2, 'violence_hits': 3, 'wisdom_cards': 3}, instance_id=_get_next_id(), base_block=8)
 
 @register_effect(CardId.METAMORPHOSIS)
 def metamorphosis_effect(card: CardInstance, combat: CombatState, target: Creature | None) -> None:

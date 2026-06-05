@@ -240,6 +240,32 @@ def _normalize_powers(powers: list[dict[str, Any]] | None) -> list[dict[str, Any
     return normalized
 
 
+def _normalize_orb_queue(orb_queue: dict[str, Any] | None) -> dict[str, Any]:
+    payload = orb_queue or {}
+    return {
+        "capacity": int(payload.get("capacity", 0)),
+        "count": int(payload.get("count", 0)),
+        "orbs": [
+            {
+                "type": str(orb.get("type", "UNKNOWN")),
+                "evoke_value": int(orb.get("evoke_value", 0)),
+            }
+            for orb in payload.get("orbs", [])[:3]
+            if isinstance(orb, dict)
+        ],
+    }
+
+
+def _normalize_osty(osty: dict[str, Any] | None) -> dict[str, Any]:
+    payload = osty or {}
+    return {
+        "alive": bool(payload.get("alive", False)),
+        "hp": int(payload.get("hp", 0)),
+        "max_hp": int(payload.get("max_hp", 0)),
+        "block": int(payload.get("block", 0)),
+    }
+
+
 def _normalize_cards(cards: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for card in cards or []:
@@ -330,16 +356,25 @@ def normalize_bridge_state(state: dict[str, Any]) -> dict[str, Any]:
     state_type = state.get("type")
     if state_type == STATE_TYPE_COMBAT:
         player = state.get("player", {})
+        normalized_player = {
+            "hp": int(player.get("hp", 0)),
+            "max_hp": int(player.get("max_hp", 0)),
+            "block": int(player.get("block", 0)),
+            "energy": int(player.get("energy", 0)),
+            "max_energy": int(player.get("max_energy", 0)),
+            "powers": _normalize_powers(player.get("powers")),
+        }
+        if "character_id" in player:
+            normalized_player["character_id"] = str(player["character_id"])
+        if "stars" in player:
+            normalized_player["stars"] = int(player.get("stars", 0))
+        if "orb_queue" in player:
+            normalized_player["orb_queue"] = _normalize_orb_queue(player.get("orb_queue"))
+        if "osty" in player:
+            normalized_player["osty"] = _normalize_osty(player.get("osty"))
         return {
             "type": STATE_TYPE_COMBAT,
-            "player": {
-                "hp": int(player.get("hp", 0)),
-                "max_hp": int(player.get("max_hp", 0)),
-                "block": int(player.get("block", 0)),
-                "energy": int(player.get("energy", 0)),
-                "max_energy": int(player.get("max_energy", 0)),
-                "powers": _normalize_powers(player.get("powers")),
-            },
+            "player": normalized_player,
             "hand": _normalize_cards(state.get("hand")),
             "enemies": _normalize_enemies(state.get("enemies")),
             "draw_pile_count": int(state.get("draw_pile_count", 0)),
@@ -437,6 +472,49 @@ def _run_choice_state(run: RunManager, state_type: str, actions: list[dict[str, 
     })
 
 
+def _player_mechanics_fields(combat: CombatState) -> dict[str, Any]:
+    """Bridge JSON fields for character mechanics on the player object."""
+    from sts2_env.orbs.base import OrbQueue
+
+    orb_queue = combat.orb_queue
+    orb_payload: dict[str, Any] = {"capacity": 0, "count": 0, "orbs": []}
+    if isinstance(orb_queue, OrbQueue):
+        orb_payload = {
+            "capacity": orb_queue.capacity,
+            "count": len(orb_queue.orbs),
+            "orbs": [
+                {
+                    "type": orb.orb_type.name,
+                    "evoke_value": orb.get_evoke_value(combat),
+                }
+                for orb in orb_queue.orbs[:3]
+            ],
+        }
+
+    osty = combat.get_osty()
+    if osty is not None and osty.is_alive:
+        osty_payload = {
+            "alive": True,
+            "hp": osty.current_hp,
+            "max_hp": osty.max_hp,
+            "block": osty.block,
+        }
+    else:
+        osty_payload = {
+            "alive": False,
+            "hp": 0,
+            "max_hp": 0,
+            "block": 0,
+        }
+
+    return {
+        "character_id": combat.character_id,
+        "stars": combat.stars,
+        "orb_queue": orb_payload,
+        "osty": osty_payload,
+    }
+
+
 def combat_state_to_bridge_state(combat: CombatState) -> dict[str, Any]:
     """Serialize simulator combat into the bridge's comparison shape."""
     if combat.pending_choice is not None:
@@ -491,6 +569,7 @@ def combat_state_to_bridge_state(combat: CombatState) -> dict[str, Any]:
                 for power_id, power in combat.player.powers.items()
                 if power.amount != 0
             ],
+            **_player_mechanics_fields(combat),
         },
         "hand": [
             {

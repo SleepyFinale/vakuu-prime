@@ -517,10 +517,7 @@ def compact(card: CardInstance, combat: CombatState, target: Creature | None) ->
     from sts2_env.cards.status import make_fuel
     blk = calculate_block(card.base_block, _owner(card, combat), ValueProp.MOVE, combat, card_source=card)
     _gain_resolved_block(_owner(card, combat), blk, combat)
-    status_cards = [
-        c for c in list(combat.hand)
-        if c.card_type == CardType.STATUS and c.is_removable
-    ]
+    status_cards = [c for c in list(combat.hand) if c.card_type == CardType.STATUS and c.is_removable]
     for status_card in status_cards:
         combat.transform_card(status_card, make_fuel(upgraded=card.upgraded))
 
@@ -559,7 +556,7 @@ def fight_through(card: CardInstance, combat: CombatState, target: Creature | No
     owner = _owner(card, combat)
     blk = calculate_block(card.base_block, owner, ValueProp.MOVE, combat, card_source=card)
     _gain_resolved_block(owner, blk, combat)
-    for _ in range(card.effect_vars.get('wounds', 2)):
+    for _ in range(2):
         combat.add_generated_card_to_creature_discard(owner, _make_wound())
 
 @register_effect(CardId.FTL)
@@ -817,7 +814,7 @@ def flak_cannon(card: CardInstance, combat: CombatState, target: Creature | None
 
 @register_effect(CardId.GENETIC_ALGORITHM)
 def genetic_algorithm(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
-    block_amt = card.effect_vars.get(GENETIC_ALGORITHM_BLOCK_KEY, 0)
+    block_amt = card.base_block or 0
     owner = _owner(card, combat)
     blk = calculate_block(block_amt, owner, ValueProp.MOVE, combat, card_source=card)
     _gain_resolved_block(owner, blk, combat)
@@ -1056,7 +1053,7 @@ def make_feral(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.FERAL, cost=2, card_type=CardType.POWER, target_type=TargetType.SELF, rarity=CardRarity.UNCOMMON, effect_vars={'feral_power': 1}, upgraded=upgraded, instance_id=_get_next_id())
 
 def make_fight_through(upgraded: bool=False) -> CardInstance:
-    return CardInstance(card_id=CardId.FIGHT_THROUGH, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.UNCOMMON, base_block=13, effect_vars={'wounds': 2}, upgraded=upgraded, instance_id=_get_next_id())
+    return CardInstance(card_id=CardId.FIGHT_THROUGH, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.UNCOMMON, base_block=13, upgraded=upgraded, instance_id=_get_next_id())
 
 def make_ftl(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.FTL, cost=0, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.UNCOMMON, base_damage=5, effect_vars={'cards': 1, 'play_max': 3}, upgraded=upgraded, instance_id=_get_next_id())

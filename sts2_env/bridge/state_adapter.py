@@ -12,7 +12,8 @@ The observation format is defined in gym_env/observation.py:
   - Pile sizes: draw, discard, exhaust, reserved, reserved, reserved (6)
   - Enemies: alive, hp%, block, intent_onehot(5), intent_dmg,
              intent_hits, vuln, weak, str (5 * 13 = 65)
-  Total: 131 dimensions
+  - Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
+  Total: 148 dimensions
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from sts2_env.core.constants import (
 )
 from sts2_env.core.enums import CardId, PotionUsageType
 from sts2_env.gym_env.observation import (
+    BASE_OBS_SIZE,
     CARD_FEATURES,
     ENEMY_FEATURES,
     INTENT_TYPES,
@@ -40,6 +42,7 @@ from sts2_env.gym_env.observation import (
     NUM_PLAYER_POWERS,
     OBS_SIZE,
     PILE_FEATURES,
+    encode_character_mechanics_from_fields,
     _CARD_ID_TO_IDX,
 )
 from sts2_env.bridge.protocol import (
@@ -106,7 +109,7 @@ class StateAdapter:
                    Must contain 'combat_state' with player, hand, enemies.
 
         Returns:
-            Float32 numpy array of shape (OBS_SIZE,) = (131,).
+            Float32 numpy array of shape (OBS_SIZE,) = (148,).
             Returns zeros if not in combat.
         """
         obs = np.zeros(OBS_SIZE, dtype=np.float32)
@@ -206,6 +209,20 @@ class StateAdapter:
                 obs[idx + 3 + NUM_INTENT_TYPES + 4] = enemy_powers.get("STRENGTH", 0) / 10.0
 
             idx += ENEMY_FEATURES
+
+        encode_character_mechanics_from_fields(
+            obs,
+            idx,
+            character_id=player.get("character_id"),
+            stars=int(player.get("stars", 0)),
+            orb_capacity=int((player.get("orb_queue") or {}).get("capacity", 0)),
+            orb_count=int((player.get("orb_queue") or {}).get("count", 0)),
+            orbs=_bridge_orb_entries(player.get("orb_queue")),
+            osty_alive=bool((player.get("osty") or {}).get("alive", False)),
+            osty_hp=int((player.get("osty") or {}).get("hp", 0)),
+            osty_max_hp=int((player.get("osty") or {}).get("max_hp", 0)),
+            osty_block=int((player.get("osty") or {}).get("block", 0)),
+        )
 
         return obs
 
@@ -355,3 +372,17 @@ def _powers_to_dict(powers: list[dict[str, Any]]) -> dict[str, int]:
         # Normalise to uppercase for matching
         result[pid.upper()] = amount
     return result
+
+
+def _bridge_orb_entries(orb_queue: dict[str, Any] | None) -> list[tuple[str, int]]:
+    if not orb_queue:
+        return []
+    entries: list[tuple[str, int]] = []
+    for orb in orb_queue.get("orbs", [])[:3]:
+        if not isinstance(orb, dict):
+            continue
+        entries.append((
+            str(orb.get("type", "UNKNOWN")),
+            int(orb.get("evoke_value", 0)),
+        ))
+    return entries

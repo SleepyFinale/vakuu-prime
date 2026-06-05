@@ -28,9 +28,9 @@ for the current game phase are unmasked:
 
 Observation space
 -----------------
-Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (151).
+Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (168).
 
-* Combat observation (131) -- reuses :func:`encode_observation`.
+* Combat observation (148) -- reuses :func:`encode_observation`.
 * Run-level state (20):
   - current_act, total_floor, and act_floor normalized by run scales (3)
   - player HP ratio and normalized gold                             (2)
@@ -212,7 +212,7 @@ NUM_PHASES = len(_PHASE_INDEX)
 # ---------------------------------------------------------------------------
 
 _RUN_STATE_SIZE = 20   # see module docstring
-RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 131 + 20 = 151
+RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 148 + 20 = 168
 
 DEFAULT_MAX_STEPS = 10_000
 DEFAULT_MAX_COMBAT_TURNS = 200
@@ -272,6 +272,7 @@ class STS2RunEnv(gymnasium.Env):
     def __init__(
         self,
         character_id: str = "Ironclad",
+        character_ids: tuple[str, ...] | None = None,
         ascension_level: int = 0,
         max_steps: int = DEFAULT_MAX_STEPS,
         max_combat_turns: int = DEFAULT_MAX_COMBAT_TURNS,
@@ -294,6 +295,7 @@ class STS2RunEnv(gymnasium.Env):
         self.action_space = spaces.Discrete(_LAYOUT.total_actions)
 
         self._character_id = character_id
+        self._character_ids = character_ids
         self._ascension_level = ascension_level
         self.max_steps = max_steps
         self.max_combat_turns = max_combat_turns
@@ -332,10 +334,20 @@ class STS2RunEnv(gymnasium.Env):
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
 
+        from sts2_env.characters.all import resolve_character_for_episode
+
+        if self._character_ids is not None:
+            run_character_id = resolve_character_for_episode(
+                self.np_random,
+                self._character_ids,
+            )
+        else:
+            run_character_id = self._character_id
+
         run_seed = int(self.np_random.integers(0, INT_MAX_EXCLUSIVE))
         self._mgr = RunManager(
             seed=run_seed,
-            character_id=self._character_id,
+            character_id=run_character_id,
             ascension_level=self._ascension_level,
             max_acts=self.act_count,
             act1_biome=self._act1_biome,

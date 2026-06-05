@@ -9,10 +9,13 @@ import numpy as np
 from gymnasium import spaces
 
 from sts2_env.cards.base import reset_instance_counter
-from sts2_env.cards.ironclad import create_ironclad_starter_deck
+from sts2_env.characters.all import (
+    create_starting_deck,
+    get_character,
+    resolve_character_for_episode,
+)
 from sts2_env.core.combat import CombatState
-from sts2_env.core.constants import ACTION_END_TURN, ACTION_SPACE_SIZE, IRONCLAD_STARTING_HP
-from sts2_env.encounters.act1 import ALL_ACT1_ENCOUNTERS
+from sts2_env.core.constants import ACTION_END_TURN, ACTION_SPACE_SIZE
 from sts2_env.encounters.pools import (
     build_encounter_pool,
     build_mixed_act1_encounter_pool,
@@ -34,7 +37,8 @@ logger = logging.getLogger(__name__)
 class STS2CombatEnv(gymnasium.Env):
     """Gymnasium environment for a single STS2 combat encounter.
 
-    Observation: flat float32 vector encoding player state, hand, piles, enemies.
+    Observation: flat float32 vector encoding player state, hand, piles, enemies,
+    and character-specific mechanics (orbs, stars, Osty).
     Action: fixed discrete combat action space including cards, end turn, and potions.
     """
 
@@ -45,8 +49,10 @@ class STS2CombatEnv(gymnasium.Env):
         encounter_pool: list[EncounterSetup] | None = None,
         encounter_acts: tuple[int, ...] = (0,),
         act1_biome: str = "random",
-        player_hp: int = IRONCLAD_STARTING_HP,
-        player_max_hp: int = IRONCLAD_STARTING_HP,
+        character_id: str = "Ironclad",
+        character_ids: tuple[str, ...] | None = None,
+        player_hp: int | None = None,
+        player_max_hp: int | None = None,
         max_turns: int = 200,
         render_mode: str | None = None,
     ):
@@ -69,12 +75,20 @@ class STS2CombatEnv(gymnasium.Env):
             )
         self.encounter_acts = encounter_acts
         self.act1_biome = act1_biome
-        self.player_hp = player_hp
-        self.player_max_hp = player_max_hp
+        self.character_id = character_id
+        self.character_ids = character_ids
+        self._fixed_player_hp = player_hp
+        self._fixed_player_max_hp = player_max_hp
         self.max_turns = max_turns
         self.render_mode = render_mode
 
         self.combat: CombatState | None = None
+        self._last_character_id: str | None = None
+
+    def _resolve_character_pool(self) -> tuple[str, ...]:
+        if self.character_ids is not None:
+            return self.character_ids
+        return (self.character_id,)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -83,28 +97,45 @@ class STS2CombatEnv(gymnasium.Env):
         rng_seed = int(self.np_random.integers(0, INT_MAX_EXCLUSIVE))
         rng = Rng(rng_seed)
 
-        # Create deck
-        deck = create_ironclad_starter_deck()
+        char_id = resolve_character_for_episode(
+            self.np_random,
+            self._resolve_character_pool(),
+        )
+        self._last_character_id = char_id
+        char_cfg = get_character(char_id)
 
-        # Create combat
-        self.combat = CombatState(
-            player_hp=self.player_hp,
-            player_max_hp=self.player_max_hp,
-            deck=deck,
-            rng_seed=rng_seed,
-            character_id="Ironclad",
+        deck = create_starting_deck(char_id)
+        player_hp = (
+            self._fixed_player_hp
+            if self._fixed_player_hp is not None
+            else char_cfg.starting_hp
+        )
+        player_max_hp = (
+            self._fixed_player_max_hp
+            if self._fixed_player_max_hp is not None
+            else char_cfg.starting_hp
         )
 
-        # Setup encounter
+        self.combat = CombatState(
+            player_hp=player_hp,
+            player_max_hp=player_max_hp,
+            deck=deck,
+            rng_seed=rng_seed,
+            character_id=char_id,
+            relics=[char_cfg.starting_relic],
+        )
+
         encounter_idx = int(self.np_random.integers(0, len(self.encounter_pool)))
         encounter_setup = self.encounter_pool[encounter_idx]
         encounter_setup(self.combat, rng)
 
-        # Start combat
         self.combat.start_combat()
 
         obs = encode_observation(self.combat)
-        info = {"action_mask": get_action_mask(self.combat)}
+        info = {
+            "action_mask": get_action_mask(self.combat),
+            "character_id": char_id,
+        }
         return obs, info
 
     def step(self, action: int):
@@ -137,7 +168,10 @@ class STS2CombatEnv(gymnasium.Env):
         reward = compute_reward(self.combat, prev_hp)
         terminated = self.combat.is_over
         truncated = self.combat.turn_count > self.max_turns
-        info = {"action_mask": get_action_mask(self.combat)}
+        info = {
+            "action_mask": get_action_mask(self.combat),
+            "character_id": self._last_character_id,
+        }
 
         return obs, reward, terminated, truncated, info
 

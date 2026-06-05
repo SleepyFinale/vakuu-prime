@@ -27,254 +27,14 @@ def _make_combat(relic_names: list[str]) -> CombatState:
     return combat
 
 
-def test_brilliant_scarf_relic_smoke():
-    """Matches BrilliantScarf.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, BeforeSideTurnStart, TryModifyEnergyCostInCombat, TryModifyStarCost)."""
-    combat = _make_combat(["BrilliantScarf"])
-    assert combat.player is not None
-
-def test_dragon_fruit_relic_smoke():
-    """Matches DragonFruit.cs: combat start with relic (AfterGoldGained, IsAllowed)."""
-    combat = _make_combat(["DragonFruit"])
-    assert combat.player is not None
-
-def test_paels_eye_relic_smoke():
-    """Matches PaelsEye.cs: combat start with relic (AfterCombatEnd, AfterObtained, AfterSideTurnStart, AfterTakingExtraTurn, BeforeCardPlayed, BeforeTurnEndEarly)."""
-    combat = _make_combat(["PaelsEye"])
-    assert combat.player is not None
-
-def test_pocketwatch_relic_smoke():
-    """Matches Pocketwatch.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterModifyingHandDraw, AfterSideTurnStart, BeforeSideTurnStart, ModifyHandDraw)."""
-    combat = _make_combat(["Pocketwatch"])
-    assert combat.player is not None
-
-def test_velvet_choker_relic_smoke():
-    """Matches VelvetChoker.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterRoomEntered, BeforeSideTurnStart, ModifyMaxEnergy, ShouldPlay)."""
-    combat = _make_combat(["VelvetChoker"])
-    assert combat.player is not None
-
-def test_amethyst_aubergine_relic_smoke():
-    """Matches AmethystAubergine.cs: combat start with relic (AfterModifyingRewards, IsAllowed, TryModifyRewards)."""
-    combat = _make_combat(["AmethystAubergine"])
-    assert combat.player is not None
-
-def test_beating_remnant_relic_smoke():
-    """Matches BeatingRemnant.cs: combat start with relic (AfterDamageReceived, AfterModifyingHpLostAfterOsty, BeforeSideTurnStart, ModifyHpLostAfterOsty)."""
-    combat = _make_combat(["BeatingRemnant"])
-    assert combat.player is not None
-
-def test_belt_buckle_relic_smoke():
-    """Matches BeltBuckle.cs: combat start with relic (AfterCombatEnd, AfterCombatVictory, AfterObtained, AfterPotionDiscarded, AfterPotionProcured, AfterPotionUsed)."""
-    combat = _make_combat(["BeltBuckle"])
-    assert combat.player is not None
-
-def test_big_mushroom_relic_smoke():
-    """Matches BigMushroom.cs: combat start with relic (AfterObtained, AfterRoomEntered, ModifyHandDraw)."""
-    combat = _make_combat(["BigMushroom"])
-    assert combat.player is not None
-
-def test_bing_bong_relic_smoke():
-    """Matches BingBong.cs: combat start with relic (AfterCardChangedPiles)."""
-    combat = _make_combat(["BingBong"])
-    assert combat.player is not None
-
-def test_black_star_relic_smoke():
-    """Matches BlackStar.cs: combat start with relic (TryModifyRewards)."""
-    combat = _make_combat(["BlackStar"])
-    assert combat.player is not None
-
-def test_burning_sticks_relic_smoke():
-    """Matches BurningSticks.cs: combat start with relic (AfterCardExhausted, AfterCombatEnd, AfterRoomEntered)."""
-    combat = _make_combat(["BurningSticks"])
-    assert combat.player is not None
-
-def test_darkstone_periapt_relic_smoke():
-    """Matches DarkstonePeriapt.cs: combat start with relic (AfterCardChangedPiles)."""
-    combat = _make_combat(["DarkstonePeriapt"])
-    assert combat.player is not None
-
-def test_dream_catcher_relic_smoke():
-    """Matches DreamCatcher.cs: combat start with relic (TryModifyRestSiteHealRewards)."""
-    combat = _make_combat(["DreamCatcher"])
-    assert combat.player is not None
-
-def test_driftwood_relic_smoke():
-    """Matches Driftwood.cs: combat start with relic (TryModifyRewardsLate)."""
-    combat = _make_combat(["Driftwood"])
-    assert combat.player is not None
-
-def test_ember_tea_relic_smoke():
-    """Matches EmberTea.cs: combat start with relic (AfterRoomEntered)."""
-    combat = _make_combat(["EmberTea"])
-    assert combat.player is not None
-
-def test_fake_happy_flower_relic_smoke():
-    """Matches FakeHappyFlower.cs: combat start with relic (AfterCombatEnd, AfterSideTurnStart)."""
-    combat = _make_combat(["FakeHappyFlower"])
-    assert combat.player is not None
-
-def test_fiddle_relic_smoke():
-    """Matches Fiddle.cs: combat start with relic (AfterPreventingDraw, ModifyHandDrawLate, ShouldDraw)."""
-    combat = _make_combat(["Fiddle"])
-    assert combat.player is not None
-
-def test_fresnel_lens_relic_smoke():
-    """Matches FresnelLens.cs: combat start with relic (ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["FresnelLens"])
-    assert combat.player is not None
-
-def test_frozen_egg_relic_smoke():
-    """Matches FrozenEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["FrozenEgg"])
-    assert combat.player is not None
-
-def test_fur_coat_relic_smoke():
-    """Matches FurCoat.cs: combat start with relic (AfterCreatureAddedToCombat, AfterObtained, BeforeCombatStart)."""
-    combat = _make_combat(["FurCoat"])
-    assert combat.player is not None
-
-def test_glitter_relic_smoke():
-    """Matches Glitter.cs: combat start with relic (TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["Glitter"])
-    assert combat.player is not None
-
-def test_ice_cream_relic_smoke():
-    """Matches IceCream.cs: combat start with relic (ShouldPlayerResetEnergy)."""
-    combat = _make_combat(["IceCream"])
-    assert combat.player is not None
-
-def test_lasting_candy_relic_smoke():
-    """Matches LastingCandy.cs: combat start with relic (AfterCombatEnd, IsAllowed, TryModifyCardRewardOptions)."""
-    combat = _make_combat(["LastingCandy"])
-    assert combat.player is not None
-
-def test_lava_lamp_relic_smoke():
-    """Matches LavaLamp.cs: combat start with relic (AfterDamageReceived, AfterRoomEntered, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["LavaLamp"])
-    assert combat.player is not None
-
-def test_lava_rock_relic_smoke():
-    """Matches LavaRock.cs: combat start with relic (TryModifyRewards)."""
-    combat = _make_combat(["LavaRock"])
-    assert combat.player is not None
-
-def test_lizard_tail_relic_smoke():
-    """Matches LizardTail.cs: combat start with relic (AfterPreventingDeath, ShouldDieLate)."""
-    combat = _make_combat(["LizardTail"])
-    assert combat.player is not None
-
-def test_massive_scroll_relic_smoke():
-    """Matches MassiveScroll.cs: combat start with relic (AfterObtained, IsAllowed)."""
-    combat = _make_combat(["MassiveScroll"])
-    assert combat.player is not None
-
-def test_maw_bank_relic_smoke():
-    """Matches MawBank.cs: combat start with relic (AfterItemPurchased, AfterRoomEntered)."""
-    combat = _make_combat(["MawBank"])
-    assert combat.player is not None
-
-def test_meat_cleaver_relic_smoke():
-    """Matches MeatCleaver.cs: combat start with relic (TryModifyRestSiteOptions)."""
-    combat = _make_combat(["MeatCleaver"])
-    assert combat.player is not None
-
-def test_molten_egg_relic_smoke():
-    """Matches MoltenEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["MoltenEgg"])
-    assert combat.player is not None
-
-def test_paels_growth_relic_smoke():
-    """Matches PaelsGrowth.cs: combat start with relic (AfterObtained, TryModifyRestSiteOptions)."""
-    combat = _make_combat(["PaelsGrowth"])
-    assert combat.player is not None
-
-def test_paels_wing_relic_smoke():
-    """Matches PaelsWing.cs: combat start with relic (TryModifyCardRewardAlternatives)."""
-    combat = _make_combat(["PaelsWing"])
-    assert combat.player is not None
-
-def test_philosophers_stone_relic_smoke():
-    """Matches PhilosophersStone.cs: combat start with relic (AfterCreatureAddedToCombat, AfterRoomEntered, ModifyMaxEnergy)."""
-    combat = _make_combat(["PhilosophersStone"])
-    assert combat.player is not None
-
-def test_pollinous_core_relic_smoke():
-    """Matches PollinousCore.cs: combat start with relic (AfterCombatEnd, AfterModifyingHandDraw, BeforeSideTurnStart, ModifyHandDraw)."""
-    combat = _make_combat(["PollinousCore"])
-    assert combat.player is not None
-
-def test_prayer_wheel_relic_smoke():
-    """Matches PrayerWheel.cs: combat start with relic (TryModifyRewards)."""
-    combat = _make_combat(["PrayerWheel"])
-    assert combat.player is not None
-
-def test_pumpkin_candle_relic_smoke():
-    """Matches PumpkinCandle.cs: combat start with relic (AfterObtained, AfterRoomEntered, ModifyMaxEnergy)."""
-    combat = _make_combat(["PumpkinCandle"])
-    assert combat.player is not None
-
-def test_silver_crucible_relic_smoke():
-    """Matches SilverCrucible.cs: combat start with relic (AfterModifyingCardRewardOptions, AfterRoomEntered, IsAllowed, ShouldGenerateTreasure, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["SilverCrucible"])
-    assert combat.player is not None
-
-def test_sling_of_courage_relic_smoke():
-    """Matches SlingOfCourage.cs: combat start with relic (AfterRoomEntered)."""
-    combat = _make_combat(["SlingOfCourage"])
-    assert combat.player is not None
-
-def test_spiked_gauntlets_relic_smoke():
-    """Matches SpikedGauntlets.cs: combat start with relic (ModifyMaxEnergy, TryModifyEnergyCostInCombat)."""
-    combat = _make_combat(["SpikedGauntlets"])
-    assert combat.player is not None
-
-def test_stone_calendar_relic_smoke():
-    """Matches StoneCalendar.cs: combat start with relic (AfterCombatEnd, AfterRoomEntered, AfterSideTurnStart, BeforeTurnEnd)."""
-    combat = _make_combat(["StoneCalendar"])
-    assert combat.player is not None
-
-def test_sword_of_jade_relic_smoke():
-    """Matches SwordOfJade.cs: combat start with relic (AfterRoomEntered)."""
-    combat = _make_combat(["SwordOfJade"])
-    assert combat.player is not None
-
-def test_the_boot_relic_smoke():
-    """Matches TheBoot.cs: combat start with relic (AfterModifyingHpLostBeforeOsty, ModifyHpLostBeforeOsty)."""
-    combat = _make_combat(["TheBoot"])
-    assert combat.player is not None
-
-def test_toxic_egg_relic_smoke():
-    """Matches ToxicEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["ToxicEgg"])
-    assert combat.player is not None
-
-def test_tungsten_rod_relic_smoke():
-    """Matches TungstenRod.cs: combat start with relic (AfterModifyingHpLostAfterOsty, ModifyHpLostAfterOsty)."""
-    combat = _make_combat(["TungstenRod"])
-    assert combat.player is not None
-
-def test_whispering_earring_relic_smoke():
-    """Matches WhisperingEarring.cs: combat start with relic (BeforePlayPhaseStartLate, ModifyMaxEnergy)."""
-    combat = _make_combat(["WhisperingEarring"])
-    assert combat.player is not None
-
-def test_white_star_relic_smoke():
-    """Matches WhiteStar.cs: combat start with relic (IsAllowed, TryModifyRewards)."""
-    combat = _make_combat(["WhiteStar"])
-    assert combat.player is not None
-
-def test_wing_charm_relic_smoke():
-    """Matches WingCharm.cs: combat start with relic (TryModifyCardRewardOptionsLate)."""
-    combat = _make_combat(["WingCharm"])
-    assert combat.player is not None
-
-def test_wongos_mystery_ticket_relic_smoke():
-    """Matches WongosMysteryTicket.cs: combat start with relic (AfterCombatEnd, AfterModifyingRewards, TryModifyRewards)."""
-    combat = _make_combat(["WongosMysteryTicket"])
-    assert combat.player is not None
-
 def test_art_of_war_relic_smoke():
     """Matches ArtOfWar.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterEnergyReset, AfterTurnEnd)."""
     combat = _make_combat(["ArtOfWar"])
+    assert combat.player is not None
+
+def test_brilliant_scarf_relic_smoke():
+    """Matches BrilliantScarf.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, BeforeSideTurnStart, TryModifyEnergyCostInCombat, TryModifyStarCost)."""
+    combat = _make_combat(["BrilliantScarf"])
     assert combat.player is not None
 
 def test_daughter_of_the_wind_relic_smoke():
@@ -285,6 +45,11 @@ def test_daughter_of_the_wind_relic_smoke():
 def test_diamond_diadem_relic_smoke():
     """Matches DiamondDiadem.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterSideTurnStart, BeforeTurnEnd)."""
     combat = _make_combat(["DiamondDiadem"])
+    assert combat.player is not None
+
+def test_dragon_fruit_relic_smoke():
+    """Matches DragonFruit.cs: combat start with relic (AfterGoldGained, IsAllowed)."""
+    combat = _make_combat(["DragonFruit"])
     assert combat.player is not None
 
 def test_game_piece_relic_smoke():
@@ -317,14 +82,34 @@ def test_music_box_relic_smoke():
     combat = _make_combat(["MusicBox"])
     assert combat.player is not None
 
+def test_paels_eye_relic_smoke():
+    """Matches PaelsEye.cs: combat start with relic (AfterCombatEnd, AfterObtained, AfterSideTurnStart, AfterTakingExtraTurn, BeforeCardPlayed, BeforeTurnEndEarly)."""
+    combat = _make_combat(["PaelsEye"])
+    assert combat.player is not None
+
 def test_paels_legion_relic_smoke():
     """Matches PaelsLegion.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterModifyingBlockAmount, AfterObtained, AfterSideTurnStart, BeforeCombatStart)."""
     combat = _make_combat(["PaelsLegion"])
     assert combat.player is not None
 
+def test_pocketwatch_relic_smoke():
+    """Matches Pocketwatch.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterModifyingHandDraw, AfterSideTurnStart, BeforeSideTurnStart, ModifyHandDraw)."""
+    combat = _make_combat(["Pocketwatch"])
+    assert combat.player is not None
+
+def test_velvet_choker_relic_smoke():
+    """Matches VelvetChoker.cs: combat start with relic (AfterCardPlayed, AfterCombatEnd, AfterRoomEntered, BeforeSideTurnStart, ModifyMaxEnergy, ShouldPlay)."""
+    combat = _make_combat(["VelvetChoker"])
+    assert combat.player is not None
+
 def test_alchemical_coffer_relic_smoke():
     """Matches AlchemicalCoffer.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["AlchemicalCoffer"])
+    assert combat.player is not None
+
+def test_amethyst_aubergine_relic_smoke():
+    """Matches AmethystAubergine.cs: combat start with relic (AfterModifyingRewards, IsAllowed, TryModifyRewards)."""
+    combat = _make_combat(["AmethystAubergine"])
     assert combat.player is not None
 
 def test_anchor_relic_smoke():
@@ -347,9 +132,19 @@ def test_astrolabe_relic_smoke():
     combat = _make_combat(["Astrolabe"])
     assert combat.player is not None
 
+def test_beating_remnant_relic_smoke():
+    """Matches BeatingRemnant.cs: combat start with relic (AfterDamageReceived, AfterModifyingHpLostAfterOsty, BeforeSideTurnStart, ModifyHpLostAfterOsty)."""
+    combat = _make_combat(["BeatingRemnant"])
+    assert combat.player is not None
+
 def test_beautiful_bracelet_relic_smoke():
     """Matches BeautifulBracelet.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["BeautifulBracelet"])
+    assert combat.player is not None
+
+def test_belt_buckle_relic_smoke():
+    """Matches BeltBuckle.cs: combat start with relic (AfterCombatEnd, AfterCombatVictory, AfterObtained, AfterPotionDiscarded, AfterPotionProcured, AfterPotionUsed)."""
+    combat = _make_combat(["BeltBuckle"])
     assert combat.player is not None
 
 def test_big_hat_relic_smoke():
@@ -357,9 +152,24 @@ def test_big_hat_relic_smoke():
     combat = _make_combat(["BigHat"])
     assert combat.player is not None
 
+def test_big_mushroom_relic_smoke():
+    """Matches BigMushroom.cs: combat start with relic (AfterObtained, AfterRoomEntered, ModifyHandDraw)."""
+    combat = _make_combat(["BigMushroom"])
+    assert combat.player is not None
+
 def test_biiig_hug_relic_smoke():
     """Matches BiiigHug.cs: combat start with relic (AfterObtained, AfterShuffle)."""
     combat = _make_combat(["BiiigHug"])
+    assert combat.player is not None
+
+def test_bing_bong_relic_smoke():
+    """Matches BingBong.cs: combat start with relic (AfterCardChangedPiles)."""
+    combat = _make_combat(["BingBong"])
+    assert combat.player is not None
+
+def test_black_star_relic_smoke():
+    """Matches BlackStar.cs: combat start with relic (TryModifyRewards)."""
+    combat = _make_combat(["BlackStar"])
     assert combat.player is not None
 
 def test_blessed_antler_relic_smoke():
@@ -395,6 +205,11 @@ def test_bread_relic_smoke():
 def test_brimstone_relic_smoke():
     """Matches Brimstone.cs: combat start with relic (AfterSideTurnStart)."""
     combat = _make_combat(["Brimstone"])
+    assert combat.player is not None
+
+def test_burning_sticks_relic_smoke():
+    """Matches BurningSticks.cs: combat start with relic (AfterCardExhausted, AfterCombatEnd, AfterRoomEntered)."""
+    combat = _make_combat(["BurningSticks"])
     assert combat.player is not None
 
 def test_byrdpip_relic_smoke():
@@ -452,6 +267,11 @@ def test_cursed_pearl_relic_smoke():
     combat = _make_combat(["CursedPearl"])
     assert combat.player is not None
 
+def test_darkstone_periapt_relic_smoke():
+    """Matches DarkstonePeriapt.cs: combat start with relic (AfterCardChangedPiles)."""
+    combat = _make_combat(["DarkstonePeriapt"])
+    assert combat.player is not None
+
 def test_demon_tongue_relic_smoke():
     """Matches DemonTongue.cs: combat start with relic (AfterDamageReceived, BeforeSideTurnStart)."""
     combat = _make_combat(["DemonTongue"])
@@ -467,6 +287,16 @@ def test_dollys_mirror_relic_smoke():
     combat = _make_combat(["DollysMirror"])
     assert combat.player is not None
 
+def test_dream_catcher_relic_smoke():
+    """Matches DreamCatcher.cs: combat start with relic (TryModifyRestSiteHealRewards)."""
+    combat = _make_combat(["DreamCatcher"])
+    assert combat.player is not None
+
+def test_driftwood_relic_smoke():
+    """Matches Driftwood.cs: combat start with relic (TryModifyRewardsLate)."""
+    combat = _make_combat(["Driftwood"])
+    assert combat.player is not None
+
 def test_ectoplasm_relic_smoke():
     """Matches Ectoplasm.cs: combat start with relic (ModifyMaxEnergy, ShouldGainGold)."""
     combat = _make_combat(["Ectoplasm"])
@@ -475,6 +305,11 @@ def test_ectoplasm_relic_smoke():
 def test_electric_shrymp_relic_smoke():
     """Matches ElectricShrymp.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["ElectricShrymp"])
+    assert combat.player is not None
+
+def test_ember_tea_relic_smoke():
+    """Matches EmberTea.cs: combat start with relic (AfterRoomEntered)."""
+    combat = _make_combat(["EmberTea"])
     assert combat.player is not None
 
 def test_empty_cage_relic_smoke():
@@ -490,6 +325,11 @@ def test_fake_anchor_relic_smoke():
 def test_fake_blood_vial_relic_smoke():
     """Matches FakeBloodVial.cs: combat start with relic (AfterPlayerTurnStartLate)."""
     combat = _make_combat(["FakeBloodVial"])
+    assert combat.player is not None
+
+def test_fake_happy_flower_relic_smoke():
+    """Matches FakeHappyFlower.cs: combat start with relic (AfterCombatEnd, AfterSideTurnStart)."""
+    combat = _make_combat(["FakeHappyFlower"])
     assert combat.player is not None
 
 def test_fake_lees_waffle_relic_smoke():
@@ -522,6 +362,11 @@ def test_fake_venerable_tea_set_relic_smoke():
     combat = _make_combat(["FakeVenerableTeaSet"])
     assert combat.player is not None
 
+def test_fiddle_relic_smoke():
+    """Matches Fiddle.cs: combat start with relic (AfterPreventingDraw, ModifyHandDrawLate, ShouldDraw)."""
+    combat = _make_combat(["Fiddle"])
+    assert combat.player is not None
+
 def test_forgotten_soul_relic_smoke():
     """Matches ForgottenSoul.cs: combat start with relic (AfterCardExhausted)."""
     combat = _make_combat(["ForgottenSoul"])
@@ -532,9 +377,29 @@ def test_fragrant_mushroom_relic_smoke():
     combat = _make_combat(["FragrantMushroom"])
     assert combat.player is not None
 
+def test_fresnel_lens_relic_smoke():
+    """Matches FresnelLens.cs: combat start with relic (ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["FresnelLens"])
+    assert combat.player is not None
+
+def test_frozen_egg_relic_smoke():
+    """Matches FrozenEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["FrozenEgg"])
+    assert combat.player is not None
+
+def test_fur_coat_relic_smoke():
+    """Matches FurCoat.cs: combat start with relic (AfterCreatureAddedToCombat, AfterObtained, BeforeCombatStart)."""
+    combat = _make_combat(["FurCoat"])
+    assert combat.player is not None
+
 def test_glass_eye_relic_smoke():
     """Matches GlassEye.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["GlassEye"])
+    assert combat.player is not None
+
+def test_glitter_relic_smoke():
+    """Matches Glitter.cs: combat start with relic (TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["Glitter"])
     assert combat.player is not None
 
 def test_gnarled_hammer_relic_smoke():
@@ -562,6 +427,11 @@ def test_hefty_tablet_relic_smoke():
     combat = _make_combat(["HeftyTablet"])
     assert combat.player is not None
 
+def test_ice_cream_relic_smoke():
+    """Matches IceCream.cs: combat start with relic (ShouldPlayerResetEnergy)."""
+    combat = _make_combat(["IceCream"])
+    assert combat.player is not None
+
 def test_jeweled_mask_relic_smoke():
     """Matches JeweledMask.cs: combat start with relic (BeforeHandDraw)."""
     combat = _make_combat(["JeweledMask"])
@@ -587,6 +457,21 @@ def test_large_capsule_relic_smoke():
     combat = _make_combat(["LargeCapsule"])
     assert combat.player is not None
 
+def test_lasting_candy_relic_smoke():
+    """Matches LastingCandy.cs: combat start with relic (AfterCombatEnd, IsAllowed, TryModifyCardRewardOptions)."""
+    combat = _make_combat(["LastingCandy"])
+    assert combat.player is not None
+
+def test_lava_lamp_relic_smoke():
+    """Matches LavaLamp.cs: combat start with relic (AfterDamageReceived, AfterRoomEntered, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["LavaLamp"])
+    assert combat.player is not None
+
+def test_lava_rock_relic_smoke():
+    """Matches LavaRock.cs: combat start with relic (TryModifyRewards)."""
+    combat = _make_combat(["LavaRock"])
+    assert combat.player is not None
+
 def test_lead_paperweight_relic_smoke():
     """Matches LeadPaperweight.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["LeadPaperweight"])
@@ -600,6 +485,11 @@ def test_leafy_poultice_relic_smoke():
 def test_lees_waffle_relic_smoke():
     """Matches LeesWaffle.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["LeesWaffle"])
+    assert combat.player is not None
+
+def test_lizard_tail_relic_smoke():
+    """Matches LizardTail.cs: combat start with relic (AfterPreventingDeath, ShouldDieLate)."""
+    combat = _make_combat(["LizardTail"])
     assert combat.player is not None
 
 def test_looming_fruit_relic_smoke():
@@ -627,6 +517,21 @@ def test_mango_relic_smoke():
     combat = _make_combat(["Mango"])
     assert combat.player is not None
 
+def test_massive_scroll_relic_smoke():
+    """Matches MassiveScroll.cs: combat start with relic (AfterObtained, IsAllowed)."""
+    combat = _make_combat(["MassiveScroll"])
+    assert combat.player is not None
+
+def test_maw_bank_relic_smoke():
+    """Matches MawBank.cs: combat start with relic (AfterItemPurchased, AfterRoomEntered)."""
+    combat = _make_combat(["MawBank"])
+    assert combat.player is not None
+
+def test_meat_cleaver_relic_smoke():
+    """Matches MeatCleaver.cs: combat start with relic (TryModifyRestSiteOptions)."""
+    combat = _make_combat(["MeatCleaver"])
+    assert combat.player is not None
+
 def test_membership_card_relic_smoke():
     """Matches MembershipCard.cs: combat start with relic (ModifyMerchantPrice)."""
     combat = _make_combat(["MembershipCard"])
@@ -635,6 +540,11 @@ def test_membership_card_relic_smoke():
 def test_miniature_tent_relic_smoke():
     """Matches MiniatureTent.cs: combat start with relic (ShouldDisableRemainingRestSiteOptions)."""
     combat = _make_combat(["MiniatureTent"])
+    assert combat.player is not None
+
+def test_molten_egg_relic_smoke():
+    """Matches MoltenEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["MoltenEgg"])
     assert combat.player is not None
 
 def test_mr_struggles_relic_smoke():
@@ -702,6 +612,11 @@ def test_paels_claw_relic_smoke():
     combat = _make_combat(["PaelsClaw"])
     assert combat.player is not None
 
+def test_paels_growth_relic_smoke():
+    """Matches PaelsGrowth.cs: combat start with relic (AfterObtained, TryModifyRestSiteOptions)."""
+    combat = _make_combat(["PaelsGrowth"])
+    assert combat.player is not None
+
 def test_paels_horn_relic_smoke():
     """Matches PaelsHorn.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["PaelsHorn"])
@@ -715,6 +630,11 @@ def test_paels_tears_relic_smoke():
 def test_paels_tooth_relic_smoke():
     """Matches PaelsTooth.cs: combat start with relic (AfterCombatEnd, AfterObtained)."""
     combat = _make_combat(["PaelsTooth"])
+    assert combat.player is not None
+
+def test_paels_wing_relic_smoke():
+    """Matches PaelsWing.cs: combat start with relic (TryModifyCardRewardAlternatives)."""
+    combat = _make_combat(["PaelsWing"])
     assert combat.player is not None
 
 def test_pandoras_box_relic_smoke():
@@ -732,9 +652,24 @@ def test_phial_holster_relic_smoke():
     combat = _make_combat(["PhialHolster"])
     assert combat.player is not None
 
+def test_philosophers_stone_relic_smoke():
+    """Matches PhilosophersStone.cs: combat start with relic (AfterCreatureAddedToCombat, AfterRoomEntered, ModifyMaxEnergy)."""
+    combat = _make_combat(["PhilosophersStone"])
+    assert combat.player is not None
+
+def test_pollinous_core_relic_smoke():
+    """Matches PollinousCore.cs: combat start with relic (AfterCombatEnd, AfterModifyingHandDraw, BeforeSideTurnStart, ModifyHandDraw)."""
+    combat = _make_combat(["PollinousCore"])
+    assert combat.player is not None
+
 def test_pomander_relic_smoke():
     """Matches Pomander.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["Pomander"])
+    assert combat.player is not None
+
+def test_prayer_wheel_relic_smoke():
+    """Matches PrayerWheel.cs: combat start with relic (TryModifyRewards)."""
+    combat = _make_combat(["PrayerWheel"])
     assert combat.player is not None
 
 def test_precarious_shears_relic_smoke():
@@ -755,6 +690,11 @@ def test_preserved_fog_relic_smoke():
 def test_prismatic_gem_relic_smoke():
     """Matches PrismaticGem.cs: combat start with relic (ModifyMaxEnergy)."""
     combat = _make_combat(["PrismaticGem"])
+    assert combat.player is not None
+
+def test_pumpkin_candle_relic_smoke():
+    """Matches PumpkinCandle.cs: combat start with relic (AfterObtained, AfterRoomEntered, ModifyMaxEnergy)."""
+    combat = _make_combat(["PumpkinCandle"])
     assert combat.player is not None
 
 def test_punch_dagger_relic_smoke():
@@ -837,6 +777,16 @@ def test_signet_ring_relic_smoke():
     combat = _make_combat(["SignetRing"])
     assert combat.player is not None
 
+def test_silver_crucible_relic_smoke():
+    """Matches SilverCrucible.cs: combat start with relic (AfterModifyingCardRewardOptions, AfterRoomEntered, IsAllowed, ShouldGenerateTreasure, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["SilverCrucible"])
+    assert combat.player is not None
+
+def test_sling_of_courage_relic_smoke():
+    """Matches SlingOfCourage.cs: combat start with relic (AfterRoomEntered)."""
+    combat = _make_combat(["SlingOfCourage"])
+    assert combat.player is not None
+
 def test_small_capsule_relic_smoke():
     """Matches SmallCapsule.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["SmallCapsule"])
@@ -852,6 +802,16 @@ def test_sozu_relic_smoke():
     combat = _make_combat(["Sozu"])
     assert combat.player is not None
 
+def test_spiked_gauntlets_relic_smoke():
+    """Matches SpikedGauntlets.cs: combat start with relic (ModifyMaxEnergy, TryModifyEnergyCostInCombat)."""
+    combat = _make_combat(["SpikedGauntlets"])
+    assert combat.player is not None
+
+def test_stone_calendar_relic_smoke():
+    """Matches StoneCalendar.cs: combat start with relic (AfterCombatEnd, AfterRoomEntered, AfterSideTurnStart, BeforeTurnEnd)."""
+    combat = _make_combat(["StoneCalendar"])
+    assert combat.player is not None
+
 def test_stone_humidifier_relic_smoke():
     """Matches StoneHumidifier.cs: combat start with relic (AfterRestSiteHeal)."""
     combat = _make_combat(["StoneHumidifier"])
@@ -865,6 +825,11 @@ def test_storybook_relic_smoke():
 def test_sturdy_clamp_relic_smoke():
     """Matches SturdyClamp.cs: combat start with relic (AfterPreventingBlockClear, ShouldClearBlock)."""
     combat = _make_combat(["SturdyClamp"])
+    assert combat.player is not None
+
+def test_sword_of_jade_relic_smoke():
+    """Matches SwordOfJade.cs: combat start with relic (AfterRoomEntered)."""
+    combat = _make_combat(["SwordOfJade"])
     assert combat.player is not None
 
 def test_sword_of_stone_relic_smoke():
@@ -887,6 +852,11 @@ def test_the_abacus_relic_smoke():
     combat = _make_combat(["TheAbacus"])
     assert combat.player is not None
 
+def test_the_boot_relic_smoke():
+    """Matches TheBoot.cs: combat start with relic (AfterModifyingHpLostBeforeOsty, ModifyHpLostBeforeOsty)."""
+    combat = _make_combat(["TheBoot"])
+    assert combat.player is not None
+
 def test_the_courier_relic_smoke():
     """Matches TheCourier.cs: combat start with relic (ModifyMerchantPrice, ShouldRefillMerchantEntry)."""
     combat = _make_combat(["TheCourier"])
@@ -907,6 +877,11 @@ def test_touch_of_orobas_relic_smoke():
     combat = _make_combat(["TouchOfOrobas"])
     assert combat.player is not None
 
+def test_toxic_egg_relic_smoke():
+    """Matches ToxicEgg.cs: combat start with relic (IsAllowed, ModifyMerchantCardCreationResults, TryModifyCardBeingAddedToDeck, TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["ToxicEgg"])
+    assert combat.player is not None
+
 def test_toy_box_relic_smoke():
     """Matches ToyBox.cs: combat start with relic (AfterCombatEnd, AfterObtained)."""
     combat = _make_combat(["ToyBox"])
@@ -915,6 +890,11 @@ def test_toy_box_relic_smoke():
 def test_tri_boomerang_relic_smoke():
     """Matches TriBoomerang.cs: combat start with relic (AfterObtained)."""
     combat = _make_combat(["TriBoomerang"])
+    assert combat.player is not None
+
+def test_tungsten_rod_relic_smoke():
+    """Matches TungstenRod.cs: combat start with relic (AfterModifyingHpLostAfterOsty, ModifyHpLostAfterOsty)."""
+    combat = _make_combat(["TungstenRod"])
     assert combat.player is not None
 
 def test_unceasing_top_relic_smoke():
@@ -947,14 +927,34 @@ def test_whetstone_relic_smoke():
     combat = _make_combat(["Whetstone"])
     assert combat.player is not None
 
+def test_whispering_earring_relic_smoke():
+    """Matches WhisperingEarring.cs: combat start with relic (BeforePlayPhaseStartLate, ModifyMaxEnergy)."""
+    combat = _make_combat(["WhisperingEarring"])
+    assert combat.player is not None
+
 def test_white_beast_statue_relic_smoke():
     """Matches WhiteBeastStatue.cs: combat start with relic (IsAllowed, ShouldForcePotionReward)."""
     combat = _make_combat(["WhiteBeastStatue"])
     assert combat.player is not None
 
+def test_white_star_relic_smoke():
+    """Matches WhiteStar.cs: combat start with relic (IsAllowed, TryModifyRewards)."""
+    combat = _make_combat(["WhiteStar"])
+    assert combat.player is not None
+
+def test_wing_charm_relic_smoke():
+    """Matches WingCharm.cs: combat start with relic (TryModifyCardRewardOptionsLate)."""
+    combat = _make_combat(["WingCharm"])
+    assert combat.player is not None
+
 def test_winged_boots_relic_smoke():
     """Matches WingedBoots.cs: combat start with relic (AfterRoomEntered, IsAllowed, ShouldAllowFreeTravel)."""
     combat = _make_combat(["WingedBoots"])
+    assert combat.player is not None
+
+def test_wongos_mystery_ticket_relic_smoke():
+    """Matches WongosMysteryTicket.cs: combat start with relic (AfterCombatEnd, AfterModifyingRewards, TryModifyRewards)."""
+    combat = _make_combat(["WongosMysteryTicket"])
     assert combat.player is not None
 
 def test_yummy_cookie_relic_smoke():

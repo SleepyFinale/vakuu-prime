@@ -29,6 +29,8 @@ public partial class MainFile : Node
     {
         Logger.Log("=== STS2 RL Bridge Mod Initializing ===");
 
+        BridgeConfig.Initialize();
+
         // Phase 1: Harmony patches
         try
         {

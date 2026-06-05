@@ -22,6 +22,7 @@ def collect_episodes(
     n_episodes: int,
     data_path: Path,
     combat_model: str,
+    character_id: str = "Ironclad",
     seed: int = 0,
     loss_weight: float = 0.3,
 ) -> None:
@@ -59,6 +60,7 @@ def collect_episodes(
         combat_model_path=combat_model,
         delegate_combat=True,
         use_noncombat_heuristic=True,
+        character_id=character_id,
         act_count=3,
         reward_shaping=False,
         card_reward_observer=observe_card_reward,
@@ -226,6 +228,13 @@ def main():
         "--combat-model", type=str, default=DEFAULT_COMBAT_MODEL,
         help="Combat model for data collection rollouts",
     )
+    from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS
+
+    parser.add_argument(
+        "--character", type=str, default="Ironclad",
+        choices=SUPPORTED_TRAINING_CHARACTERS,
+        help="Character for data collection rollouts (default: Ironclad)",
+    )
     parser.add_argument(
         "--loss-weight", type=float, default=0.3,
         help="Sample weight for picks from losing runs",
@@ -254,6 +263,7 @@ def main():
             args.collect_episodes,
             data_path,
             args.combat_model,
+            character_id=args.character,
             seed=args.seed,
             loss_weight=args.loss_weight,
         )

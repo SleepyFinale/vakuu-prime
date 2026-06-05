@@ -766,7 +766,7 @@ def make_gather_light(upgraded: bool=False) -> CardInstance:
 
 def make_glow(upgraded: bool=False) -> CardInstance:
     stars = 2 if upgraded else 1
-    return CardInstance(card_id=CardId.GLOW, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.COMMON, upgraded=upgraded, effect_vars={'cards': 1, 'stars': stars}, instance_id=_get_next_id())
+    return CardInstance(card_id=CardId.GLOW, cost=1, card_type=CardType.SKILL, target_type=TargetType.SELF, rarity=CardRarity.COMMON, upgraded=upgraded, effect_vars={'cards': 1, 'stars': 1}, instance_id=_get_next_id())
 
 def make_guiding_star(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.GUIDING_STAR, cost=1, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.COMMON, base_damage=12, upgraded=upgraded, star_cost=2, effect_vars={'cards': 2}, instance_id=_get_next_id())

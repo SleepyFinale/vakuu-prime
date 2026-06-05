@@ -31,6 +31,7 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 
 ## Project Stats
 
+
 | Metric                        | Value                                             |
 | ----------------------------- | ------------------------------------------------- |
 | Source files                  | 133 Python + C#                                   |
@@ -44,6 +45,7 @@ A reinforcement learning agent for **Slay the Spire 2**, built on a high-perform
 | Playable characters           | 5 (Ironclad, Silent, Defect, Necrobinder, Regent) |
 | Simulation speed              | ~1,200 combats/sec, ~28,000 steps/sec             |
 | Combat win rate (trained PPO) | ~92% (Act 1 Ironclad)                             |
+
 
 ## Quick Start
 
@@ -132,6 +134,7 @@ python scripts/train_combat.py \
 
 Key flags:
 
+
 | Flag                | Default           | Description                           |
 | ------------------- | ----------------- | ------------------------------------- |
 | `--total-timesteps` | 500,000           | Total environment steps               |
@@ -140,6 +143,7 @@ Key flags:
 | `--batch-size`      | 256               | Minibatch size                        |
 | `--n-steps`         | 2048              | Steps per rollout per env             |
 | `--output-dir`      | output/combat_ppo | Where to save models and logs         |
+
 
 ### Train a Full-Run Agent
 
@@ -160,8 +164,9 @@ The `--act-count` flag controls how many acts per episode (1 = Act 1 only, 3 = f
 After training, run the agent against the actual game:
 
 1. Build and install the bridge mod (see [docs/MOD_BUILD_GUIDE.md](docs/MOD_BUILD_GUIDE.md))
-2. Start Slay the Spire 2
-3. Run the agent:
+2. Optionally set `STS2_BRIDGE_CHARACTER` (default `Ironclad`) so the mod selects the same character your model was trained on
+3. Start Slay the Spire 2
+4. Run the agent:
 
 ```bash
 python -m sts2_env.bridge.agent_runner \
@@ -277,6 +282,7 @@ sts2-rl-agent/
 
 ## Game Content Coverage
 
+
 | Content Type            | Game Total | Implemented | Coverage        |
 | ----------------------- | ---------- | ----------- | --------------- |
 | Cards                   | 577        | 577         | 100%            |
@@ -288,6 +294,7 @@ sts2-rl-agent/
 | Events                  | 68         | 68          | 100%            |
 | Characters              | 5 + 2      | 5           | 100% (playable) |
 | Acts                    | 4          | 4           | 100%            |
+
 
 ## How It Works
 
@@ -321,6 +328,7 @@ Following lessons from the STS1 RL community, this project uses a two-phase stra
 
 ## Documentation
 
+
 | Document                                                         | Description                                     |
 | ---------------------------------------------------------------- | ----------------------------------------------- |
 | [README.md](README.md)                                           | This file                                       |
@@ -338,6 +346,10 @@ Following lessons from the STS1 RL community, this project uses a two-phase stra
 | [docs/GAME_BRIDGE_REFERENCE.md](docs/GAME_BRIDGE_REFERENCE.md)   | Bridge architecture and design notes            |
 | [docs/AUTOSLAY_BRIDGE.md](docs/AUTOSLAY_BRIDGE.md)               | AutoSlay-based bridge design                    |
 | [docs/GAME_SYSTEMS_REFERENCE.md](docs/GAME_SYSTEMS_REFERENCE.md) | Game mechanics reference                        |
+| [docs/PARITY_COVERAGE_BACKLOG.md](docs/PARITY_COVERAGE_BACKLOG.md) | Direct-reference parity gate (complete)         |
+| [docs/PARITY_GAPS.md](docs/PARITY_GAPS.md) | Confirmed blockers to exact parity              |
+| [docs/BRIDGE_LIVE_SMOKE.md](docs/BRIDGE_LIVE_SMOKE.md) | Bridge offline + live smoke procedure           |
+
 
 ## License
 
@@ -350,3 +362,4 @@ This project is for research and educational purposes. Slay the Spire 2 is the p
 - [CommunicationMod](https://github.com/ForgottenArbiter/CommunicationMod) -- STS1 game bridge protocol design
 - [BaseLib-StS2](https://github.com/Alchyr/BaseLib-StS2) -- STS2 mod framework
 - [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) -- RL training framework
+

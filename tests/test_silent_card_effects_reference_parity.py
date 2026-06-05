@@ -276,7 +276,8 @@ class TestSilentCardEffectsReferenceParity:
         assert combat.play_card(0, 0)
         assert enemy.current_hp == 91
 
-    def test_follow_through_only_applies_weak_after_owner_skill(self):
+    def test_follow_through_hits_once_until_hand_has_five_other_cards(self):
+        """Matches FollowThrough.cs: second hit only when hand has CardCount other cards."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.max_hp = 100
@@ -284,37 +285,34 @@ class TestSilentCardEffectsReferenceParity:
         combat.hand = [make_follow_through(upgraded=True)]
         combat.energy = 1
 
-        assert combat.play_card(0)
-        assert enemy.current_hp == 92
-        assert enemy.get_power_amount(PowerId.WEAK) == 0
+        assert combat.play_card(0, 0)
+        assert enemy.current_hp == 93
 
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.max_hp = 100
         enemy.current_hp = 100
-        combat.hand = [make_deflect(), make_follow_through(upgraded=True)]
+        filler = [make_deflect() for _ in range(5)]
+        combat.hand = filler + [make_follow_through(upgraded=True)]
         combat.energy = 1
 
-        assert combat.play_card(0)
-        assert combat.play_card(0)
-        assert enemy.current_hp == 92
-        assert enemy.get_power_amount(PowerId.WEAK) == 2
+        assert combat.play_card(5, 0)
+        assert enemy.current_hp == 86
 
-    def test_follow_through_replay_uses_prior_started_card_for_weak(self):
+    def test_follow_through_replay_still_uses_hand_size_for_bonus_hit(self):
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.max_hp = 100
         enemy.current_hp = 100
         follow_through = make_follow_through(upgraded=True)
         follow_through.base_replay_count = 1
-        combat.hand = [make_deflect(), follow_through]
+        filler = [make_deflect() for _ in range(5)]
+        combat.hand = filler + [follow_through]
         combat.energy = 1
 
-        assert combat.play_card(0)
-        assert combat.play_card(0)
+        assert combat.play_card(5, 0)
 
-        assert enemy.current_hp == 84
-        assert enemy.get_power_amount(PowerId.WEAK) == 4
+        assert enemy.current_hp == 72
 
     def test_murder_scales_with_cards_drawn_this_combat(self):
         combat = _make_combat()

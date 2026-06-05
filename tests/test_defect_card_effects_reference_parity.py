@@ -922,6 +922,7 @@ class TestDefectCardEffectsReferenceParity:
         assert not combat.orb_queue.orbs
 
     def test_uproar_hits_twice_then_autoplays_draw_pile_attack(self):
+        """Matches Uproar.cs: damage all enemies then auto-play a draw-pile attack."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         enemy.current_hp = enemy.max_hp = 100

@@ -156,12 +156,12 @@ def make_breakthrough(upgraded: bool=False) -> CardInstance:
 def cinder(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
     assert target is not None
     _deal_damage_to_target(card, combat, target)
-    owner = _owner(card, combat)
-    exhaust_count = card.effect_vars.get('cards_to_exhaust', 1)
-    combat.exhaust_from_draw_pile(owner, exhaust_count)
+    if not combat.hand:
+        return
+    combat.exhaust_card(combat.combat_card_selection_rng.choice(list(combat.hand)))
 
 def make_cinder(upgraded: bool=False) -> CardInstance:
-    return CardInstance(card_id=CardId.CINDER, cost=2, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.COMMON, base_damage=18, effect_vars={'cards_to_exhaust': 1}, upgraded=upgraded, instance_id=_get_next_id())
+    return CardInstance(card_id=CardId.CINDER, cost=2, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.COMMON, base_damage=18, upgraded=upgraded, instance_id=_get_next_id())
 
 @register_effect(CardId.HAVOC)
 def havoc(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
@@ -641,10 +641,13 @@ def make_second_wind(upgraded: bool=False) -> CardInstance:
 def spite(card: CardInstance, combat: CombatState, target: Creature | None) -> None:
     assert target is not None
     owner = _owner(card, combat)
-    _deal_damage_to_target(card, combat, target)
-    draw = card.effect_vars.get('cards', 1)
+    hits = 1
     if combat.has_unblocked_damage_received_this_turn(owner, side=CombatSide.PLAYER):
-        _draw_cards(combat, draw, owner)
+        hits = card.effect_vars.get('repeat', 2)
+    for _ in range(hits):
+        if owner.is_dead or target.is_dead:
+            break
+        _deal_damage_to_target(card, combat, target)
 
 def make_spite(upgraded: bool=False) -> CardInstance:
     return CardInstance(card_id=CardId.SPITE, cost=0, card_type=CardType.ATTACK, target_type=TargetType.ANY_ENEMY, rarity=CardRarity.UNCOMMON, base_damage=5, effect_vars={'repeat': 2}, upgraded=upgraded, instance_id=_get_next_id())

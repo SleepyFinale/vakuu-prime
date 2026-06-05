@@ -13,12 +13,28 @@ DEFAULT_MAX_STEPS = 10_000
 
 
 def main():
+    from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS, parse_character_ids
+
     parser = argparse.ArgumentParser(description="Evaluate STS2 full-run meta-policy")
     parser.add_argument("--load-model", type=str, required=True, help="Meta-policy zip")
     parser.add_argument("--combat-model", type=str, default=None)
     parser.add_argument("--combat-models", type=str, default=None)
+    parser.add_argument(
+        "--combat-models-by-character", type=str, default=None,
+        help="Per-character combat models: 'Ironclad:path0,Silent:path1'",
+    )
     parser.add_argument("--card-value-model", type=str, default=None)
     parser.add_argument("--act-count", type=int, default=3)
+    character_group = parser.add_mutually_exclusive_group()
+    character_group.add_argument(
+        "--character", type=str, default="Ironclad",
+        choices=SUPPORTED_TRAINING_CHARACTERS,
+        help="Character for evaluation (default: Ironclad)",
+    )
+    character_group.add_argument(
+        "--characters", type=str, default=None,
+        help="Mixed-character pool: 'Ironclad,Silent' or 'all'",
+    )
     parser.add_argument("--episodes", type=int, default=100)
     parser.add_argument("--max-steps", type=int, default=DEFAULT_MAX_STEPS)
     parser.add_argument(
@@ -32,6 +48,7 @@ def main():
         from sb3_contrib.common.wrappers import ActionMasker
         from sts2_env.gym_env.hierarchical_run_env import (
             STS2HierarchicalRunEnv,
+            parse_combat_models_by_character,
             parse_combat_models_spec,
         )
     except ImportError:
@@ -40,11 +57,26 @@ def main():
 
     combat_model = args.combat_model or DEFAULT_COMBAT_MODEL
     combat_models = None
-    if args.combat_models:
+    combat_models_by_character = None
+    if args.combat_models_by_character:
+        combat_models_by_character = {
+            char_id: str(path)
+            for char_id, path in parse_combat_models_by_character(
+                args.combat_models_by_character,
+            ).items()
+        }
+        combat_model = None
+    elif args.combat_models:
         combat_models = {
             act: str(path)
             for act, path in parse_combat_models_spec(args.combat_models).items()
         }
+        combat_model = None
+
+    character_ids = None
+    character_id = args.character
+    if args.characters is not None:
+        character_ids = parse_character_ids(args.characters)
 
     def mask_fn(env):
         return env.action_masks()
@@ -53,9 +85,12 @@ def main():
         STS2HierarchicalRunEnv(
             combat_model_path=combat_model,
             combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
             delegate_combat=True,
             use_noncombat_heuristic=args.with_heuristics,
             card_value_model_path=args.card_value_model,
+            character_id=character_id,
+            character_ids=character_ids,
             act_count=args.act_count,
             reward_shaping=False,
             max_steps=args.max_steps,
@@ -87,6 +122,10 @@ def main():
     print(f"Model:           {args.load_model}")
     print(f"Episodes:        {args.episodes}")
     print(f"Act count:       {args.act_count}")
+    if character_ids is not None:
+        print(f"Characters:      {character_ids}")
+    else:
+        print(f"Character:       {character_id}")
     print(f"Heuristics:      {args.with_heuristics}")
     print(f"Card-value:      {args.card_value_model}")
     print(f"Win rate:        {wins / args.episodes:.1%}")

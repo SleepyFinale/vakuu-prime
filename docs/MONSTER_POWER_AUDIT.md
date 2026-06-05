@@ -1,0 +1,292 @@
+# Monster power application audit
+
+Source: `decompiled/MegaCrit.Sts2.Core.Models.Monsters` vs `sts2_env/monsters`.
+Game logic takes precedence over wiki summaries.
+
+- **Architect**: OK (powers=none)
+- **AssassinRubyRaider**: OK (powers=none)
+- **Axebot**: missing powers ['FRAIL', 'WEAK']; missing move ids ['BOOT_UP_MOVE', 'HAMMER_UPPERCUT_MOVE', 'ONE_TWO_MOVE', 'SHARPEN_MOVE']
+  - python: create_axebot
+  - csharp powers: ['FRAIL', 'STOCK', 'STRENGTH', 'WEAK']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **AxeRubyRaider**: OK (powers=none)
+- **BattleFriendV1**: missing move ids ['NOTHING_MOVE']
+  - python: create_battle_friend_v1
+  - csharp powers: ['BATTLEWORN_DUMMY_TIME_LIMIT']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **BattleFriendV2**: missing move ids ['NOTHING_MOVE']
+  - python: create_battle_friend_v2
+  - csharp powers: ['BATTLEWORN_DUMMY_TIME_LIMIT']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **BattleFriendV3**: missing move ids ['NOTHING_MOVE']
+  - python: create_battle_friend_v3
+  - csharp powers: ['BATTLEWORN_DUMMY_TIME_LIMIT']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **BigDummy**: OK (powers=none)
+- **BowlbugEgg**: OK (powers=none)
+- **BowlbugNectar**: OK (powers=['STRENGTH'])
+- **BowlbugRock**: OK (powers=['IMBALANCED'])
+- **BowlbugSilk**: missing powers ['WEAK']
+  - python: create_bowlbug_silk
+  - csharp powers: ['WEAK']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **BruteRubyRaider**: OK (powers=['STRENGTH'])
+- **BygoneEffigy**: OK (powers=['SLOW', 'STRENGTH'])
+- **Byrdonis**: OK (powers=['TERRITORIAL'])
+- **Byrdpip**: missing move ids ['NOTHING_MOVE']
+  - python: create_byrdpip
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **CalcifiedCultist**: OK (powers=['RITUAL'])
+- **CeremonialBeast**: missing powers ['RINGING']
+  - python: create_ceremonial_beast
+  - csharp powers: ['PLOW', 'RINGING', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **Chomper**: OK (powers=['ARTIFACT'])
+- **CorpseSlug**: missing powers ['FRAIL']
+  - python: create_corpse_slug
+  - csharp powers: ['FRAIL', 'RAVENOUS']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **CrossbowRubyRaider**: OK (powers=none)
+- **Crusher**: missing powers ['FRAIL', 'WEAK']
+  - python: create_crusher
+  - csharp powers: ['BACK_ATTACK_LEFT', 'CRAB_RAGE', 'FRAIL', 'STRENGTH', 'WEAK']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **CubexConstruct**: OK (powers=['ARTIFACT', 'STRENGTH'])
+- **DampCultist**: OK (powers=['RITUAL'])
+- **DecimillipedeSegment**: missing powers ['WEAK']
+  - python: create_decimillipede_segment
+  - csharp powers: ['REATTACH', 'STRENGTH', 'WEAK']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **DecimillipedeSegmentBack**: OK (powers=none)
+- **DecimillipedeSegmentFront**: OK (powers=none)
+- **DecimillipedeSegmentMiddle**: OK (powers=none)
+- **DeprecatedMonster**: OK (powers=none)
+- **DevotedSculptor**: OK (powers=['RITUAL'])
+- **Door**: OK (powers=['DOOR_REVIVAL', 'STRENGTH'])
+- **Doormaker**: missing powers ['T']
+  - python: create_doormaker
+  - csharp powers: ['STRENGTH', 'T']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **Entomancer**: OK (powers=['PERSONAL_HIVE', 'STRENGTH'])
+- **Exoskeleton**: OK (powers=['HARD_TO_KILL', 'STRENGTH'])
+- **EyeWithTeeth**: missing move ids ['DISTRACT_MOVE']
+  - python: create_eye_with_teeth
+  - csharp powers: ['ILLUSION']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **Fabricator**: OK (powers=['MINION'])
+- **FakeMerchantMonster**: missing powers ['FRAIL']; missing move ids ['ENRAGE_MOVE', 'SPEW_COINS_MOVE', 'SWIPE_MOVE', 'THROW_RELIC_MOVE']
+  - python: create_fake_merchant_monster
+  - csharp powers: ['FRAIL', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **FatGremlin**: OK (powers=none)
+- **FlailKnight**: OK (powers=['STRENGTH'])
+- **Flyconid**: missing powers ['FRAIL', 'VULNERABLE']
+  - python: create_flyconid
+  - csharp powers: ['FRAIL', 'VULNERABLE']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **Fogmog**: OK (powers=['STRENGTH'])
+- **FossilStalker**: missing powers ['FRAIL']
+  - python: create_fossil_stalker
+  - csharp powers: ['FRAIL', 'SUCK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **FrogKnight**: missing powers ['FRAIL']
+  - python: create_frog_knight
+  - csharp powers: ['FRAIL', 'PLATING', 'STRENGTH']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **FuzzyWurmCrawler**: OK (powers=['STRENGTH'])
+- **GasBomb**: missing powers ['MINION']
+  - python: create_gas_bomb
+  - csharp powers: ['MINION']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **GlobeHead**: missing powers ['FRAIL']
+  - python: create_globe_head
+  - csharp powers: ['FRAIL', 'GALVANIC', 'STRENGTH']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **GremlinMerc**: missing powers ['WEAK']
+  - python: create_gremlin_merc
+  - csharp powers: ['STRENGTH', 'SURPRISE', 'THIEVERY', 'WEAK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **Guardbot**: OK (powers=none)
+- **HauntedShip**: missing powers ['WEAK']
+  - python: create_haunted_ship
+  - csharp powers: ['WEAK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **HunterKiller**: missing powers ['TENDER']
+  - python: create_hunter_killer
+  - csharp powers: ['TENDER']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **InfestedPrism**: OK (powers=['STRENGTH', 'VITAL_SPARK'])
+- **Inklet**: OK (powers=['SLIPPERY'])
+- **KinFollower**: OK (powers=['MINION', 'STRENGTH'])
+- **KinPriest**: missing powers ['FRAIL', 'WEAK']
+  - python: create_kin_priest
+  - csharp powers: ['FRAIL', 'STRENGTH', 'WEAK']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **KnowledgeDemon**: OK (powers=['STRENGTH'])
+- **LagavulinMatriarch**: missing powers ['DEXTERITY']
+  - python: create_lagavulin_matriarch
+  - csharp powers: ['ASLEEP', 'DEXTERITY', 'PLATING', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **LeafSlimeM**: OK (powers=none)
+- **LeafSlimeS**: OK (powers=none)
+- **LivingFog**: missing powers ['SMOGGY']
+  - python: create_living_fog
+  - csharp powers: ['SMOGGY']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **LivingShield**: missing move ids ['SHIELD_SLAM_MOVE', 'SMASH_MOVE']
+  - python: create_living_shield
+  - csharp powers: ['RAMPART', 'STRENGTH']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **LouseProgenitor**: missing powers ['FRAIL']
+  - python: create_louse_progenitor
+  - csharp powers: ['CURL_UP', 'FRAIL', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **MagiKnight**: OK (powers=['DAMPEN'])
+- **Mawler**: missing powers ['VULNERABLE']
+  - python: create_mawler
+  - csharp powers: ['VULNERABLE']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **MechaKnight**: OK (powers=['ARTIFACT', 'STRENGTH'])
+- **MultiAttackMoveMonster**: missing move ids ['POKE']
+  - python: create_multi_attack_move_monster
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **MysteriousKnight**: OK (powers=['PLATING', 'STRENGTH'])
+- **Myte**: OK (powers=['STRENGTH'])
+- **Nibbit**: OK (powers=['STRENGTH'])
+- **Noisebot**: OK (powers=none)
+- **OneHpMonster**: OK (powers=none)
+- **Osty**: missing move ids ['NOTHING_MOVE']
+  - python: create_osty
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **Ovicopter**: missing powers ['VULNERABLE']
+  - python: create_ovicopter
+  - csharp powers: ['MINION', 'STRENGTH', 'VULNERABLE']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **OwlMagistrate**: missing powers ['VULNERABLE']
+  - python: create_owl_magistrate
+  - csharp powers: ['SOAR', 'VULNERABLE']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **PaelsLegion**: missing move ids ['NOTHING_MOVE']
+  - python: create_paels_legion
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **Parafright**: OK (powers=['ILLUSION'])
+- **PhantasmalGardener**: OK (powers=['SKITTISH', 'STRENGTH'])
+- **PhrogParasite**: OK (powers=['INFESTED'])
+- **PunchConstruct**: missing powers ['WEAK']
+  - python: create_punch_construct
+  - csharp powers: ['ARTIFACT', 'WEAK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **Queen**: missing powers ['CHAINS_OF_BINDING', 'FRAIL', 'VULNERABLE', 'WEAK']
+  - python: create_queen
+  - csharp powers: ['CHAINS_OF_BINDING', 'FRAIL', 'STRENGTH', 'VULNERABLE', 'WEAK']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **Rocket**: missing powers ['SURROUNDED']
+  - python: create_rocket
+  - csharp powers: ['BACK_ATTACK_RIGHT', 'CRAB_RAGE', 'STRENGTH', 'SURROUNDED']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **ScrollOfBiting**: missing move ids ['CHEW', 'CHOMP', 'MORE_TEETH']
+  - python: create_scroll_of_biting
+  - csharp powers: ['PAPER_CUTS', 'STRENGTH']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **Seapunk**: OK (powers=['STRENGTH'])
+- **SewerClam**: OK (powers=['PLATING', 'STRENGTH'])
+- **ShrinkerBeetle**: missing powers ['SHRINK']; missing move ids ['SHRINKER_MOVE']
+  - python: create_shrinker_beetle
+  - csharp powers: ['SHRINK']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **SingleAttackMoveMonster**: missing move ids ['POKE']
+  - python: create_single_attack_move_monster
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **SkulkingColony**: missing move ids ['PIERCING_STABS_MOVE']
+  - python: create_skulking_colony
+  - csharp powers: ['HARDENED_SHELL', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **SlimedBerserker**: missing powers ['WEAK']
+  - python: create_slimed_berserker
+  - csharp powers: ['STRENGTH', 'WEAK']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **SlitheringStrangler**: missing powers ['CONSTRICT']
+  - python: create_slithering_strangler
+  - csharp powers: ['CONSTRICT']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **SludgeSpinner**: missing powers ['WEAK']
+  - python: create_sludge_spinner
+  - csharp powers: ['STRENGTH', 'WEAK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **SlumberingBeetle**: OK (powers=['PLATING', 'SLUMBER', 'STRENGTH'])
+- **SnappingJaxfruit**: OK (powers=['STRENGTH'])
+- **SneakyGremlin**: OK (powers=none)
+- **SoulFysh**: OK (powers=['INTANGIBLE', 'VULNERABLE'])
+- **SoulNexus**: missing powers ['VULNERABLE', 'WEAK']
+  - python: create_soul_nexus
+  - csharp powers: ['VULNERABLE', 'WEAK']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **SpectralKnight**: missing powers ['HEX']
+  - python: create_spectral_knight
+  - csharp powers: ['HEX']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **SpinyToad**: OK (powers=['THORNS'])
+- **Stabbot**: missing powers ['FRAIL']
+  - python: create_stabbot
+  - csharp powers: ['FRAIL']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **TenHpMonster**: OK (powers=none)
+- **TerrorEel**: OK (powers=['SHRIEK', 'VIGOR', 'VULNERABLE'])
+- **TestSubject**: missing powers ['VULNERABLE']
+  - python: create_test_subject
+  - csharp powers: ['ADAPTABLE', 'ENRAGE', 'NEMESIS', 'PAINFUL_STABS', 'STRENGTH', 'VULNERABLE']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+- **TheAdversaryMkOne**: missing move ids ['BARRAGE_MOVE', 'SMASH_MOVE']
+  - python: create_the_adversary_mk_one
+  - csharp powers: ['ARTIFACT', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **TheAdversaryMkThree**: missing move ids ['BARRAGE_MOVE', 'CRASH_MOVE', 'FLAME_BEAM_MOVE']
+  - python: create_the_adversary_mk_three
+  - csharp powers: ['ARTIFACT', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **TheAdversaryMkTwo**: missing move ids ['BARRAGE_MOVE', 'BASH_MOVE', 'FLAME_BEAM_MOVE']
+  - python: create_the_adversary_mk_two
+  - csharp powers: ['ARTIFACT', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BATTLEWORN_DUMMY_TIME_LIMIT', 'MINION', 'PLATING', 'STRENGTH']
+- **TheForgotten**: OK (powers=['DEXTERITY', 'POSSESS_SPEED'])
+- **TheInsatiable**: missing powers ['SANDPIT']
+  - python: create_the_insatiable
+  - csharp powers: ['SANDPIT', 'STRENGTH']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **TheLost**: OK (powers=['POSSESS_STRENGTH', 'STRENGTH'])
+- **TheObscura**: OK (powers=['STRENGTH'])
+- **ThievingHopper**: missing powers ['SWIPE']
+  - python: create_thieving_hopper
+  - csharp powers: ['ESCAPE_ARTIST', 'FLUTTER', 'SWIPE']
+  - python powers: ['ARTIFACT', 'BACK_ATTACK_LEFT', 'BACK_ATTACK_RIGHT', 'BURROWED', 'CRAB_RAGE', 'CURL_UP', 'ESCAPE_ARTIST', 'FLUTTER', 'HARD_TO_KILL', 'HATCH', 'IMBALANCED', 'MINION', 'PERSONAL_HIVE', 'PLATING', 'REATTACH', 'SLUMBER', 'STRENGTH', 'THORNS', 'VITAL_SPARK']
+- **Toadpole**: OK (powers=['THORNS'])
+- **TorchHeadAmalgam**: OK (powers=['MINION'])
+- **ToughEgg**: OK (powers=['HATCH'])
+- **TrackerRubyRaider**: missing powers ['FRAIL']
+  - python: create_tracker_ruby_raider
+  - csharp powers: ['FRAIL']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **Tunneler**: OK (powers=['BURROWED'])
+- **TurretOperator**: OK (powers=['STRENGTH'])
+- **TwigSlimeM**: OK (powers=none)
+- **TwigSlimeS**: OK (powers=none)
+- **TwoTailedRat**: missing powers ['FRAIL']
+  - python: create_two_tailed_rat
+  - csharp powers: ['FRAIL']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **Vantom**: OK (powers=['SLIPPERY', 'STRENGTH'])
+- **VineShambler**: missing powers ['TANGLED']
+  - python: create_vine_shambler
+  - csharp powers: ['TANGLED']
+  - python powers: ['ARTIFACT', 'ILLUSION', 'INFESTED', 'MINION', 'PLOW', 'SLIPPERY', 'SLOW', 'STRENGTH', 'TERRITORIAL']
+- **WaterfallGiant**: missing powers ['WEAK']
+  - python: create_waterfall_giant
+  - csharp powers: ['STEAM_ERUPTION', 'WEAK']
+  - python powers: ['ARTIFACT', 'ASLEEP', 'HARDENED_SHELL', 'INTANGIBLE', 'PLATING', 'RAVENOUS', 'RITUAL', 'SHRIEK', 'SKITTISH', 'STEAM_ERUPTION', 'STRENGTH', 'SUCK', 'SURPRISE', 'THIEVERY', 'THORNS', 'VIGOR', 'VULNERABLE']
+- **Wriggler**: OK (powers=['STRENGTH'])
+- **Zapbot**: missing powers ['HIGH_VOLTAGE']
+  - python: create_zapbot
+  - csharp powers: ['HIGH_VOLTAGE']
+  - python powers: ['ADAPTABLE', 'ARTIFACT', 'DAMPEN', 'DEXTERITY', 'DOOR_REVIVAL', 'ENRAGE', 'GALVANIC', 'MINION', 'NEMESIS', 'PAINFUL_STABS', 'PAPER_CUTS', 'PLATING', 'POSSESS_SPEED', 'POSSESS_STRENGTH', 'RAMPART', 'RITUAL', 'SOAR', 'STOCK', 'STRENGTH']
+
+Rows with issues: 56

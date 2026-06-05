@@ -281,6 +281,7 @@ class TestRegentCardEffectsReferenceParity:
         assert combat.player.block == 13
 
     def test_bundle_of_joy_adds_three_distinct_colorless_cards_to_hand(self):
+        """Matches BundleOfJoy.cs: generate three distinct colorless cards into hand."""
         combat = _make_combat()
         combat.hand = [make_bundle_of_joy()]
         combat.energy = 2
@@ -555,6 +556,7 @@ class TestRegentCardEffectsReferenceParity:
         assert enemy.get_power_amount(PowerId.VULNERABLE) == 3
 
     def test_shining_strike_deals_damage_gains_stars_and_returns_to_draw_pile(self):
+        """Matches ShiningStrike.cs: attack, gain stars, return to draw pile."""
         combat = _make_combat()
         enemy = combat.enemies[0]
         starting_hp = enemy.current_hp

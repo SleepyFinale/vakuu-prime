@@ -814,8 +814,10 @@ class CombatState:
 
     def start_combat(self) -> None:
         """Initialize combat and enter the first player turn."""
+        from sts2_env.core.creature import _ensure_power_registry
         from sts2_env.core.hooks import fire_before_combat_start
 
+        _ensure_power_registry()
         self._combat_started = True
         self.current_side = CombatSide.PLAYER
         self.round_number = 1

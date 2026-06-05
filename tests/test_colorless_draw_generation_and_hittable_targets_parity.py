@@ -66,6 +66,7 @@ class TestColorlessDrawGenerationAndHittableTargetsParity:
         assert combat.hand == [drawn]
 
     def test_jack_of_all_trades_upgraded_adds_two_distinct_non_self_colorless_cards(self):
+        """Matches JackOfAllTrades.cs: upgraded generates two distinct colorless cards."""
         combat = _make_combat()
         combat.hand = [make_jack_of_all_trades(upgraded=True)]
         combat.energy = 0
