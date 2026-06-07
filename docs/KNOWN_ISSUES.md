@@ -115,7 +115,9 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 - **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py) and [`reward_shaping.py`](../sts2_env/gym_env/reward_shaping.py): floor progress, combat clear, **non-linear HP penalties** (damage near 0 HP costs much more than at full HP), and combat **micro-rewards** for Vulnerable/Weak on enemies and block vs attacks (`--reward-shaping`, default on).
 - **Act-count curriculum** via `RunManager.max_acts` and `--act-count` (train Act 1 before full game).
-- **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
+- **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; legacy meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
+- **Navigator agent** via [`STS2NavigatorEnv`](../sts2_env/gym_env/navigator_env.py): dedicated strategic observations; all non-combat phases (`--combat-model`, [`scripts/train_navigator.py`](../scripts/train_navigator.py)).
+- **Combat-critic draft scoring** via [`sts2_env/gym_env/combat_value.py`](../sts2_env/gym_env/combat_value.py): `--combat-value-draft` (Phase 1) or `--combat-value-shaping` (Navigator training).
 - **Curriculum fine-tune:** `--load-model` to fine-tune from a Phase 1 checkpoint into a new output dir.
 - **Pause/resume:** Ctrl+C saves an `interrupted_checkpoint.zip`; `--resume --output-dir <dir>` continues from the latest checkpoint (periodic checkpoints every `--checkpoint-freq` steps), so multi-day training no longer has to run in one sitting. See [`docs/TRAINING_GUIDE.md`](TRAINING_GUIDE.md) ("Pause and Resume").
 
@@ -128,6 +130,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 **Card-value network and win tracking (implemented):**
 
 - Learned card picker in [`sts2_env/gym_env/card_value.py`](../sts2_env/gym_env/card_value.py), trained via [`scripts/train_card_value.py`](../scripts/train_card_value.py) with outcome-weighted heuristic labels.
+- **Combat-critic draft picker** in [`sts2_env/gym_env/combat_value.py`](../sts2_env/gym_env/combat_value.py): uses the frozen combat PPO value head to score drafts against elite encounters. Opening-hand RNG adds variance; mitigated by fixed seed ensembles (`CombatValueConfig.rng_seed`, `num_encounters`).
 - [`RunWinRateCallback`](../sts2_env/training/callbacks.py) logs `eval/win_rate` during long meta training; [`scripts/eval_full_run.py`](../scripts/eval_full_run.py) for post-training sweeps.
 
 Remaining work: achieving a positive full-run win rate still depends on running full preset schedules (2M–8M meta steps) with mixed-act combat and a trained card-value model; no guarantee without sufficient training time.

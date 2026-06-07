@@ -386,7 +386,55 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 | Long episodes | Meta-steps + act-count curriculum | Further episode compression |
 | Multi-phase | Hierarchical combat delegate + meta PPO | Further shop/event learned policies |
 | Simulation speed | ~1,200 combats/sec | Cython acceleration of core loop (target: 10k+/sec) |
-| Card selection | Meta policy via combat-slice choices | Dedicated card evaluation network |
+| Card selection | Meta policy via combat-slice choices | Combat critic draft picker + Navigator PPO |
+
+---
+
+## Hierarchical RL (Combat + Navigator)
+
+Two distinct controllers separate tactical combat from strategic run decisions:
+
+| Controller | Role | Training |
+| ------------ | ---- | -------- |
+| **Combat Agent** | Play cards/potions in a fight; maximize HP retention | [`scripts/train_combat.py`](../scripts/train_combat.py) |
+| **Navigator Agent** | Map, drafting, shops, events, rest, boss relics | [`scripts/train_navigator.py`](../scripts/train_navigator.py) |
+
+Combat is always delegated to a frozen combat MaskablePPO. The Navigator never sees combat actions (0–114).
+
+### Phase 1 — Combat-value draft picker
+
+Use the combat PPO **critic** (`V(s)`) to score card rewards against sampled elite encounters ([`sts2_env/gym_env/combat_value.py`](../sts2_env/gym_env/combat_value.py)):
+
+```bash
+python scripts/train_combat.py --acts 0,1,2 --output-dir output/combat_ppo_mixed
+python scripts/train_full_run.py --preset phase1 --baseline-only \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --combat-value-draft
+```
+
+`--combat-value-draft` sets `card_reward_mode: combat_value` in non-combat heuristics. Pick `argmax ΔV` where `ΔV = V(deck + card) - V(deck)` averaged over elite encounters.
+
+The legacy supervised [`CardValueNet`](../sts2_env/gym_env/card_value.py) remains available via `--card-value-model` but the combat critic is preferred for tighter deck-combat feedback.
+
+### Phase 2 — Navigator PPO
+
+Train the Navigator on all non-combat phases with dedicated observations ([`navigator_observation.py`](../sts2_env/gym_env/navigator_observation.py)):
+
+```bash
+python scripts/train_navigator.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --combat-value-shaping --output-dir output/navigator_ppo
+```
+
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--combat-value-shaping` | off | Add `draft_value_scale * ΔV` shaping on card picks |
+| `--draft-value-scale` | 0.1 | Scale for combat-critic draft shaping |
+| `--no-combat-value-shaping` | - | Ablation: macro shaping only |
+
+Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
+
+[`scripts/train_full_run.py`](../scripts/train_full_run.py) remains for legacy meta-policy training but is deprecated in favor of `train_navigator.py`.
 
 ---
 
@@ -403,7 +451,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 ## Future Improvements
 
-1. **Hierarchical policy:** Separate the policy into a high-level strategy selector (which card to add, which path to take) and a low-level combat executor. Train them independently and combine.
+1. **Hierarchical policy:** Implemented — Combat Agent ([`train_combat.py`](../scripts/train_combat.py)) + Navigator Agent ([`train_navigator.py`](../scripts/train_navigator.py)) with combat-critic draft scoring ([`combat_value.py`](../sts2_env/gym_env/combat_value.py)). Optional path-level value shaping remains future work.
 
 2. **Cython acceleration:** Port `core/combat.py`, `core/hooks.py`, and `core/damage.py` to Cython for 5-10x speedup. The main bottleneck is Python interpreter overhead in the hot loop.
 

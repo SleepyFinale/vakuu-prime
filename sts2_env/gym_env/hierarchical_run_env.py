@@ -168,6 +168,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         combat_models_by_character_loaded: dict[str, Any] | None = None,
         card_value_model_path: str | Path | None = None,
         card_value_model: Any | None = None,
+        use_combat_value_draft: bool = False,
         card_reward_observer: Callable[[RunManager], None] | None = None,
     ):
         super().__init__()
@@ -198,6 +199,13 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         self._card_value_config = None
         if card_value_model_path is not None or card_value_model is not None:
             self._configure_learned_card_picker(card_value_model, card_value_model_path)
+        self.use_combat_value_draft = use_combat_value_draft
+        if use_combat_value_draft:
+            from sts2_env.gym_env.combat_value import CombatValueConfig
+
+            self._heuristic_config.card_reward_mode = "combat_value"
+            if self._heuristic_config.combat_value_config is None:
+                self._heuristic_config.combat_value_config = CombatValueConfig()
         self.reward_shaping = reward_shaping
         self._reward_config = self._run_env._reward_config
 
@@ -390,6 +398,10 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
                 and mgr._offered_cards
             ):
                 self._card_reward_observer(mgr)
+
+            if self._heuristic_config.card_reward_mode == "combat_value":
+                self._ensure_combat_models()
+                self._heuristic_config.combat_value_model = self._combat_policy_for_run(mgr)
 
             action = heuristic_global_action(mgr, self._heuristic_config, self._layout)
             if action is None:

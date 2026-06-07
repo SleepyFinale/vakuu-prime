@@ -106,3 +106,16 @@ class TestHierarchicalRunEnv:
         assert shaping_reward >= 0.0
         assert env._meta_step_count == meta_steps_before
         assert mgr.phase != RunManager.PHASE_CARD_REWARD
+
+    def test_combat_value_draft_mode_configured(self):
+        from sts2_env.gym_env.hierarchical_run_env import STS2HierarchicalRunEnv
+
+        env = STS2HierarchicalRunEnv(
+            delegate_combat=True,
+            combat_model=_MockCombatModel(),
+            use_combat_value_draft=True,
+            use_noncombat_heuristic=True,
+            max_steps=500,
+        )
+        assert env.use_combat_value_draft is True
+        assert env._heuristic_config.card_reward_mode == "combat_value"

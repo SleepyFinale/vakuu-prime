@@ -1,17 +1,15 @@
-"""Train a MaskablePPO meta-policy on the STS2 hierarchical full-run environment.
+"""Train a MaskablePPO Navigator policy on the STS2 hierarchical run environment.
 
-Combat is delegated to a pre-trained combat MaskablePPO; card rewards, boss
-relics, and rest sites can be auto-resolved by heuristics. This script trains
-map navigation, shops, and events.
-
-Deprecated: prefer ``scripts/train_navigator.py`` for the Navigator agent with
-dedicated observations and combat-value draft shaping.
+The Navigator controls all non-combat phases (map, drafting, shops, events, rest,
+boss relics). Combat is delegated to a pre-trained combat MaskablePPO. Optional
+combat-critic reward shaping guides card drafting.
 
 Usage:
     pip install "sts2-rl-agent[train]"
     python scripts/train_combat.py --acts 0,1,2 --output-dir output/combat_ppo_mixed
-    python scripts/train_full_run.py --preset phase1 \\
-        --combat-model output/combat_ppo_mixed/best_model/best_model.zip
+    python scripts/train_navigator.py --preset phase1 \\
+        --combat-model output/combat_ppo_mixed/best_model/best_model.zip \\
+        --combat-value-shaping
 
 Requires: stable-baselines3, sb3-contrib, torch
 """
@@ -28,6 +26,7 @@ import numpy as np
 DEFAULT_COMBAT_MODEL = "output/combat_ppo_mixed/best_model/best_model.zip"
 DEFAULT_MAX_STEPS = 10_000
 DEFAULT_TOTAL_TIMESTEPS = 2_000_000
+DEFAULT_OUTPUT_DIR = "output/navigator_ppo"
 
 PRESETS = {
     "phase1": {"act_count": 1, "total_timesteps": 2_000_000},
@@ -56,7 +55,7 @@ def _resolve_combat_paths(args) -> tuple[
         parsed = parse_combat_models_spec(args.combat_models)
         return None, {act: str(path) for act, path in parsed.items()}, None
     combat_model = args.combat_model
-    if combat_model is None and args.delegate_combat:
+    if combat_model is None:
         combat_model = DEFAULT_COMBAT_MODEL
     return combat_model, None, None
 
@@ -73,10 +72,7 @@ def _validate_combat_paths(
     combat_model: str | None,
     combat_models: dict[int, str] | None,
     combat_models_by_character: dict[str, str] | None,
-    delegate_combat: bool,
 ) -> None:
-    if not delegate_combat:
-        return
     paths: list[str] = []
     if combat_models_by_character:
         paths.extend(combat_models_by_character.values())
@@ -114,12 +110,13 @@ def apply_preset(args) -> None:
         )
 
 
-def build_run_reward_config(args):
-    from sts2_env.gym_env.run_reward import RunRewardConfig
+def build_navigator_reward_config(args):
     from sts2_env.gym_env.reward_shaping import HpShapingConfig
+    from sts2_env.gym_env.run_reward import NavigatorRewardConfig
 
-    return RunRewardConfig(
+    return NavigatorRewardConfig(
         hp=HpShapingConfig(steepness=args.hp_steepness),
+        draft_value_scale=args.draft_value_scale,
     )
 
 
@@ -134,16 +131,13 @@ def make_masked_env(
     combat_models_by_character: dict[str, str] | None = None,
     character_id: str = "Ironclad",
     character_ids: tuple[str, ...] | None = None,
-    delegate_combat: bool = True,
-    use_noncombat_heuristic: bool = True,
-    card_value_model: str | None = None,
-    use_combat_value_draft: bool = False,
+    combat_value_shaping: bool = False,
     max_steps: int = DEFAULT_MAX_STEPS,
     act1_biome: str = "random",
     underdocks_unlocked: bool = True,
     underdocks_discovered: bool = True,
 ):
-    """Create a masked env factory for vectorised envs."""
+    """Create a masked Navigator env factory for vectorised envs."""
     try:
         from sb3_contrib.common.wrappers import ActionMasker
     except ImportError:
@@ -155,43 +149,24 @@ def make_masked_env(
         return env.action_masks()
 
     def _init():
-        if delegate_combat:
-            from sts2_env.gym_env.hierarchical_run_env import STS2HierarchicalRunEnv
+        from sts2_env.gym_env.navigator_env import STS2NavigatorEnv
 
-            env = STS2HierarchicalRunEnv(
-                combat_model_path=combat_model,
-                combat_models=combat_models,
-                combat_models_by_character=combat_models_by_character,
-                delegate_combat=True,
-                use_noncombat_heuristic=use_noncombat_heuristic,
-                card_value_model_path=card_value_model,
-                use_combat_value_draft=use_combat_value_draft,
-                character_id=character_id,
-                character_ids=character_ids,
-                act_count=act_count,
-                reward_shaping=reward_shaping,
-                reward_config=reward_config,
-                max_steps=max_steps,
-                act1_biome=act1_biome,
-                underdocks_unlocked=underdocks_unlocked,
-                underdocks_discovered=underdocks_discovered,
-            )
-        else:
-            from sts2_env.gym_env.run_env import STS2RunEnv
-
-            env = STS2RunEnv(
-                character_id=character_id,
-                character_ids=character_ids,
-                act_count=act_count,
-                reward_shaping=reward_shaping,
-                reward_config=reward_config,
-                max_steps=max_steps,
-                act1_biome=act1_biome,
-                underdocks_unlocked=underdocks_unlocked,
-                underdocks_discovered=underdocks_discovered,
-            )
-        env = ActionMasker(env, mask_fn)
-        return env
+        env = STS2NavigatorEnv(
+            combat_model_path=combat_model,
+            combat_models=combat_models,
+            combat_models_by_character=combat_models_by_character,
+            character_id=character_id,
+            character_ids=character_ids,
+            act_count=act_count,
+            reward_shaping=reward_shaping,
+            reward_config=reward_config,
+            combat_value_shaping=combat_value_shaping,
+            max_steps=max_steps,
+            act1_biome=act1_biome,
+            underdocks_unlocked=underdocks_unlocked,
+            underdocks_discovered=underdocks_discovered,
+        )
+        return ActionMasker(env, mask_fn)
 
     return _init
 
@@ -199,7 +174,7 @@ def make_masked_env(
 def train(args):
     try:
         from sb3_contrib import MaskablePPO
-        from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+        from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
         from sts2_env.training.callbacks import RunWinRateCallback
     except ImportError:
         print("Training requires sb3-contrib and stable-baselines3.")
@@ -217,44 +192,36 @@ def train(args):
 
     combat_model, combat_models, combat_models_by_character = _resolve_combat_paths(args)
     character_id, character_ids = _resolve_run_characters(args)
-    _validate_combat_paths(
-        combat_model,
-        combat_models,
-        combat_models_by_character,
-        args.delegate_combat,
-    )
+    _validate_combat_paths(combat_model, combat_models, combat_models_by_character)
 
-    print("Training MaskablePPO on STS2 Hierarchical Full Run")
+    print("Training MaskablePPO Navigator on STS2 Hierarchical Run")
     if args.preset:
-        print(f"  preset:           {args.preset}")
-    print(f"  act_count:        {args.act_count}")
+        print(f"  preset:                 {args.preset}")
+    print(f"  act_count:              {args.act_count}")
     if character_ids is not None:
-        print(f"  characters:       {character_ids}")
+        print(f"  characters:             {character_ids}")
     else:
-        print(f"  character:        {character_id}")
-    print(f"  n_envs:           {args.n_envs}")
-    print(f"  total_timesteps:  {args.total_timesteps}")
-    print(f"  learning_rate:    {args.lr}")
-    print(f"  batch_size:       {args.batch_size}")
-    print(f"  reward_shaping:   {args.reward_shaping}")
+        print(f"  character:              {character_id}")
+    print(f"  n_envs:                 {args.n_envs}")
+    print(f"  total_timesteps:        {args.total_timesteps}")
+    print(f"  learning_rate:          {args.lr}")
+    print(f"  batch_size:             {args.batch_size}")
+    print(f"  reward_shaping:         {args.reward_shaping}")
     if args.reward_shaping:
-        print(f"  hp_steepness:     {args.hp_steepness}")
-    print(f"  delegate_combat:  {args.delegate_combat}")
-    print(f"  noncombat_heur:   {args.use_noncombat_heuristic}")
+        print(f"  hp_steepness:           {args.hp_steepness}")
+    print(f"  combat_value_shaping:   {args.combat_value_shaping}")
+    if args.combat_value_shaping:
+        print(f"  draft_value_scale:      {args.draft_value_scale}")
     if combat_models_by_character:
-        print(f"  combat_by_char:   {combat_models_by_character}")
+        print(f"  combat_by_char:         {combat_models_by_character}")
     elif combat_models:
-        print(f"  combat_models:    {combat_models}")
+        print(f"  combat_models:          {combat_models}")
     else:
-        print(f"  combat_model:     {combat_model}")
-    if args.card_value_model:
-        print(f"  card_value_model: {args.card_value_model}")
-    if getattr(args, "combat_value_draft", False):
-        print(f"  combat_value_draft: True")
-    print(f"  max_steps:        {args.max_steps}")
-    print(f"  output_dir:       {args.output_dir}")
+        print(f"  combat_model:           {combat_model}")
+    print(f"  max_steps:              {args.max_steps}")
+    print(f"  output_dir:             {args.output_dir}")
     if args.load_model:
-        print(f"  load_model:       {args.load_model}")
+        print(f"  load_model:             {args.load_model}")
     print()
 
     output_dir = Path(args.output_dir)
@@ -263,7 +230,7 @@ def train(args):
     if not getattr(args, "resume", False):
         save_run_config(output_dir, args)
 
-    reward_config = build_run_reward_config(args) if args.reward_shaping else None
+    reward_config = build_navigator_reward_config(args) if args.reward_shaping else None
     env_kwargs = dict(
         act_count=args.act_count,
         reward_shaping=args.reward_shaping,
@@ -273,10 +240,7 @@ def train(args):
         combat_models_by_character=combat_models_by_character,
         character_id=character_id,
         character_ids=character_ids,
-        delegate_combat=args.delegate_combat,
-        use_noncombat_heuristic=args.use_noncombat_heuristic,
-        card_value_model=args.card_value_model,
-        use_combat_value_draft=getattr(args, "combat_value_draft", False),
+        combat_value_shaping=args.combat_value_shaping,
         max_steps=args.max_steps,
         act1_biome=args.act1_biome,
         underdocks_unlocked=args.underdocks_unlocked,
@@ -321,10 +285,6 @@ def train(args):
         )
         reset_timesteps = True
 
-    # RunWinRateCallback expects a Gymnasium-style env (reset(seed=...) -> (obs, info),
-    # step(...) -> obs, reward, terminated, truncated, info). EvalCallback operates
-    # on the vectorized env, but the win-rate callback should use the single wrapped
-    # environment instance directly to avoid VecEnv API mismatches.
     win_rate_callback = RunWinRateCallback(
         eval_env.envs[0],
         eval_freq=max((args.eval_freq * 5) // args.n_envs, 1),
@@ -355,7 +315,7 @@ def train(args):
 
     if interrupt_callback.interrupted:
         print(f"\nTraining interrupted after {elapsed:.1f}s")
-        print_pause_message("scripts/train_full_run.py", args.output_dir, model, args.total_timesteps)
+        print_pause_message("scripts/train_navigator.py", args.output_dir, model, args.total_timesteps)
         safe_close_vec_envs(train_env, eval_env)
         sys.exit(0)
 
@@ -365,7 +325,7 @@ def train(args):
     print(f"Final model saved to: {final_path}")
     print(f"Best model saved to: {output_dir / 'best_model'}")
 
-    print("\n--- Final Evaluation (sparse rewards, no heuristics) ---")
+    print("\n--- Final Evaluation (sparse rewards) ---")
     evaluate(
         model,
         act_count=args.act_count,
@@ -374,9 +334,6 @@ def train(args):
         combat_models_by_character=combat_models_by_character,
         character_id=character_id,
         character_ids=character_ids,
-        delegate_combat=args.delegate_combat,
-        card_value_model=args.card_value_model,
-        use_noncombat_heuristic=False,
         n_episodes=100,
     )
 
@@ -391,47 +348,27 @@ def _make_eval_env(
     combat_models_by_character: dict[str, str] | None,
     character_id: str,
     character_ids: tuple[str, ...] | None,
-    delegate_combat: bool,
-    card_value_model: str | None = None,
-    use_noncombat_heuristic: bool = False,
     act1_biome: str = "random",
     underdocks_unlocked: bool = True,
     underdocks_discovered: bool = True,
 ):
     from sb3_contrib.common.wrappers import ActionMasker
+    from sts2_env.gym_env.navigator_env import STS2NavigatorEnv
 
-    if delegate_combat:
-        from sts2_env.gym_env.hierarchical_run_env import STS2HierarchicalRunEnv
-
-        base = STS2HierarchicalRunEnv(
-            combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
-            combat_models=combat_models,
-            combat_models_by_character=combat_models_by_character,
-            delegate_combat=True,
-            use_noncombat_heuristic=use_noncombat_heuristic,
-            card_value_model_path=card_value_model,
-            character_id=character_id,
-            character_ids=character_ids,
-            act_count=act_count,
-            reward_shaping=False,
-            max_steps=DEFAULT_MAX_STEPS,
-            act1_biome=act1_biome,
-            underdocks_unlocked=underdocks_unlocked,
-            underdocks_discovered=underdocks_discovered,
-        )
-    else:
-        from sts2_env.gym_env.run_env import STS2RunEnv
-
-        base = STS2RunEnv(
-            character_id=character_id,
-            character_ids=character_ids,
-            act_count=act_count,
-            reward_shaping=False,
-            max_steps=DEFAULT_MAX_STEPS,
-            act1_biome=act1_biome,
-            underdocks_unlocked=underdocks_unlocked,
-            underdocks_discovered=underdocks_discovered,
-        )
+    base = STS2NavigatorEnv(
+        combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
+        combat_models=combat_models,
+        combat_models_by_character=combat_models_by_character,
+        character_id=character_id,
+        character_ids=character_ids,
+        act_count=act_count,
+        reward_shaping=False,
+        combat_value_shaping=False,
+        max_steps=DEFAULT_MAX_STEPS,
+        act1_biome=act1_biome,
+        underdocks_unlocked=underdocks_unlocked,
+        underdocks_discovered=underdocks_discovered,
+    )
 
     def mask_fn(env):
         return env.action_masks()
@@ -447,15 +384,12 @@ def evaluate(
     combat_models_by_character: dict[str, str] | None = None,
     character_id: str = "Ironclad",
     character_ids: tuple[str, ...] | None = None,
-    delegate_combat: bool = True,
-    card_value_model: str | None = None,
-    use_noncombat_heuristic: bool = False,
     n_episodes: int = 100,
     act1_biome: str = "random",
     underdocks_unlocked: bool = True,
     underdocks_discovered: bool = True,
 ):
-    """Evaluate with sparse terminal rewards."""
+    """Evaluate Navigator with sparse terminal rewards."""
     env = _make_eval_env(
         act_count,
         combat_model,
@@ -463,9 +397,6 @@ def evaluate(
         combat_models_by_character,
         character_id,
         character_ids,
-        delegate_combat,
-        card_value_model=card_value_model,
-        use_noncombat_heuristic=use_noncombat_heuristic,
         act1_biome=act1_biome,
         underdocks_unlocked=underdocks_unlocked,
         underdocks_discovered=underdocks_discovered,
@@ -513,45 +444,27 @@ def random_baseline(
     combat_models_by_character: dict[str, str] | None = None,
     character_id: str = "Ironclad",
     character_ids: tuple[str, ...] | None = None,
-    delegate_combat: bool = True,
-    use_noncombat_heuristic: bool = False,
     n_episodes: int = 100,
     act1_biome: str = "random",
     underdocks_unlocked: bool = True,
     underdocks_discovered: bool = True,
 ):
-    """Random-action baseline with sparse rewards."""
-    if delegate_combat:
-        from sts2_env.gym_env.hierarchical_run_env import STS2HierarchicalRunEnv
+    """Random-action Navigator baseline with sparse rewards."""
+    from sts2_env.gym_env.navigator_env import STS2NavigatorEnv
 
-        env = STS2HierarchicalRunEnv(
-            combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
-            combat_models=combat_models,
-            combat_models_by_character=combat_models_by_character,
-            delegate_combat=True,
-            use_noncombat_heuristic=use_noncombat_heuristic,
-            character_id=character_id,
-            character_ids=character_ids,
-            act_count=act_count,
-            reward_shaping=False,
-            max_steps=DEFAULT_MAX_STEPS,
-            act1_biome=act1_biome,
-            underdocks_unlocked=underdocks_unlocked,
-            underdocks_discovered=underdocks_discovered,
-        )
-    else:
-        from sts2_env.gym_env.run_env import STS2RunEnv
-
-        env = STS2RunEnv(
-            character_id=character_id,
-            character_ids=character_ids,
-            act_count=act_count,
-            reward_shaping=False,
-            max_steps=DEFAULT_MAX_STEPS,
-            act1_biome=act1_biome,
-            underdocks_unlocked=underdocks_unlocked,
-            underdocks_discovered=underdocks_discovered,
-        )
+    env = STS2NavigatorEnv(
+        combat_model_path=combat_model or DEFAULT_COMBAT_MODEL,
+        combat_models=combat_models,
+        combat_models_by_character=combat_models_by_character,
+        character_id=character_id,
+        character_ids=character_ids,
+        act_count=act_count,
+        reward_shaping=False,
+        max_steps=DEFAULT_MAX_STEPS,
+        act1_biome=act1_biome,
+        underdocks_unlocked=underdocks_unlocked,
+        underdocks_discovered=underdocks_discovered,
+    )
     rng = np.random.RandomState(42)
 
     wins = 0
@@ -574,7 +487,7 @@ def random_baseline(
         total_rewards.append(ep_reward)
         floors_reached.append(env.run_state.total_floor if env.run_state else 0)
 
-    print("=== Random Baseline (sparse eval) ===")
+    print("=== Random Navigator Baseline (sparse eval) ===")
     print(f"Episodes:         {n_episodes}")
     print(f"Win rate:         {wins / n_episodes:.1%}")
     print(f"Avg reward:       {np.mean(total_rewards):.3f}")
@@ -582,9 +495,9 @@ def random_baseline(
     print(f"Max floors:       {max(floors_reached)}")
 
 
-def main():
+def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Train MaskablePPO meta-policy on STS2 hierarchical full run",
+        description="Train MaskablePPO Navigator on STS2 hierarchical full run",
     )
     parser.add_argument(
         "--preset", type=str, default=None, choices=sorted(PRESETS),
@@ -640,28 +553,20 @@ def main():
         help="Mixed-character full-run pool: 'Ironclad,Silent' or 'all'",
     )
     parser.add_argument(
-        "--no-combat-delegate", action="store_true",
-        help="Train flat policy without combat delegation (ablation)",
+        "--combat-value-shaping", action="store_true", default=False,
+        help="Add combat-critic delta-V shaping on card draft picks",
     )
     parser.add_argument(
-        "--no-noncombat-heuristic", action="store_true",
-        help="Disable auto card-reward / boss-relic / rest heuristics",
+        "--no-combat-value-shaping", action="store_false", dest="combat_value_shaping",
+        help="Disable combat-value draft shaping (default)",
     )
     parser.add_argument(
-        "--card-value-model", type=str, default=None,
-        help="Learned card-value model (.pt or output dir) for card rewards",
-    )
-    parser.add_argument(
-        "--combat-value-draft", action="store_true",
-        help="Use combat PPO critic for card reward picks (Phase 1 HRL)",
-    )
-    parser.add_argument(
-        "--eval-with-heuristics", action="store_true",
-        help="Also evaluate with rule heuristics for card/boss/rest",
+        "--draft-value-scale", type=float, default=0.1,
+        help="Scale for combat-value draft shaping (default: 0.1)",
     )
     parser.add_argument(
         "--load-model", type=str, default=None,
-        help="Resume or fine-tune from a saved meta-policy zip",
+        help="Resume or fine-tune from a saved Navigator policy zip",
     )
     parser.add_argument(
         "--max-steps", type=int, default=DEFAULT_MAX_STEPS,
@@ -712,8 +617,8 @@ def main():
         help="Episodes per evaluation (default: 10)",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="output/run_ppo",
-        help="Output directory (default: output/run_ppo)",
+        "--output-dir", type=str, default=DEFAULT_OUTPUT_DIR,
+        help=f"Output directory (default: {DEFAULT_OUTPUT_DIR})",
     )
     parser.add_argument(
         "--baseline-only", action="store_true",
@@ -731,13 +636,12 @@ def main():
         "--keep-checkpoints", type=int, default=3,
         help="Number of periodic checkpoints to retain (default: 3)",
     )
+    return parser
+
+
+def main():
+    parser = build_arg_parser()
     args = parser.parse_args()
-    args.delegate_combat = not args.no_combat_delegate
-    args.use_noncombat_heuristic = not args.no_noncombat_heuristic
-    args.combat_value_draft = getattr(args, "combat_value_draft", False)
-    if args.combat_value_draft and not args.use_noncombat_heuristic:
-        print("Note: --combat-value-draft requires non-combat heuristics for card picks.")
-        args.use_noncombat_heuristic = True
 
     from sts2_env.training.checkpointing import resolve_resume_args
 
@@ -749,6 +653,7 @@ def main():
     character_id, character_ids = _resolve_run_characters(args)
 
     if args.baseline_only:
+        _validate_combat_paths(combat_model, combat_models, combat_models_by_character)
         random_baseline(
             act_count=args.act_count,
             combat_model=combat_model,
@@ -756,17 +661,9 @@ def main():
             combat_models_by_character=combat_models_by_character,
             character_id=character_id,
             character_ids=character_ids,
-            delegate_combat=args.delegate_combat,
-            use_noncombat_heuristic=args.use_noncombat_heuristic,
         )
     else:
-        if args.delegate_combat:
-            _validate_combat_paths(
-                combat_model,
-                combat_models,
-                combat_models_by_character,
-                True,
-            )
+        _validate_combat_paths(combat_model, combat_models, combat_models_by_character)
         print("Running random baseline for reference...")
         random_baseline(
             act_count=args.act_count,
@@ -775,28 +672,10 @@ def main():
             combat_models_by_character=combat_models_by_character,
             character_id=character_id,
             character_ids=character_ids,
-            delegate_combat=args.delegate_combat,
-            use_noncombat_heuristic=False,
             n_episodes=50,
         )
         print()
-        interrupted = train(args)
-        if not interrupted and args.eval_with_heuristics:
-            print("\n--- Heuristic-Assisted Evaluation ---")
-            from sb3_contrib import MaskablePPO
-            model = MaskablePPO.load(str(Path(args.output_dir) / "final_model"))
-            evaluate(
-                model,
-                act_count=args.act_count,
-                combat_model=combat_model,
-                combat_models=combat_models,
-                combat_models_by_character=combat_models_by_character,
-                character_id=character_id,
-                character_ids=character_ids,
-                delegate_combat=args.delegate_combat,
-                use_noncombat_heuristic=True,
-                n_episodes=50,
-            )
+        train(args)
 
 
 if __name__ == "__main__":

@@ -22,12 +22,23 @@ class NoncombatHeuristicConfig:
     card_reward: bool = True
     boss_relic: bool = True
     rest_site: bool = True
-    card_reward_mode: Literal["rules", "learned"] = "rules"
+    card_reward_mode: Literal["rules", "learned", "combat_value"] = "rules"
     card_value_model: Any | None = None
     card_value_config: Any | None = None
+    combat_value_model: Any | None = None
+    combat_value_config: Any | None = None
 
 
 def _pick_card_with_config(mgr: RunManager, config: NoncombatHeuristicConfig) -> int | None:
+    if config.card_reward_mode == "combat_value" and config.combat_value_model is not None:
+        from sts2_env.gym_env.combat_value import pick_card_by_combat_value
+
+        pick, _, _ = pick_card_by_combat_value(
+            mgr,
+            config.combat_value_model,
+            config=config.combat_value_config,
+        )
+        return pick
     if config.card_reward_mode == "learned" and config.card_value_model is not None:
         from sts2_env.gym_env.card_value import pick_card_reward_index as pick_learned
 

@@ -97,3 +97,33 @@ def compute_run_shaping(
             )
 
     return reward
+
+
+@dataclass(frozen=True)
+class NavigatorRewardConfig(RunRewardConfig):
+    """Run shaping plus combat-critic draft signals for the Navigator agent."""
+
+    draft_value_scale: float = 0.1
+    deck_value_scale: float = 0.0
+
+
+def compute_draft_value_shaping(
+    draft_delta: float,
+    config: NavigatorRewardConfig,
+) -> float:
+    """Shaping from combat critic delta-V on a card pick."""
+    return config.draft_value_scale * draft_delta
+
+
+def compute_navigator_shaping(
+    prev: RunRewardSnapshot,
+    curr: RunRewardSnapshot,
+    config: NavigatorRewardConfig,
+    *,
+    draft_delta: float = 0.0,
+) -> float:
+    """Macro run shaping plus optional combat-value draft shaping."""
+    reward = compute_run_shaping(prev, curr, config)
+    if draft_delta != 0.0:
+        reward += compute_draft_value_shaping(draft_delta, config)
+    return reward
