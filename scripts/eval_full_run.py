@@ -41,6 +41,22 @@ def main():
         "--with-heuristics", action="store_true",
         help="Enable rule heuristics for card/boss/rest",
     )
+    parser.add_argument(
+        "--mcts", action="store_true",
+        help="Use turn-bounded MCTS for delegated combat",
+    )
+    parser.add_argument(
+        "--mcts-sims", type=int, default=128,
+        help="MCTS simulations per combat decision (default: 128)",
+    )
+    parser.add_argument(
+        "--mcts-c-puct", type=float, default=1.5,
+        help="PUCT exploration constant (default: 1.5)",
+    )
+    parser.add_argument(
+        "--mcts-max-depth", type=int, default=30,
+        help="Max actions within a turn during MCTS (default: 30)",
+    )
     args = parser.parse_args()
 
     try:
@@ -51,6 +67,7 @@ def main():
             parse_combat_models_by_character,
             parse_combat_models_spec,
         )
+        from sts2_env.search.mcts_agent import build_mcts_config
     except ImportError:
         print("Requires sb3-contrib. pip install 'sts2-rl-agent[train]'")
         sys.exit(1)
@@ -94,6 +111,7 @@ def main():
             act_count=args.act_count,
             reward_shaping=False,
             max_steps=args.max_steps,
+            mcts_config=build_mcts_config(args),
         ),
         mask_fn,
     )
@@ -127,6 +145,7 @@ def main():
     else:
         print(f"Character:       {character_id}")
     print(f"Heuristics:      {args.with_heuristics}")
+    print(f"MCTS combat:     {args.mcts}")
     print(f"Card-value:      {args.card_value_model}")
     print(f"Win rate:        {wins / args.episodes:.1%}")
     print(f"Avg floors:      {np.mean(floors):.1f}")

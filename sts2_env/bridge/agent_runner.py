@@ -33,6 +33,7 @@ from sts2_env.bridge.protocol import (
 )
 from sts2_env.bridge.state_adapter import StateAdapter
 from sts2_env.parity.bridge_replay import BridgeReplayRecorder
+from sts2_env.search.mcts_agent import MCTSConfig, select_combat_action
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ def run_agent(
     verbose: bool = False,
     record_replay_path: str | None = None,
     replay_factory: str | None = None,
+    mcts_config: MCTSConfig | None = None,
 ) -> None:
     """Main agent loop.
 
@@ -190,7 +192,7 @@ def run_agent(
                     continue
 
                 if phase in Phase.COMBAT_PHASES:
-                    # ---- Combat: use trained model ----
+                    # ---- Combat: trained model (+ optional MCTS) ----
                     obs = adapter.encode_observation(state)
                     mask = adapter.compute_action_mask(state)
 
@@ -200,12 +202,42 @@ def run_agent(
                         client.end_turn()
                         continue
 
-                    action, _states = model.predict(
-                        obs,
-                        action_masks=mask,
-                        deterministic=deterministic,
-                    )
-                    action_int = int(action)
+                    action_int: int
+                    if mcts_config is not None:
+                        from sts2_env.bridge.combat_hydration import hydrate_combat_from_bridge
+
+                        hydration = hydrate_combat_from_bridge(state)
+                        if hydration.ok and hydration.combat is not None:
+                            if hydration.warnings:
+                                logger.debug(
+                                    "Bridge hydration warnings: %s",
+                                    "; ".join(hydration.warnings),
+                                )
+                            action_int = select_combat_action(
+                                hydration.combat,
+                                model,
+                                mcts_config=mcts_config,
+                            )
+                        else:
+                            logger.warning(
+                                "MCTS hydration failed (%s); falling back to PPO",
+                                "; ".join(hydration.warnings) or "unknown",
+                            )
+                            action_int = int(
+                                model.predict(
+                                    obs,
+                                    action_masks=mask,
+                                    deterministic=deterministic,
+                                )[0]
+                            )
+                    else:
+                        action_int = int(
+                            model.predict(
+                                obs,
+                                action_masks=mask,
+                                deterministic=deterministic,
+                            )[0]
+                        )
 
                     decoded = adapter.decode_action(action_int, state)
 
@@ -697,6 +729,26 @@ def main() -> None:
         default=None,
         help="Optional module:function factory to store in replay metadata for later comparison.",
     )
+    parser.add_argument(
+        "--mcts", action="store_true",
+        help="Use turn-bounded MCTS for combat (hydrates sim state from bridge JSON)",
+    )
+    parser.add_argument(
+        "--mcts-sims", type=int, default=128,
+        help="MCTS simulations per combat decision (default: 128)",
+    )
+    parser.add_argument(
+        "--mcts-c-puct", type=float, default=1.5,
+        help="PUCT exploration constant (default: 1.5)",
+    )
+    parser.add_argument(
+        "--mcts-max-depth", type=int, default=30,
+        help="Max actions within a turn during MCTS (default: 30)",
+    )
+    parser.add_argument(
+        "--mcts-time-budget", type=float, default=2.0,
+        help="Wall-clock seconds cap per MCTS decision (default: 2.0)",
+    )
 
     args = parser.parse_args()
 
@@ -708,6 +760,10 @@ def main() -> None:
 
     deterministic = not args.stochastic
 
+    from sts2_env.search.mcts_agent import build_mcts_config
+
+    mcts_config = build_mcts_config(args)
+
     run_agent(
         model_path=args.model_path,
         host=args.host,
@@ -716,6 +772,7 @@ def main() -> None:
         verbose=args.verbose,
         record_replay_path=args.record_replay,
         replay_factory=args.replay_factory,
+        mcts_config=mcts_config,
     )
 
 

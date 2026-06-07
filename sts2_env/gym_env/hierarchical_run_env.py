@@ -28,6 +28,7 @@ from sts2_env.gym_env.run_reward import (
     snapshot_from_manager,
 )
 from sts2_env.run.run_manager import RunManager
+from sts2_env.search.mcts_agent import MCTSConfig, select_combat_action
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         card_value_model: Any | None = None,
         use_combat_value_draft: bool = False,
         card_reward_observer: Callable[[RunManager], None] | None = None,
+        mcts_config: MCTSConfig | None = None,
     ):
         super().__init__()
         self._run_env = STS2RunEnv(
@@ -217,6 +219,7 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         self._combat_model_path = combat_model_path
         self._combat_models_paths = combat_models
         self._combat_models_by_character_paths = combat_models_by_character
+        self._mcts_config = mcts_config
 
         if delegate_combat:
             if combat_models_by_character and not self._combat_models_by_character:
@@ -433,17 +436,26 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
             if self._run_env.needs_player_select():
                 action = layout.player_select_start
             else:
-                obs = self._run_env._encode_obs()
-                full_mask = self._run_env.action_masks()
-                combat_obs = obs[:COMBAT_OBS_SIZE]
-                combat_mask = full_mask[
-                    layout.combat_start: layout.combat_start + layout.combat_size
-                ]
-                local_action, _ = combat_policy.predict(
-                    combat_obs,
-                    action_masks=combat_mask,
-                    deterministic=True,
-                )
+                combat = mgr.get_combat_state()
+                if combat is not None and self._mcts_config is not None:
+                    local_action = select_combat_action(
+                        combat,
+                        combat_policy,
+                        mcts_config=self._mcts_config,
+                    )
+                else:
+                    obs = self._run_env._encode_obs()
+                    full_mask = self._run_env.action_masks()
+                    combat_obs = obs[:COMBAT_OBS_SIZE]
+                    combat_mask = full_mask[
+                        layout.combat_start: layout.combat_start + layout.combat_size
+                    ]
+                    local_action, _ = combat_policy.predict(
+                        combat_obs,
+                        action_masks=combat_mask,
+                        deterministic=True,
+                    )
+                    local_action = int(local_action)
                 action = layout.combat_start + int(local_action)
 
             self._run_env._dispatch_action(action)

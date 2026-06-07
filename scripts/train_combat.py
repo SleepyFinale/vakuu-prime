@@ -258,6 +258,8 @@ def train(args):
     print(f"Best model saved to: {output_dir / 'best_model'}")
 
     print("\n--- Final Evaluation ---")
+    from sts2_env.search.mcts_agent import build_mcts_config
+
     evaluate(
         model,
         encounter_acts=encounter_acts,
@@ -265,6 +267,7 @@ def train(args):
         character_id=character_id,
         character_ids=character_ids,
         n_episodes=100,
+        mcts_config=build_mcts_config(args),
     )
 
     safe_close_vec_envs(train_env, eval_env)
@@ -277,10 +280,12 @@ def evaluate(
     character_id: str | None = DEFAULT_CHARACTER,
     character_ids: tuple[str, ...] | None = None,
     n_episodes: int = 100,
+    mcts_config=None,
 ):
     """Evaluate trained model."""
     from sb3_contrib.common.wrappers import ActionMasker
     from sts2_env.gym_env.combat_env import STS2CombatEnv
+    from sts2_env.search.mcts_agent import select_combat_action
 
     def mask_fn(env):
         return env.action_masks()
@@ -303,16 +308,28 @@ def evaluate(
         done = False
         ep_reward = 0.0
         while not done:
-            masks = env.action_masks()
-            action, _ = model.predict(obs, action_masks=masks, deterministic=True)
-            obs, reward, terminated, truncated, info = env.step(int(action))
+            base_env = env.unwrapped
+            while hasattr(base_env, "env"):
+                base_env = base_env.env
+            if mcts_config is not None and base_env.combat is not None:
+                action = select_combat_action(
+                    base_env.combat,
+                    model,
+                    mcts_config=mcts_config,
+                )
+            else:
+                masks = env.action_masks()
+                action, _ = model.predict(obs, action_masks=masks, deterministic=True)
+                action = int(action)
+            obs, reward, terminated, truncated, info = env.step(action)
             ep_reward += reward
             done = terminated or truncated
             if terminated and reward > 0:
                 wins += 1
         total_rewards.append(ep_reward)
 
-    print(f"Episodes:    {n_episodes}")
+    mode = "MCTS" if mcts_config is not None else "PPO"
+    print(f"Episodes:    {n_episodes} ({mode})")
     print(f"Acts:        {encounter_acts}")
     if character_ids is not None:
         print(f"Characters:  {character_ids}")
@@ -434,6 +451,30 @@ def main():
         help="Sparse terminal reward only (+1 win / -1 loss)",
     )
     parser.add_argument(
+        "--eval-only", action="store_true",
+        help="Load --load-model and run evaluation without training",
+    )
+    parser.add_argument(
+        "--mcts", action="store_true",
+        help="Use turn-bounded MCTS at inference (AlphaZero-style PPO prior)",
+    )
+    parser.add_argument(
+        "--mcts-sims", type=int, default=128,
+        help="MCTS simulations per combat decision (default: 128)",
+    )
+    parser.add_argument(
+        "--mcts-c-puct", type=float, default=1.5,
+        help="PUCT exploration constant (default: 1.5)",
+    )
+    parser.add_argument(
+        "--mcts-max-depth", type=int, default=30,
+        help="Max actions within a turn during MCTS (default: 30)",
+    )
+    parser.add_argument(
+        "--mcts-time-budget", type=float, default=None,
+        help="Optional wall-clock seconds cap per MCTS decision (bridge)",
+    )
+    parser.add_argument(
         "--hp-steepness", type=float, default=3.0,
         help="Exponential HP penalty steepness (default: 3.0)",
     )
@@ -452,6 +493,7 @@ def main():
     args = parser.parse_args()
 
     from sts2_env.training.checkpointing import resolve_resume_args
+    from sts2_env.search.mcts_agent import build_mcts_config
 
     resolve_resume_args(args)
 
@@ -465,6 +507,37 @@ def main():
             args.total_timesteps = MIXED_ACTS_DEFAULT_TIMESTEPS
         else:
             args.total_timesteps = SINGLE_ACT_DEFAULT_TIMESTEPS
+
+    if args.eval_only:
+        if not args.load_model:
+            parser.error("--eval-only requires --load-model")
+        from sb3_contrib import MaskablePPO
+        from sb3_contrib.common.wrappers import ActionMasker
+        from sts2_env.gym_env.combat_env import STS2CombatEnv
+
+        def mask_fn(env):
+            return env.action_masks()
+
+        dummy_env = ActionMasker(
+            STS2CombatEnv(
+                encounter_acts=encounter_acts,
+                act1_biome=args.act1_biome,
+                character_id=character_id or DEFAULT_CHARACTER,
+                character_ids=character_ids,
+            ),
+            mask_fn,
+        )
+        model = MaskablePPO.load(args.load_model, env=dummy_env)
+        evaluate(
+            model,
+            encounter_acts=encounter_acts,
+            act1_biome=args.act1_biome,
+            character_id=character_id,
+            character_ids=character_ids,
+            n_episodes=args.eval_episodes,
+            mcts_config=build_mcts_config(args),
+        )
+        return
 
     if args.output_dir is None:
         args.output_dir = default_output_dir(

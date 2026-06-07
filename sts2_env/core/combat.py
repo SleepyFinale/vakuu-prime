@@ -209,6 +209,12 @@ class CombatState:
         for ally in ally_players or ():
             self.add_ally_player(ally)
 
+    def clone(self) -> CombatState:
+        """Return a deep copy for search branching (MCTS)."""
+        from sts2_env.search.combat_clone import clone_combat_state
+
+        return clone_combat_state(self)
+
     @property
     def max_energy(self) -> int:
         from sts2_env.core.hooks import modify_max_energy

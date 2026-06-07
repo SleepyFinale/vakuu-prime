@@ -203,6 +203,7 @@ class MonsterAI:
         self.state_log: list[str] = []
         self._current_state_id = initial_state_id
         self._performed_first_move: bool = False
+        self._forced_move_id: str | None = None
 
         # Resolve initial state to a MoveState (walk through branches)
         self._resolve_to_move(rng)
@@ -227,12 +228,27 @@ class MonsterAI:
                 rng = RngClass(0)
             self._current_state_id = state.get_next_state(self.state_log, rng)
 
+    def set_forced_move(self, move_id: str | None) -> None:
+        """Pin the next rolled move (search / bridge hydration only)."""
+        self._forced_move_id = move_id
+        if move_id is not None and move_id in self.states:
+            self._current_state_id = move_id
+            self._resolve_to_move(None)
+
     def roll_move(self, rng: Rng) -> MoveState:
         """Advance the state machine to the next move.
 
         Per C#: first move is held until performed. After that,
         each call advances to the next MoveState.
         """
+        if self._forced_move_id is not None:
+            forced_id = self._forced_move_id
+            self._forced_move_id = None
+            if forced_id in self.states:
+                self._current_state_id = forced_id
+                self._resolve_to_move(rng)
+                return self.current_move
+
         current = self.states[self._current_state_id]
 
         # Don't advance if first move hasn't been performed yet
