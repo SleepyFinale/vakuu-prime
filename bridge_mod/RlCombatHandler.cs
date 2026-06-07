@@ -456,11 +456,26 @@ public class RlCombatHandler : IRoomHandler, IHandler
 
             // Hand cards
             var handCards = new List<Dictionary<string, object>>();
+            var drawCards = new List<Dictionary<string, object>>();
+            var discardCards = new List<Dictionary<string, object>>();
+            var playCards = new List<Dictionary<string, object>>();
             if (pcs != null)
             {
                 foreach (CardModel card in pcs.Hand.Cards)
                 {
                     handCards.Add(SerializeCard(card));
+                }
+                foreach (CardModel card in pcs.DrawPile.Cards)
+                {
+                    drawCards.Add(SerializeCard(card));
+                }
+                foreach (CardModel card in pcs.DiscardPile.Cards)
+                {
+                    discardCards.Add(SerializeCard(card));
+                }
+                foreach (CardModel card in pcs.PlayPile.Cards)
+                {
+                    playCards.Add(SerializeCard(card));
                 }
             }
 
@@ -484,6 +499,9 @@ public class RlCombatHandler : IRoomHandler, IHandler
                 ["type"] = "combat_action",
                 ["player"] = playerObj,
                 ["hand"] = handCards,
+                ["draw_pile"] = drawCards,
+                ["discard_pile"] = discardCards,
+                ["play_pile"] = playCards,
                 ["enemies"] = enemies,
                 ["relics"] = relics,
                 ["potions"] = potions,

@@ -350,4 +350,4 @@ obs, info = env.reset()  # Start next episode
 
 **Cause:** The observation size changed between training and inference (e.g., new features were added to the observation encoder).
 
-**Solution:** Ensure the same version of `observation.py` is used for both training and inference. The observation size is `OBS_SIZE = 268` dimensions (148 combat v2 + 120 relic slots). If you modify the observation encoder or policy architecture (`--policy attention` vs `mlp`), retrain the model.
+**Solution:** Ensure the same version of `observation.py` is used for both training and inference. The observation size is `OBS_SIZE = 294` dimensions (obs v4). If you modify the observation encoder or policy architecture (`--policy attention` vs `mlp`), retrain the model.

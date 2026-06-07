@@ -110,7 +110,7 @@ python scripts/train_combat.py \
 
 ### Command (GNN policy)
 
-Graph policy uses the same 268-dim obs v3 tokens with **structural edges**
+Graph policy uses the same 294-dim obs v4 tokens with **structural edges**
 (card→enemy from static target metadata, enemy→player on attack intents, relic→player).
 Requires `torch-geometric`.
 
@@ -463,7 +463,7 @@ Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 
-7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 268 dims (obs v3: mechanics + relic slots); retrain after upgrading from 148-dim or 131-dim checkpoints.
+7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 294 dims (obs v4: pile memory + relic slots); retrain after upgrading from 268-dim or earlier checkpoints.
 
 8. **Entity-based policies:** `--policy attention` (`CombatAttentionExtractor`) and `--policy gnn` (`CombatGNNExtractor`) share tokenization via `sts2_env/training/entity_tokens.py`. GNN uses structural edges from `entity_graph.py`.
 
@@ -501,4 +501,4 @@ one-hot/mechanics/relic features and poor play.
 See [docs/BRIDGE_LIVE_SMOKE.md](BRIDGE_LIVE_SMOKE.md) for the offline smoke gate
 and [docs/AGENT_USAGE_GUIDE.md](AGENT_USAGE_GUIDE.md) for agent runner options.
 
-**Observation v3 note:** Combat `OBS_SIZE` is now **268** (148 combat v2 + 120 relic slots). Existing 148-dim and 131-dim PPO checkpoints are incompatible. Retrain combat models with the updated encoder and `--policy attention` (or `--policy mlp` for a flat baseline on the new obs size).
+**Observation v4 note:** Combat `OBS_SIZE` is now **294** (157 combat base + 17 mechanics + 120 relic slots). Pile memory (dims 63–88) encodes draw-pile composition and next-turn draw probabilities via `pile_distribution.py`. Existing 268-dim (obs v3) and earlier PPO checkpoints are incompatible. Retrain combat models with the updated encoder and `--policy attention` (or `--policy mlp` for a flat baseline on the new obs size).

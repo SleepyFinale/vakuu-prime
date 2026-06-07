@@ -1,16 +1,16 @@
 """Observation space encoding.
 
-Compact flat float32 vector (268 dimensions, obs v3):
+Compact flat float32 vector (294 dimensions, obs v4):
   Player state:       hp/max_hp, block/50, energy, max_energy       (4)
   Player powers:      str, dex, vuln, weak, frail, artifact         (6)
   Hand (10 cards):    card_id_norm, cost, damage, block, is_attack  (50)
-  Pile sizes:         draw, discard, exhaust, reserved, reserved,
-                      reserved                                     (6)
+  Pile summaries:     draw, discard, exhaust counts + pile memory
+                      (26) + reserved (3)                            (32)
   Enemies (5 slots):  alive, hp%, block, intent_onehot(5),
                       intent_dmg, intent_hits, vuln, weak, str      (13 * 5 = 65)
   Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
   Relics (30 slots):  relic_id_norm, rarity, enabled, is_used_up     (4 * 30 = 120)
-Total: 4 + 6 + 50 + 6 + 65 + 17 + 120 = 268
+Total: 4 + 6 + 50 + 32 + 65 + 17 + 120 = 294
 """
 
 from __future__ import annotations
@@ -21,6 +21,13 @@ from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS
 from sts2_env.core.combat import CombatState
 from sts2_env.core.enums import CardId, IntentType, OrbType, PowerId, RelicRarity
 from sts2_env.core.constants import MAX_HAND_SIZE, MAX_ENEMIES
+from sts2_env.gym_env.pile_distribution import (
+    PILE_FEATURES,
+    PILE_MEMORY_FEATURES,
+    cards_from_combat,
+    encode_pile_summaries,
+    projected_next_draw_count,
+)
 from sts2_env.orbs.base import OrbQueue
 from sts2_env.relics.base import RelicId, RelicInstance
 
@@ -50,8 +57,8 @@ CARD_FEATURES = 5  # card_id_norm, cost, damage, block, is_attack
 # alive(1) + hp%(1) + block(1) + intent_onehot(5) + intent_dmg(1) + intent_hits(1) + vuln(1) + weak(1) + str(1)
 ENEMY_FEATURES = 1 + 1 + 1 + NUM_INTENT_TYPES + 1 + 1 + 1 + 1 + 1  # = 13
 
-# Pile summary features
-PILE_FEATURES = 6  # draw_size, discard_size, exhaust_size, reserved x3
+# Pile summary features (counts + draw-pile memory + reserved padding)
+# Exported from pile_distribution.py: PILE_FEATURES, PILE_MEMORY_FEATURES
 
 # Character mechanics (orbs, stars, Osty companion)
 NUM_TRAINING_CHARACTERS = len(SUPPORTED_TRAINING_CHARACTERS)
@@ -98,8 +105,8 @@ NUM_RELIC_RARITIES = len(RelicRarity)
 _RELIC_RARITY_TO_IDX = {rarity: i for i, rarity in enumerate(RelicRarity)}
 RELIC_OBS_SIZE = MAX_RELIC_SLOTS * RELIC_FEATURES  # = 120
 
-# Full observation size (obs v3)
-OBS_SIZE = COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE  # = 268
+# Full observation size (obs v4)
+OBS_SIZE = COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE  # = 294
 
 # Token layout for attention feature extractor (start, end indices)
 TOKEN_SLICES: dict[str, tuple[int, int]] = {
@@ -293,16 +300,17 @@ def encode_observation(combat: CombatState) -> np.ndarray:
             obs[idx + 4] = 1.0 if card.is_attack else 0.0
         idx += CARD_FEATURES
 
-    # --- Pile summaries (6) ---
-    obs[idx] = len(combat.draw_pile) / 20.0
-    obs[idx + 1] = len(combat.discard_pile) / 20.0
-    obs[idx + 2] = len(combat.exhaust_pile) / 20.0
-    # Keep the last three pile-summary dimensions zeroed so simulator and
-    # bridge observations stay aligned even though the bridge only exposes
-    # aggregate pile counts.
-    obs[idx + 3] = 0.0
-    obs[idx + 4] = 0.0
-    obs[idx + 5] = 0.0
+    # --- Pile summaries (32) ---
+    draw, discard, play, hand_cards = cards_from_combat(combat)
+    next_draw_count = projected_next_draw_count(len(combat.hand), combat=combat)
+    obs[idx:idx + PILE_FEATURES] = encode_pile_summaries(
+        draw,
+        discard,
+        play,
+        hand_cards,
+        len(combat.exhaust_pile),
+        next_draw_count=next_draw_count,
+    )
     idx += PILE_FEATURES
 
     # --- Enemies (5 * 13 = 65) ---

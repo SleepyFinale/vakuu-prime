@@ -9,12 +9,12 @@ The observation format is defined in gym_env/observation.py:
   - Player state: hp/max_hp, block/50, energy/10, max_energy/10 (4)
   - Player powers: str, dex, vuln, weak, frail, artifact (6)
   - Hand cards: card_id_norm, cost, damage, block, is_attack (10 * 5 = 50)
-  - Pile sizes: draw, discard, exhaust, reserved, reserved, reserved (6)
+  - Pile sizes: draw, discard, exhaust counts + pile memory (26) + reserved (3) (32)
   - Enemies: alive, hp%, block, intent_onehot(5), intent_dmg,
              intent_hits, vuln, weak, str (5 * 13 = 65)
   - Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
   - Relics: relic_id_norm, rarity, enabled, is_used_up (30 * 4 = 120)
-  Total: 268 dimensions
+  Total: 294 dimensions
 """
 
 from __future__ import annotations
@@ -33,16 +33,19 @@ from sts2_env.core.constants import (
     POTION_TARGET_OPTIONS,
 )
 from sts2_env.core.enums import CardId, PotionUsageType
+from sts2_env.gym_env.pile_distribution import (
+    PILE_FEATURES,
+    cards_from_bridge,
+    encode_pile_summaries,
+    projected_next_draw_count,
+)
 from sts2_env.gym_env.observation import (
     BASE_OBS_SIZE,
     CARD_FEATURES,
     ENEMY_FEATURES,
-    INTENT_TYPES,
     NUM_CARD_IDS,
     NUM_INTENT_TYPES,
-    NUM_PLAYER_POWERS,
     OBS_SIZE,
-    PILE_FEATURES,
     COMBAT_OBS_V2_SIZE,
     encode_character_mechanics_from_fields,
     encode_relics_into_obs,
@@ -112,7 +115,7 @@ class StateAdapter:
                    Must contain 'combat_state' with player, hand, enemies.
 
         Returns:
-            Float32 numpy array of shape (OBS_SIZE,) = (268,).
+            Float32 numpy array of shape (OBS_SIZE,) = (294,).
             Returns zeros if not in combat.
         """
         obs = np.zeros(OBS_SIZE, dtype=np.float32)
@@ -169,19 +172,18 @@ class StateAdapter:
                 obs[idx + 4] = 1.0 if card.get("type", "") == CardTypeName.ATTACK else 0.0
             idx += CARD_FEATURES
 
-        # --- Pile summaries (6) ---
-        # Keep the last three pile-summary dimensions zeroed so the bridge
-        # matches gym_env/observation.py exactly.
-        draw_count = combat.get("draw_pile_count", 0)
-        discard_count = combat.get("discard_pile_count", 0)
+        # --- Pile summaries (32) ---
+        draw, discard, play, hand_cards = cards_from_bridge(combat)
         exhaust_count = combat.get("exhaust_pile_count", 0)
-
-        obs[idx] = draw_count / 20.0
-        obs[idx + 1] = discard_count / 20.0
-        obs[idx + 2] = exhaust_count / 20.0
-        obs[idx + 3] = 0.0
-        obs[idx + 4] = 0.0
-        obs[idx + 5] = 0.0
+        next_draw_count = projected_next_draw_count(len(hand))
+        obs[idx:idx + PILE_FEATURES] = encode_pile_summaries(
+            draw,
+            discard,
+            play,
+            hand_cards,
+            exhaust_count,
+            next_draw_count=next_draw_count,
+        )
         idx += PILE_FEATURES
 
         # --- Enemies (5 * 13 = 65) ---

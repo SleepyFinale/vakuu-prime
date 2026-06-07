@@ -35,7 +35,7 @@ def _make_combat(deck, character_id: str) -> CombatState:
 def test_obs_size_includes_mechanics_and_relics():
     assert COMBAT_OBS_V2_SIZE == BASE_OBS_SIZE + CHARACTER_MECHANICS_FEATURES
     assert OBS_SIZE == COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE
-    assert OBS_SIZE == 268
+    assert OBS_SIZE == 294
 
 
 def test_character_one_hot_ironclad():

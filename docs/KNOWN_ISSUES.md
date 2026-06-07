@@ -145,13 +145,13 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 - **Character selection** in [`STS2CombatEnv`](../sts2_env/gym_env/combat_env.py): `--character` (single) and `--characters all` (mixed) in [`scripts/train_combat.py`](../scripts/train_combat.py).
 - **Starter deck, HP, and starting relic** per character via [`sts2_env/characters/all.py`](../sts2_env/characters/all.py).
-- **Observation v3 (268 dims):** character mechanics (dims 131–147), relic entity slots (dims 148–267), `CombatAttentionExtractor` in [`sts2_env/training/attention_extractor.py`](../sts2_env/training/attention_extractor.py), and optional `CombatGNNExtractor` in [`sts2_env/training/gnn_extractor.py`](../sts2_env/training/gnn_extractor.py).
+- **Observation v4 (294 dims):** pile memory (dims 63–88), character mechanics (dims 157–173), relic entity slots (dims 174–293), `CombatAttentionExtractor` in [`sts2_env/training/attention_extractor.py`](../sts2_env/training/attention_extractor.py), and optional `CombatGNNExtractor` in [`sts2_env/training/gnn_extractor.py`](../sts2_env/training/gnn_extractor.py).
 - **Full-run wiring:** `--character`, `--characters`, and `--combat-models-by-character` in [`scripts/train_full_run.py`](../scripts/train_full_run.py) and [`scripts/eval_full_run.py`](../scripts/eval_full_run.py).
-- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, `osty`, and `relics` ([`bridge_mod/BridgeStateSerializer.cs`](../bridge_mod/BridgeStateSerializer.cs)); Python adapter encodes the full 268-dim vector ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
+- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, `osty`, `relics`, and pile card lists ([`bridge_mod/RlCombatHandler.cs`](../bridge_mod/RlCombatHandler.cs)); Python adapter encodes the full 294-dim vector ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
 
 **Remaining gaps:**
 
-- Pre-existing 131-dim and 148-dim combat checkpoints must be retrained for obs v3 (268 dims). `mlp`, `attention`, and `gnn` checkpoints are also mutually incompatible (different `policy_kwargs` / feature extractors).
+- Pre-existing 268-dim (obs v3) and earlier combat checkpoints must be retrained for obs v4 (294 dims). `mlp`, `attention`, and `gnn` checkpoints are also mutually incompatible (different `policy_kwargs` / feature extractors).
 - Live bridge eval requires matching the mod's `STS2_BRIDGE_CHARACTER` to the agent's trained character and `--character` / `--combat-models-by-character` model path.
 
 ### 9. Combat potion actions were missing from the RL action space
@@ -230,10 +230,10 @@ except Exception:
 
 ### 14. Pile-summary distribution shift between simulator and bridge
 
-**Status:** Fixed
+**Status:** Fixed (obs v4)
 
-**Problem:** The observation vector used to encode pile-composition features in simulator mode even though bridge mode could not provide them.
+**Problem:** Obs v3 kept three pile-composition slots zeroed because the bridge only sent pile counts, not card lists. The agent could not count cards in the draw pile.
 
-**Fix:** The simulator now keeps those three pile-composition slots zeroed as well, so simulator and bridge observations match on that segment without changing observation size.
+**Fix:** Obs v4 adds 26 pile-memory features (unseen deck composition, next-draw probabilities, known top-of-deck order, high-value heuristics, watchlist groups). The bridge now serializes `draw_pile`, `discard_pile`, and `play_pile` card arrays; simulator and adapter share `encode_pile_memory()` from `pile_distribution.py`.
 
-**Location:** `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`
+**Location:** `sts2_env/gym_env/pile_distribution.py`, `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`, `bridge_mod/RlCombatHandler.cs`

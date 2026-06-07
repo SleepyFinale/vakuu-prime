@@ -47,17 +47,21 @@ def test_encode_observation_encodes_relic_slots() -> None:
     assert relic_slice[2:].sum() == 0.0
 
 
-def test_encode_observation_keeps_reserved_pile_summary_slots_zero() -> None:
+def test_encode_observation_encodes_pile_memory_when_card_lists_present() -> None:
     adapter = StateAdapter()
-    obs = adapter.encode_observation(_base_state())
+    state = _base_state()
+    state["draw_pile"] = [{"id": "Strike", "cost": 1, "type": "Attack"}]
+    state["discard_pile"] = [{"id": "Defend", "cost": 1, "type": "Skill"}]
+    state["play_pile"] = []
+    obs = adapter.encode_observation(state)
 
     pile_start = 4 + 6 + 50
-    assert obs[pile_start] == 5 / 20.0
-    assert obs[pile_start + 1] == 2 / 20.0
+    assert obs[pile_start] == 1 / 20.0
+    assert obs[pile_start + 1] == 1 / 20.0
     assert obs[pile_start + 2] == 1 / 20.0
-    assert obs[pile_start + 3] == 0.0
-    assert obs[pile_start + 4] == 0.0
-    assert obs[pile_start + 5] == 0.0
+    memory = obs[pile_start + 3:pile_start + 3 + 26]
+    assert memory.sum() > 0.0
+    assert obs[pile_start + 29:pile_start + 32].sum() == 0.0
 
 
 def test_compute_action_mask_includes_targeted_and_untargeted_potions() -> None:

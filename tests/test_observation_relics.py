@@ -1,4 +1,4 @@
-"""Tests for relic observation encoding (obs v3)."""
+"""Tests for relic observation encoding (obs v4)."""
 
 import numpy as np
 import pytest
@@ -34,9 +34,9 @@ def _make_combat(relics: list[str] | None = None) -> CombatState:
     return combat
 
 
-def test_obs_v3_size_constants():
+def test_obs_v4_size_constants():
     assert OBS_SIZE == COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE
-    assert OBS_SIZE == 268
+    assert OBS_SIZE == 294
     assert RELIC_OBS_SIZE == MAX_RELIC_SLOTS * RELIC_FEATURES
     assert TOKEN_SLICES["relics"] == (COMBAT_OBS_V2_SIZE, OBS_SIZE)
 

@@ -55,9 +55,10 @@ run/                        Full-run state management (depends on all above)
   events.py                 Event handler
 
 gym_env/                    Gymnasium environments (depends on run/, encounters/)
-  combat_env.py             Single-combat env (Discrete(115), obs 268-dim)
-  run_env.py                Full-run env (Discrete(157), obs 288-dim)
-  observation.py            CombatState -> 268-dim float32 vector (obs v3)
+  combat_env.py             Single-combat env (Discrete(115), obs 294-dim)
+  run_env.py                Full-run env (Discrete(157), obs 314-dim)
+  observation.py            CombatState -> 294-dim float32 vector (obs v4)
+  pile_distribution.py        Draw-pile memory encoding for obs v4
   training/entity_tokens.py       Shared entity token builder (48 nodes)
   training/entity_graph.py        Structural adjacency for GNN policy
   training/attention_extractor.py  Transformer feature extractor for MaskablePPO
@@ -350,7 +351,7 @@ The first move is held until `on_move_performed()` is called. After that, `roll_
 
 Single-combat training environment.
 
-- **Observation:** `Box(low=-1, high=10, shape=(268,), dtype=float32)`
+- **Observation:** `Box(low=-1, high=10, shape=(294,), dtype=float32)`
 - **Action space:** `Discrete(115)` = 1 end_turn + 10 untargeted card actions + 50 targeted card actions + 54 potion actions (`9 slots * (1 untargeted + 5 enemy targets)`)
 - **Action masking:** `action_masks()` returns `int8[115]` marking legal actions. Required by `MaskablePPO`.
 
@@ -371,14 +372,14 @@ On `step(action)`:
 
 ### Observation encoding (`gym_env/observation.py`)
 
-268-dimensional flat float32 vector (obs v3):
+294-dimensional flat float32 vector (obs v4):
 
 | Segment | Dims | Encoding |
 | ------- | ---- | -------- |
 | Player state | 4 | hp/max_hp, block/50, energy/10, max_energy/10 |
 | Player powers | 6 | str/20, dex/20, vuln/20, weak/20, frail/20, artifact/20 |
 | Hand (10 slots) | 50 | 5 features per card: card_id_norm, cost/5, damage/50, block/50, is_attack |
-| Pile summaries | 6 | draw/20, discard/20, exhaust/20, reserved x3 (zeroed for bridge parity) |
+| Pile summaries | 32 | draw/20, discard/20, exhaust/20; pile memory (26): unseen type fractions, next-draw probabilities, top-5 draw order, shuffle flag, high-value heuristics, watchlist groups; reserved x3 |
 | Enemies (5 slots) | 65 | 13 features per enemy: alive, hp%, block/50, intent_onehot(5), intent_dmg/30, intent_hits/5, vuln/10, weak/10, str/10 |
 | Character mechanics | 17 | one-hot(5), stars/30, orb cap/count, 3 orb slots (type, evoke), Osty alive/hp/block |
 | Relics (30 slots) | 120 | 4 features per relic: relic_id_norm, rarity, enabled, is_used_up |
@@ -387,7 +388,7 @@ Card and relic IDs are normalized as `(index + 1) / (total_ids + 1)` to produce 
 
 ### Entity tokenization (`training/entity_tokens.py`)
 
-Both attention and GNN policies parse obs v3 into **48 fixed nodes** (player,
+Both attention and GNN policies parse obs v4 into **48 fixed nodes** (player,
 piles, mechanics, 10 cards, 5 enemies, 30 relics) with per-type linear
 projections, entity-type embeddings, and padding masks for empty slots.
 
@@ -430,7 +431,7 @@ over the graph; output is mean-pooled like attention. Wired via `--policy gnn`.
 | Topic | CombatEnv | RunEnv |
 | ----- | --------- | ------ |
 | Scope | Single combat | Full multi-act run |
-| Obs size | 268 | 288 (268 combat + 20 run-level) |
+| Obs size | 294 | 314 (294 combat + 20 run-level) |
 | Action space | Discrete(115) | Discrete(157) |
 | Phases | Combat only | Combat + map + card_reward + boss_relic + shop + rest + event + treasure |
 | Reward | +1 win / -1 loss | +1 run win / -1 death or timeout |
@@ -490,5 +491,3 @@ Steps/sec:      28101
 2. **AnimationSpeedPatch fails to apply.** The Harmony patch targeting `MegaAnimationState.SetTimeScale` fails on some game versions because the method signature does not match. The patch is skipped with a log message; the game runs without animation acceleration.
 
 3. **Mod abandon-run popup path may not match.** The Godot node path `/root/Game/RootSceneContainer/MainMenu/...` for the abandon-run confirmation popup may differ across game versions.
-
-4. **Pile summary mismatch in bridge.** The state adapter (`state_adapter.py`) cannot compute draw/discard attack/skill counts because the bridge only sends pile counts, not full pile composition. These 3 features are always 0 in bridge mode but nonzero during simulator training, creating a distribution shift.
