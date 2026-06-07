@@ -262,6 +262,61 @@ The training script saves several model checkpoints:
 - `output/combat_ppo/checkpoints/checkpoint_<steps>_steps.zip` -- periodic resumable checkpoints (every `--checkpoint-freq` steps, newest `--keep-checkpoints` retained)
 - `output/combat_ppo/interrupted_checkpoint.zip` -- written when you stop training with Ctrl+C
 
+### Combat MCTS (Inference Only)
+
+Turn-bounded PUCT search in [`sts2_env/search/`](../sts2_env/search/) improves combat
+decisions at **inference time only** — MCTS is not used during PPO gradient updates.
+
+**Algorithm:**
+
+1. Root = `deepcopy` of current `CombatState`.
+2. Each simulation: select child via PUCT (`c_puct`), expand with masked PPO action
+   priors ([`policy_guide.py`](../sts2_env/search/policy_guide.py)), roll out with
+   `apply_combat_action()` until the player turn ends (`ACTION_END_TURN` / enemy phase)
+   or `--mcts-max-depth` is reached.
+3. Leaf value from PPO critic (`predict_combat_values()`, `leaf_eval="post_enemy_critic"`).
+4. Backpropagate visit counts and values; pick highest visit-count root child
+   (temperature 0).
+
+Search does **not** cross into the next player turn — it is model-predictive control
+within a single turn.
+
+**Post-training combat eval:**
+
+```bash
+python scripts/train_combat.py --acts 0 --load-model output/combat_ppo/best_model/best_model.zip \
+    --total-timesteps 0 --mcts --mcts-sims 128 --output-dir output/combat_ppo
+```
+
+**Full-run eval with MCTS delegate:**
+
+```bash
+python scripts/eval_full_run.py \
+    --load-model output/navigator_ppo/best_model/best_model.zip \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --mcts --mcts-sims 64
+```
+
+**Live bridge (default 2s time budget per decision):**
+
+```bash
+python -m sts2_env.bridge.agent_runner \
+    --model-path output/combat_ppo_mixed/best_model/best_model.zip \
+    --mcts --mcts-time-budget 2.0 --verbose
+```
+
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--mcts` | off | Enable turn-bounded search |
+| `--mcts-sims` | 128 | Simulations per decision |
+| `--mcts-c-puct` | 1.5 | PUCT exploration constant |
+| `--mcts-max-depth` | 30 | Max actions within one player turn |
+| `--mcts-time-budget` | None (train/eval) / 2.0s (bridge) | Wall-clock cap per decision |
+
+See [`tests/test_mcts_combat.py`](../tests/test_mcts_combat.py) for behavioral tests
+(e.g. preferring Inflame before Strike). For the full RL feature overview, see the
+[README Combat MCTS section](../README.md#combat-mcts-turn-bounded-mpc).
+
 ### Pause and Resume
 
 Long runs can be stopped and continued over several days. Both PPO trainers
@@ -449,7 +504,7 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 1. **Sparse reward:** Only +1 for winning the entire run, -1 for death. No intermediate signal for floor progression (unless reward shaping is enabled).
 2. **Long episodes:** A full Act 1 run involves 15+ floors, each with its own combat, map choice, and reward decisions. Episodes can span thousands of steps.
-3. **Multi-phase action space:** The agent must learn to handle 8 different game phases with very different semantics under a single Discrete(100) action space.
+3. **Multi-phase action space:** The agent must learn to handle 8 different game phases with very different semantics under a single Discrete(157) action space.
 4. **Compounding errors:** A bad card reward choice in floor 3 might not manifest as a loss until floor 12.
 
 ### Challenges and Mitigations
@@ -533,7 +588,7 @@ Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
 
 4. **Population-based training (PBT):** Use Ray RLlib to train multiple agents with different hyperparameters in parallel, automatically tuning learning rate, entropy, and gamma.
 
-5. **Combat curriculum:** Implemented — staged encounter/deck widening with HP-retention gates (`--curriculum`, `--auto-promote`) in [`combat_curriculum.py`](../sts2_env/training/combat_curriculum.py).
+5. **Combat curriculum:** Implemented — staged encounter/deck widening with HP-retention gates (`--curriculum`, `--auto-promote`) in [`combat_curriculum.py`](../sts2_env/training/combat_curriculum.py). See [README Combat Curriculum](../README.md#combat-curriculum-learning) for the stage table.
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 

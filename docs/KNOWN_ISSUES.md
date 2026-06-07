@@ -2,6 +2,10 @@
 
 Current known issues, bugs, and limitations of the STS2 RL Agent project.
 
+For the current RL architecture (obs v4, attention policies, curriculum, Navigator,
+MCTS, reward shaping), see the [README RL Feature Overview](../README.md#rl-feature-overview)
+and [TRAINING_GUIDE.md](TRAINING_GUIDE.md).
+
 ---
 
 ## Fixed Issues

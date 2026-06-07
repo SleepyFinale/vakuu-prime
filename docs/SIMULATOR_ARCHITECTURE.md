@@ -57,20 +57,38 @@ run/                        Full-run state management (depends on all above)
 gym_env/                    Gymnasium environments (depends on run/, encounters/)
   combat_env.py             Single-combat env (Discrete(115), obs 294-dim)
   run_env.py                Full-run env (Discrete(157), obs 314-dim)
+  navigator_env.py          Strategic env (obs 164-dim, combat delegated)
+  navigator_observation.py  Navigator-specific observation encoder
+  hierarchical_run_env.py   Legacy hierarchical wrapper (frozen combat delegate)
   observation.py            CombatState -> 294-dim float32 vector (obs v4)
-  pile_distribution.py        Draw-pile memory encoding for obs v4
-  training/entity_tokens.py       Shared entity token builder (48 nodes)
-  training/entity_graph.py        Structural adjacency for GNN policy
-  training/attention_extractor.py  Transformer feature extractor for MaskablePPO
-  training/gnn_extractor.py        DenseGAT feature extractor for MaskablePPO
+  pile_distribution.py      Draw-pile memory encoding for obs v4
+  reward_shaping.py         Non-linear HP + micro-reward math
+  combat_value.py           Combat-critic draft scoring (PPO value head)
   action_space.py           Action encoding + masking
-  reward.py                 Reward shaping
+  reward.py                 Combat step rewards
+  run_reward.py             Full-run / Navigator shaping
+
+training/                   RL policy extractors and curriculum (depends on gym_env/)
+  entity_tokens.py          Shared entity token builder (48 nodes)
+  entity_graph.py           Structural adjacency for GNN policy
+  attention_extractor.py    Transformer feature extractor for MaskablePPO
+  gnn_extractor.py          DenseGAT feature extractor for MaskablePPO
+  combat_curriculum.py      Staged encounter/deck curriculum
+  deck_templates.py         Starter/stripped/exhaust deck templates
+  curriculum_callback.py    Gate eval and auto-promotion callback
+
+search/                     Inference-only MCTS (depends on gym_env/, training/)
+  mcts_combat.py            PUCT turn-bounded search
+  mcts_agent.py             CLI integration (select_combat_action)
+  combat_clone.py           Combat deepcopy for branching
+  policy_guide.py           PPO prior + critic for MCTS leaves
 
 bridge/                     Real-game connection (depends on gym_env/)
   client.py                 TCP client
   protocol.py               Message types, phases
-  state_adapter.py          Game JSON -> observation vector
-  agent_runner.py           Main agent loop
+  state_adapter.py          Game JSON -> 294-dim observation vector
+  combat_hydration.py       Bridge state hydration for MCTS / hydration fallback
+  agent_runner.py           Main agent loop (optional MCTS)
 ```
 
 Dependency flow is strictly top-down: `core -> cards/powers/monsters/relics -> encounters/events -> run -> gym_env -> bridge`. No circular imports.
@@ -416,6 +434,39 @@ Card targets are resolved from `card_id_norm` via static metadata
 over the graph; output is mean-pooled like attention. Wired via `--policy gnn`.
 
 **Checkpoint note:** `mlp`, `attention`, and `gnn` checkpoints are not interchangeable.
+
+### Navigator environment (`gym_env/navigator_env.py`)
+
+`STS2NavigatorEnv` is the **preferred** strategic training environment. It wraps
+`RunManager` with a dedicated observation encoder
+([`navigator_observation.py`](../sts2_env/gym_env/navigator_observation.py),
+164 dims) that includes run context, phase one-hot, map options, card-offer features,
+shop state, phase-specific options, and a combat-critic deck value scalar.
+
+During `PHASE_COMBAT`, the env auto-plays combat via a frozen MaskablePPO loaded from
+`--combat-model`. The Navigator policy never samples combat actions (0–114). Optional
+MCTS can wrap the combat delegate the same way as in `STS2HierarchicalRunEnv`.
+
+`STS2HierarchicalRunEnv`
+([`hierarchical_run_env.py`](../sts2_env/gym_env/hierarchical_run_env.py)) is the
+legacy wrapper used by `train_full_run.py`; it shares the combat delegation pattern but
+uses the full 314-dim run observation instead of the Navigator-specific encoder.
+
+### MCTS search (`search/`)
+
+Turn-bounded PUCT search for **inference only** (not used during PPO training):
+
+1. `combat_clone.clone_combat_state()` snapshots `CombatState` for branching.
+2. `combat_step.apply_combat_action()` steps a clone without gym overhead.
+3. `policy_guide.policy_prior_and_value()` supplies masked PPO action priors and
+   critic leaf values.
+4. `mcts_combat.mcts_search()` runs simulations until the player turn ends or
+   `max_actions_per_turn` is hit.
+5. `mcts_agent.select_combat_action()` is the CLI entry point used by
+   `train_combat.py`, `eval_full_run.py`, and `agent_runner.py`.
+
+Integration points: hierarchical/navigator env `_auto_play_combat()`, bridge
+`agent_runner.py` combat loop.
 
 ### Action space (`gym_env/action_space.py`)
 

@@ -38,11 +38,13 @@ sts2_env/           Python package (headless simulator + gym envs + bridge)
   relics/           Relic effects (290 relics)
   potions/          Potion effects (63 potions)
   encounters/       Encounter definitions
-  gym_env/          Gymnasium environments
+  gym_env/          Gymnasium environments (combat, run, navigator)
+  training/         Policy extractors, combat curriculum
+  search/           Inference-only MCTS
   bridge/           Real-game connection
 bridge_mod/         C# bridge mod (Godot project)
 scripts/            Training and benchmark scripts
-tests/              Test suite (16 test files, 408 test functions)
+tests/              Test suite (~140 test files, 5,387 test functions)
 docs/               Documentation
 decompiled/         Decompiled C# source from sts2.dll (reference only)
 extracted_pck/      Extracted Godot resources (reference only)

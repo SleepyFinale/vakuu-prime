@@ -1,148 +1,214 @@
 # Agent Usage Guide
 
-This guide covers training RL agents and running them against the real Slay the Spire 2 game.
+This guide covers training RL agents and running them against the real Slay the Spire 2 game. For the full training reference (curriculum stages, policy architectures, hyperparameters), see [TRAINING_GUIDE.md](TRAINING_GUIDE.md).
 
 ---
 
 ## 1. Training a Combat Agent
 
-The combat environment (`STS2CombatEnv`) trains an agent on single combat encounters. The agent learns to play cards, manage energy, and defeat monsters.
+The combat environment (`STS2CombatEnv`) trains an agent on single combat encounters. Default policy is a **Transformer self-attention** extractor over 48 entity tokens; observations are **294-dim obs v4** (including draw-pile memory and relic slots).
 
-### Basic Training
+### Recommended: Curriculum-First Training
+
+Start on easy Act 1 fights before widening encounter tiers:
 
 ```bash
 pip install -e ".[train]"
-python scripts/train_combat.py
+
+python scripts/train_combat.py \
+    --curriculum easy_pair \
+    --characters Ironclad,Regent \
+    --total-timesteps 500000 \
+    --n-envs 8 \
+    --output-dir output/curriculum/s1_easy
 ```
 
-### Advanced Training
+Hands-off auto-promotion through all stages:
+
+```bash
+python scripts/train_combat.py --curriculum full --auto-promote \
+    --characters Ironclad,Regent --total-timesteps 5000000 \
+    --output-dir output/curriculum/auto
+```
+
+### Advanced Combat Training
+
+Mixed acts and all characters (combat delegate for full-run training):
 
 ```bash
 python scripts/train_combat.py \
-    --total-timesteps 2000000 \
+    --acts 0,1,2 \
+    --characters all \
+    --policy attention \
+    --total-timesteps 3000000 \
     --n-envs 8 \
-    --lr 3e-4 \
-    --batch-size 512 \
-    --n-steps 2048 \
-    --ent-coef 0.01 \
-    --eval-freq 10000 \
-    --eval-episodes 20 \
-    --output-dir output/combat_ppo_gpu
+    --output-dir output/combat_ppo_mixed
+```
+
+GNN policy (requires `torch-geometric`):
+
+```bash
+python scripts/train_combat.py \
+    --acts 0,1,2 \
+    --policy gnn \
+    --output-dir output/combat_ppo_mixed_gnn
 ```
 
 ### What Happens During Training
 
 1. The script creates `--n-envs` parallel combat environments.
-2. Each environment randomly selects an Act 1 encounter and creates an Ironclad starter deck.
-3. The MaskablePPO agent collects rollouts and updates its policy.
-4. Every `--eval-freq` steps, the agent is evaluated on `--eval-episodes` episodes.
-5. The best model (by evaluation reward) is saved to `output_dir/best_model/`.
-6. The final model is saved to `output_dir/final_model/`.
-7. After training, a 100-episode evaluation prints win rate and average reward.
+2. With `--curriculum`, each reset samples encounters and decks from the current stage ([`combat_curriculum.py`](../sts2_env/training/combat_curriculum.py)).
+3. Without curriculum, encounters are drawn from the act/tier pool for the selected character(s).
+4. MaskablePPO with the chosen feature extractor (`attention`, `gnn`, or `mlp`) collects rollouts.
+5. **Reward shaping** (non-linear HP penalty + Vulnerable/Weak/block micro-rewards) is on by default during training; the eval env uses sparse ±1 rewards.
+6. Every `--eval-freq` steps, the agent is evaluated. Curriculum runs also log `curriculum/gate_win_rate` and `curriculum/gate_hp_ratio`.
+7. The best model is saved to `output_dir/best_model/`; after training, 100 evaluation episodes print win rate.
+8. Use `--resume --output-dir <same>` to continue a paused run; use `--load-model` to fine-tune into a **new** output directory (e.g. next curriculum stage).
 
 ### Training Output
 
 ```text
-output/combat_ppo/
-  tb_logs/          # TensorBoard logs
-  eval_logs/        # Evaluation results
-  best_model/       # Best model checkpoint
-    best_model.zip
-  final_model.zip   # Final model
+output/curriculum/s1_easy/
+  tb_logs/                    # TensorBoard logs
+  eval_logs/                  # Evaluation results
+  curriculum_state.json       # Stage index for parallel workers
+  best_model/best_model.zip   # Best checkpoint
+  final_model.zip             # Final checkpoint
+  run_config.json             # Settings for --resume
 ```
 
-View training progress with TensorBoard:
+View training progress:
 
 ```bash
-tensorboard --logdir output/combat_ppo/tb_logs
+tensorboard --logdir output/curriculum/s1_easy/tb_logs
 ```
 
-### Hyperparameter Guidance
+### Combat Training Flags (selected)
 
-| Parameter | Recommended Range | Notes |
-| --------- | ----------------- | ----- |
-| `--lr` | 1e-4 to 5e-4 | Lower for stability, higher for speed |
-| `--batch-size` | 128 to 512 | Larger = more stable gradients |
-| `--n-steps` | 1024 to 4096 | More steps = better advantage estimates |
-| `--ent-coef` | 0.005 to 0.02 | Higher = more exploration |
-| `--gamma` | 0.99 | Standard for short episodes |
-| `--n-envs` | 4 to 16 | Match your CPU core count |
-| `--total-timesteps` | 500K to 5M | More is generally better |
+| Parameter | Default | Notes |
+| --------- | ------- | ----- |
+| `--policy` | `attention` | `attention`, `gnn`, or `mlp` — checkpoints not interchangeable |
+| `--curriculum` | — | Stage name or `full` |
+| `--auto-promote` | off | Advance when gate metrics pass |
+| `--reward-shaping` | True | Disable with `--no-reward-shaping` |
+| `--hp-steepness` | 3.0 | Exponential HP penalty steepness |
+| `--total-timesteps` | 2M (act 0) / 500K (curriculum) | More is generally better |
+| `--n-envs` | 4 | Match CPU core count |
+| `--lr` | 3e-4 | Lower for stability, higher for speed |
+| `--mcts` | off | Post-training eval with turn-bounded MCTS |
+
+### Checkpoint Compatibility
+
+- Combat `OBS_SIZE` is **294** (obs v4). Checkpoints trained on 268-dim (v3) or 131-dim vectors are **obsolete**.
+- Policy type (`mlp` / `attention` / `gnn`) must match at load time. Check `run_config.json` in the output directory.
 
 ---
 
 ## 2. Training a Full-Run Agent
 
-The full-run environment (`STS2RunEnv`) trains an agent on complete game runs, including combat, map navigation, card rewards, shop, rest sites, and events.
+Full-run training uses a **hierarchical** design: a frozen combat PPO plays fights; a separate **Navigator** PPO handles strategic decisions.
 
-### Basic Full-Run Training
+### Recommended: Navigator PPO
 
-Requires a trained combat model (mixed acts recommended):
+Requires a trained mixed-act combat model:
 
 ```bash
-python scripts/train_combat.py --acts 0,1,2 --output-dir output/combat_ppo_mixed
+# Phase 0: combat delegate
+python scripts/train_combat.py --acts 0,1,2 --characters all \
+    --total-timesteps 3000000 --output-dir output/combat_ppo_mixed
+
+# Phase 2: Navigator (preferred)
+python scripts/train_navigator.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --combat-value-shaping \
+    --output-dir output/navigator_ppo
+```
+
+Fine-tune to full game:
+
+```bash
+python scripts/train_navigator.py --preset phase2 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --combat-value-shaping \
+    --load-model output/navigator_ppo/final_model.zip \
+    --output-dir output/navigator_ppo_full
+```
+
+### Key Navigator Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--combat-model` | Single frozen combat zip for all acts |
+| `--combat-models` | Per-act routing: `0:path0,1:path1,2:path2` |
+| `--combat-models-by-character` | Per-character: `Ironclad:path0,Silent:path1` |
+| `--combat-value-shaping` | Draft pick shaping via combat PPO critic ΔV |
+| `--draft-value-scale` | 0.1 (scale for draft ΔV bonus) |
+| `--act-count` | Acts before win (1 = Act 1, 3 = full game) |
+| `--preset` | `phase1` (2M, Act 1), `phase2` (5M, full), `full` (8M) |
+
+### Legacy: Flat Meta-Policy (`train_full_run.py`)
+
+Deprecated in favor of `train_navigator.py`. Still available:
+
+```bash
+python scripts/train_full_run.py --preset phase1 \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --n-envs 4 --output-dir output/run_ppo
+```
+
+Optional learned card picker (alternative to combat-critic):
+
+```bash
 python scripts/train_card_value.py --collect-episodes 5000
 python scripts/train_full_run.py --preset phase1 \
     --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
     --card-value-model output/card_value/best_model.pt
 ```
 
-### Training with Options
+### Act Count Curriculum
 
-```bash
-python scripts/train_full_run.py --preset phase2 \
-    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
-    --combat-models "0:act0.zip,1:act1.zip,2:act2.zip" \
-    --load-model output/run_ppo/final_model.zip \
-    --n-envs 8 --output-dir output/run_ppo
-```
-
-### Key Differences from Combat Training
-
-- **Hierarchical combat:** Fights are played by a frozen combat PPO (`--combat-model` or `--combat-models`).
-- **Non-combat heuristics:** Boss relics and rest are rule-based; card rewards use rules by default or a learned model (`--card-value-model`, trained via `scripts/train_card_value.py`). Disable all auto-picks with `--no-noncombat-heuristic`.
-- **Win-rate tracking:** TensorBoard `eval/win_rate` during training; post-hoc sweeps via `scripts/eval_full_run.py` (`--eval-with-heuristics`, `--card-value-model`).
-- **Meta action space:** Map, shop, and events under `Discrete(157)`; combat/card-rest slices are masked or auto-played.
-- **Presets:** `--preset phase1` (2M steps, Act 1), `phase2` (5M, full run), `full` (8M).
-- **Gamma / entropy:** 0.995 and 0.02 defaults for long-horizon meta decisions.
-
-### Act Count
-
-The `--act-count` flag controls episode length:
+The `--act-count` flag controls episode length (distinct from **combat curriculum** stages):
 
 | Value | Description | Recommended for |
 | ----- | ----------- | ----------------- |
-| 1 | Act 1 only (Overgrowth or Underdocks; see `--act1-biome`) | Initial training |
-| 2 | Acts 1-2 | Intermediate |
-| 3 | Full game (Acts 1-3) | Final training |
+| 1 | Act 1 only | Initial Navigator training |
+| 2 | Acts 1–2 | Intermediate |
+| 3 | Full game (Acts 1–3) | Final training |
 
-Start with `--act-count 1` and increase after the agent achieves >70% win rate. Use `--act1-biome random|overgrowth|underdocks` to control the Act 1 biome (default: random per game rules).
-
-### Random Baseline
-
-Run a random-action baseline for comparison:
+### Post-Training Evaluation
 
 ```bash
-python scripts/train_full_run.py --baseline-only
+python scripts/eval_full_run.py \
+    --load-model output/navigator_ppo/best_model/best_model.zip \
+    --combat-model output/combat_ppo_mixed/best_model/best_model.zip \
+    --mcts
 ```
 
-The training script automatically runs a 50-episode random baseline before training starts.
+---
+
+## 2.5 Combat MCTS (Inference Only)
+
+Turn-bounded PUCT search improves combat decisions at inference time. **Not used during PPO training.**
+
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--mcts` | off | Enable MCTS |
+| `--mcts-sims` | 128 | Simulations per decision |
+| `--mcts-c-puct` | 1.5 | PUCT exploration constant |
+| `--mcts-max-depth` | 30 | Max actions within one player turn |
+| `--mcts-time-budget` | 2.0s (bridge) / None (train eval) | Wall-clock cap per decision |
+
+Use MCTS when you want stronger combat play and can tolerate slower decisions (especially in the live game). Reduce `--mcts-sims` or increase `--mcts-time-budget` if decisions feel too slow.
 
 ---
 
 ## 3. Running the Benchmark
 
-Measure simulator throughput:
-
 ```bash
 python scripts/benchmark.py
 ```
 
-This runs 1,000 episodes with random actions and reports:
-
-- Episodes per second (~1,200)
-- Steps per second (~28,000)
-- Random-play win rate
+Reports ~1,200 episodes/sec, ~28,000 steps/sec, and random-play win rate.
 
 ---
 
@@ -150,15 +216,18 @@ This runs 1,000 episodes with random actions and reports:
 
 ### Prerequisites
 
-1. Trained model (from steps 1 or 2)
+1. Trained model matching obs v4 and policy type
 2. Bridge mod installed (see [MOD_BUILD_GUIDE.md](MOD_BUILD_GUIDE.md))
 3. Slay the Spire 2 running with the mod loaded
+4. `STS2_BRIDGE_CHARACTER` set to the same character the model was trained on
 
 ### Starting the Agent
 
 ```bash
 python -m sts2_env.bridge.agent_runner \
-    --model-path output/combat_ppo/best_model/best_model.zip \
+    --model-path output/combat_ppo_mixed/best_model/best_model.zip \
+    --character Ironclad \
+    --mcts --mcts-time-budget 2.0 \
     --verbose
 ```
 
@@ -167,44 +236,36 @@ python -m sts2_env.bridge.agent_runner \
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `--model-path` | (required) | Path to trained MaskablePPO model (.zip) |
+| `--character` | from env | Must match `STS2_BRIDGE_CHARACTER` and training character |
+| `--combat-models-by-character` | — | Per-character routing for full-run delegates |
 | `--host` | 127.0.0.1 | Bridge server hostname |
 | `--port` | 9002 | Bridge server port |
-| `--deterministic` | True | Use greedy action selection (no randomness) |
-| `--stochastic` | False | Use stochastic selection (for diversity) |
+| `--mcts` | off | Turn-bounded MCTS for combat decisions |
+| `--mcts-sims` | 128 | MCTS simulations per decision |
+| `--mcts-time-budget` | 2.0 | Seconds per combat decision |
+| `--deterministic` | True | Greedy action selection (no randomness) |
+| `--stochastic` | False | Stochastic selection |
 | `--verbose` / `-v` | False | Log every action taken |
-| `--log-level` | INFO | Logging verbosity (DEBUG/INFO/WARNING/ERROR) |
+| `--log-level` | INFO | DEBUG/INFO/WARNING/ERROR |
 
 ### Step-by-Step Walkthrough
 
-1. **Start the game.** Launch STS2 via Steam. Wait for the main menu. The mod will show "Running Modded" and start the TCP server on port 9002.
+1. **Set character** (PowerShell):
 
-2. **Wait for AutoSlayer.** The mod automatically creates an AutoSlayer instance and waits at the main menu. You should see log messages like:
-
-   ```text
-   [STS2Bridge] [RlAutoSlay] Main menu visible. Creating RL AutoSlayer...
+   ```powershell
+   $env:STS2_BRIDGE_CHARACTER = "Ironclad"
    ```
 
-3. **Start the agent.** In a separate terminal:
+2. **Start the game.** Launch STS2. The mod shows "Running Modded" and starts TCP on port 9002.
 
-   ```bash
-   python -m sts2_env.bridge.agent_runner \
-       --model-path output/combat_ppo/best_model/best_model.zip \
-       --verbose
-   ```
+3. **Start the agent** in a separate terminal with a model trained for the same character.
 
-4. **Watch the game play.** The agent will:
-   - Start a new run with a random seed
-   - Navigate the map (prefer elites when healthy, safer nodes when low on HP)
-   - Fight combats (using the trained model)
-   - Pick card rewards (prefer powers, then attacks, then skills; skip if deck > 30 cards)
-   - Use rest sites (heuristic: rest if HP < 50%, otherwise upgrade)
-   - Handle shops, events, treasure, and boss relics through bridge option lists
+4. **Watch the game play.** Combat uses the trained PPO (optionally wrapped with MCTS). Non-combat phases use heuristics or a Navigator model if configured.
 
-5. **Monitor output.** With `--verbose`, the agent logs every action:
+5. **Monitor output** with `--verbose`:
 
    ```text
    COMBAT [HP:72/80 E:3] -> PLAY BASH (idx=4) -> NIBBIT (idx=0)
-   COMBAT [HP:72/80 E:1] -> PLAY STRIKE_IRONCLAD (idx=2) -> NIBBIT (idx=0)
    COMBAT [HP:72/80 E:0] -> END_TURN (round 1)
    MAP: choosing node 0
    CARD_REWARD: choosing option 0
@@ -214,15 +275,15 @@ python -m sts2_env.bridge.agent_runner \
 
 | Phase | Strategy | Source |
 | ----- | -------- | ------ |
-| Combat | Trained MaskablePPO model | Model prediction |
-| Map navigation | Prefer elites when healthy; prefer rest/shop/treasure when low on HP | Heuristic (TODO: train) |
-| Card rewards | Prefer powers, then attacks, then skills; skip if deck > 30 | Heuristic (TODO: train) |
-| Rest sites | Rest if HP < 50%, otherwise upgrade | Heuristic (TODO: train) |
-| Shop | Buy enabled relic/card/potion options before leaving | Heuristic (TODO: train) |
-| Events | Pick the first enabled event option | Heuristic (TODO: train) |
-| Treasure / Boss relics | Pick the bridge option matching collect / pick relic | Heuristic (TODO: train) |
+| Combat | Trained MaskablePPO (+ optional MCTS) | `agent_runner.py` / combat model |
+| Map navigation | Learned path preferences | Navigator PPO (`train_navigator.py`) or heuristics |
+| Card rewards | Combat-critic ΔV or learned card-value net | `--combat-value-shaping` / `train_card_value.py` or rules |
+| Rest sites | Rest if low HP, else upgrade | `noncombat_heuristics.py` |
+| Shop | Buy relics/cards/potions before leaving | Navigator PPO or heuristics |
+| Events | Pick from enabled options | Navigator PPO or heuristics |
+| Treasure / Boss relics | Collect or pick relic | Navigator PPO or heuristics |
 
-For a fully trained agent, use the full-run model instead of the combat-only model. The full-run model handles all phases via the trained policy.
+For combat-only evaluation, pass a combat model. For full-run play in the real game, wire a Navigator checkpoint or rely on the built-in heuristics for non-combat phases.
 
 ---
 
@@ -230,19 +291,18 @@ For a fully trained agent, use the full-run model instead of the combat-only mod
 
 ### Training Metrics (TensorBoard)
 
-Key metrics to watch:
-
 | Metric | What It Means |
 | ------ | ------------- |
-| `rollout/ep_rew_mean` | Average episode reward (should increase) |
-| `rollout/ep_len_mean` | Average episode length (shorter = faster wins or faster deaths) |
-| `train/loss` | Total PPO loss (should decrease then stabilize) |
-| `train/entropy_loss` | Policy entropy (should decrease slowly; too fast = collapsed policy) |
-| `train/approx_kl` | KL divergence between old and new policy (should stay < 0.02) |
+| `rollout/ep_rew_mean` | Average episode reward (shaped during training) |
+| `eval/mean_reward` | Sparse eval reward (should trend toward +1.0) |
+| `curriculum/gate_win_rate` | Curriculum promotion win rate |
+| `curriculum/gate_hp_ratio` | Mean HP retention on gate encounters |
+| `eval/win_rate` | Full-run win rate (Navigator / legacy full-run) |
+| `train/entropy_loss` | Policy entropy (should decrease slowly) |
 
 ### Evaluation Output
 
-After training, the script prints:
+Combat (after `train_combat.py`):
 
 ```text
 --- Final Evaluation ---
@@ -251,24 +311,19 @@ Win rate:    92.0%
 Avg reward:  0.847
 ```
 
-For the full-run agent:
+Navigator / full-run:
 
 ```text
 Episodes:         100
-Win rate:         45.0%
-Avg reward:       0.123
-Avg ep length:    342.5
-Avg floors:       12.3
-Max floors:       17
+Win rate:         0.0%    # full-run win rate still challenging at 1M steps
+Avg floors:       8.9
+Max floors:       15
 ```
 
 ### Real-Game Logs
 
-When running against the real game, look for:
-
-- **Connection messages:** `Connected to STS2 bridge at 127.0.0.1:9002`
-- **Phase transitions:** `Step 42: type=combat_action phase=COMBAT_PLAY`
-- **Combat actions:** `COMBAT [HP:65/80 E:2] -> PLAY INFLAME -> N/A`
+- **Connection:** `Connected to STS2 bridge at 127.0.0.1:9002`
+- **Combat:** `COMBAT [HP:65/80 E:2] -> PLAY INFLAME -> N/A`
 - **Warnings:** `No valid actions! Defaulting to END_TURN.` (should be rare)
 - **Game over:** `Game over! Result: win` or `Game over! Result: death`
 
@@ -276,22 +331,22 @@ When running against the real game, look for:
 
 ## 6. Known Limitations
 
-### Simulator vs Real Game Differences
+### Simulator vs Real Game
 
-The headless simulator closely mirrors the decompiled game logic, but some edge cases may differ:
+The headless simulator mirrors decompiled game logic, but edge cases may differ. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the full list.
 
-- **Floating-point rounding:** The simulator uses Python `int(floor())` for damage; the game uses C# `(int)`. Results should be identical for positive values.
-- **Hook execution order:** When multiple relics/powers modify the same value, the iteration order matters. The simulator processes them in list order, which should match the game.
-- **Rare card interactions:** Some complex multi-step card effects (e.g., cards that draw cards that trigger effects) may have subtle ordering differences.
+### Observation and Policy Mismatch
+
+Loading a model trained with `--policy attention` while the runner expects `mlp` (or using an obs v3 checkpoint) produces poor play or load failures. Always match character, obs version, and policy type.
 
 ### Non-Combat Phases
 
-The combat model only handles combat. Non-combat decisions (map, rewards, etc.) use simple heuristics. For better non-combat play, train a full-run agent.
+The combat model only handles combat. For strategic play, train a Navigator (`train_navigator.py`) or accept heuristic non-combat behavior.
 
 ### Characters
 
-The default combat environment uses Ironclad. All 5 characters are implemented in the simulator, but training configurations for other characters require specifying the appropriate starter deck and encounter pool.
+All 5 characters are implemented. Training and bridge character must match (`--character` / `--characters` / `STS2_BRIDGE_CHARACTER`).
 
 ### Ascension
 
-Ascension (difficulty levels) is supported by the simulator but not enabled by default in the training scripts. Pass ascension-level parameters when creating encounters to train at higher difficulties.
+Supported by the simulator but not enabled by default in training scripts.
