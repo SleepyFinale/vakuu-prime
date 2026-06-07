@@ -126,6 +126,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 - **Training presets** (`--preset phase1|phase2|full`) with 2M / 5M / 8M meta timesteps ([`scripts/train_full_run.py`](../scripts/train_full_run.py)).
 - **Non-combat heuristics** ([`sts2_env/gym_env/noncombat_heuristics.py`](../sts2_env/gym_env/noncombat_heuristics.py)): auto card-reward, boss-relic, and rest picks during training (`--no-noncombat-heuristic` to disable).
 - **Act-mixed combat training** ([`sts2_env/encounters/pools.py`](../sts2_env/encounters/pools.py), `train_combat.py --acts 0,1,2`) and per-act routing (`--combat-models`).
+- **Combat tier curriculum** ([`sts2_env/training/combat_curriculum.py`](../sts2_env/training/combat_curriculum.py), `train_combat.py --curriculum`): staged easy-pool bootstrapping (Jaw Worm/Cultists), HP-retention gate metrics, deck-complexity ramps (Exhaust, Necrobinder), hard-start recovery scenarios (`--curriculum recovery`), and optional `--auto-promote`.
 
 **Card-value network and win tracking (implemented):**
 

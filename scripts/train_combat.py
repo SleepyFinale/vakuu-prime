@@ -42,6 +42,84 @@ def resolve_training_characters(args) -> tuple[str | None, tuple[str, ...] | Non
     return args.character, None
 
 
+def resolve_curriculum_context(args):
+    """Return curriculum training context or None when curriculum is disabled."""
+    if args.curriculum is None:
+        return None
+
+    from sts2_env.training.combat_curriculum import resolve_curriculum_spec
+
+    stage_override = args.curriculum_stage
+    if stage_override is not None and stage_override.isdigit():
+        stage_override = int(stage_override)
+
+    stage, stage_index, sequence = resolve_curriculum_spec(
+        args.curriculum,
+        stage_override=stage_override,
+    )
+    return {
+        "stage": stage,
+        "stage_index": stage_index,
+        "sequence": sequence,
+    }
+
+
+def build_combat_env(
+    args,
+    *,
+    character_id: str | None,
+    character_ids: tuple[str, ...] | None,
+    encounter_acts: tuple[int, ...],
+    reward_shaping: bool,
+    reward_config,
+    curriculum_context: dict | None,
+    output_dir: Path | None,
+):
+    from sts2_env.gym_env.combat_env import STS2CombatEnv
+    from sts2_env.training.combat_curriculum import (
+        build_tier_encounter_pool,
+        parse_encounter_names,
+        parse_tier_flags,
+    )
+
+    common_kwargs = dict(
+        character_id=character_id or DEFAULT_CHARACTER,
+        character_ids=character_ids,
+        reward_shaping=reward_shaping,
+        reward_config=reward_config,
+    )
+
+    if curriculum_context is not None:
+        sequence = curriculum_context["sequence"]
+        state_path = output_dir / "curriculum_state.json" if output_dir else None
+        return STS2CombatEnv(
+            **common_kwargs,
+            curriculum_stage=curriculum_context["stage"],
+            curriculum_sequence=sequence,
+            curriculum_state_path=state_path,
+            hard_start_fraction=args.hard_start_frac,
+        )
+
+    if args.encounters:
+        encounter_pool = parse_encounter_names(args.encounters)
+        return STS2CombatEnv(**common_kwargs, encounter_pool=encounter_pool)
+
+    if args.include_tiers:
+        tier_flags = parse_tier_flags(args.include_tiers)
+        encounter_pool = build_tier_encounter_pool(
+            encounter_acts,
+            tier_flags,
+            act1_biome=args.act1_biome,
+        )
+        return STS2CombatEnv(**common_kwargs, encounter_pool=encounter_pool)
+
+    return STS2CombatEnv(
+        **common_kwargs,
+        encounter_acts=encounter_acts,
+        act1_biome=args.act1_biome,
+    )
+
+
 def default_output_dir(
     encounter_acts: tuple[int, ...],
     character_id: str | None,
@@ -135,10 +213,19 @@ def train(args):
 
     encounter_acts = parse_acts(args.acts)
     character_id, character_ids = resolve_training_characters(args)
+    curriculum_context = resolve_curriculum_context(args)
 
     print("Training MaskablePPO on STS2 combat")
-    print(f"  acts:            {encounter_acts}")
-    print(f"  act1_biome:      {args.act1_biome}")
+    if curriculum_context is not None:
+        stage = curriculum_context["stage"]
+        print(f"  curriculum:      {args.curriculum}")
+        print(f"  stage:           {stage.name} ({curriculum_context['stage_index']})")
+        print(f"  auto_promote:    {args.auto_promote}")
+        if args.hard_start_frac is not None:
+            print(f"  hard_start_frac: {args.hard_start_frac}")
+    else:
+        print(f"  acts:            {encounter_acts}")
+        print(f"  act1_biome:      {args.act1_biome}")
     if character_ids is not None:
         print(f"  characters:      {character_ids}")
     else:
@@ -162,6 +249,15 @@ def train(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if curriculum_context is not None and not getattr(args, "resume", False):
+        from sts2_env.training.curriculum_env import init_curriculum_state
+
+        init_curriculum_state(
+            output_dir,
+            stage_index=curriculum_context["stage_index"],
+            stage_name=curriculum_context["stage"].name,
+        )
+
     if not getattr(args, "resume", False):
         save_run_config(output_dir, args)
 
@@ -174,15 +270,15 @@ def train(args):
         use_shaping = args.reward_shaping if shaping is None else shaping
 
         def _init():
-            from sts2_env.gym_env.combat_env import STS2CombatEnv
-
-            env = STS2CombatEnv(
-                encounter_acts=encounter_acts,
-                act1_biome=args.act1_biome,
-                character_id=character_id or DEFAULT_CHARACTER,
+            env = build_combat_env(
+                args,
+                character_id=character_id,
                 character_ids=character_ids,
+                encounter_acts=encounter_acts,
                 reward_shaping=use_shaping,
                 reward_config=reward_config if use_shaping else None,
+                curriculum_context=curriculum_context,
+                output_dir=output_dir,
             )
             env = ActionMasker(env, mask_fn)
             return env
@@ -223,6 +319,29 @@ def train(args):
         )
         reset_timesteps = True
 
+    extra_callbacks = ()
+    if curriculum_context is not None:
+        from sts2_env.training.curriculum_callback import (
+            CombatCurriculumEvalCallback,
+            build_gate_eval_env,
+        )
+
+        gate_env = build_gate_eval_env(
+            curriculum_context["stage"],
+            character_ids=character_ids,
+        )
+        extra_callbacks = (
+            CombatCurriculumEvalCallback(
+                gate_env=gate_env,
+                stage_sequence=curriculum_context["sequence"],
+                initial_stage_index=curriculum_context["stage_index"],
+                output_dir=output_dir,
+                eval_freq=args.eval_freq,
+                n_eval_episodes=args.eval_episodes,
+                auto_promote=args.auto_promote,
+            ),
+        )
+
     callbacks, interrupt_callback = build_ppo_callbacks(
         output_dir=output_dir,
         eval_env=eval_env,
@@ -231,6 +350,7 @@ def train(args):
         n_envs=args.n_envs,
         checkpoint_freq=args.checkpoint_freq,
         keep_checkpoints=args.keep_checkpoints,
+        extra_callbacks=extra_callbacks,
     )
 
     start = time.perf_counter()
@@ -262,10 +382,13 @@ def train(args):
 
     evaluate(
         model,
+        args=args,
         encounter_acts=encounter_acts,
         act1_biome=args.act1_biome,
         character_id=character_id,
         character_ids=character_ids,
+        curriculum_context=curriculum_context,
+        output_dir=output_dir,
         n_episodes=100,
         mcts_config=build_mcts_config(args),
     )
@@ -275,28 +398,45 @@ def train(args):
 
 def evaluate(
     model,
+    *,
+    args=None,
     encounter_acts: tuple[int, ...] = (0,),
     act1_biome: str = "random",
     character_id: str | None = DEFAULT_CHARACTER,
     character_ids: tuple[str, ...] | None = None,
+    curriculum_context: dict | None = None,
+    output_dir: Path | None = None,
     n_episodes: int = 100,
     mcts_config=None,
 ):
     """Evaluate trained model."""
     from sb3_contrib.common.wrappers import ActionMasker
-    from sts2_env.gym_env.combat_env import STS2CombatEnv
     from sts2_env.search.mcts_agent import select_combat_action
 
     def mask_fn(env):
         return env.action_masks()
 
+    if args is None:
+        class _EvalArgs:
+            curriculum = None
+            encounters = None
+            include_tiers = None
+            hard_start_frac = None
+            auto_promote = False
+            act1_biome = act1_biome
+
+        args = _EvalArgs()
+
     env = ActionMasker(
-        STS2CombatEnv(
-            encounter_acts=encounter_acts,
-            act1_biome=act1_biome,
-            character_id=character_id or DEFAULT_CHARACTER,
+        build_combat_env(
+            args,
+            character_id=character_id,
             character_ids=character_ids,
+            encounter_acts=encounter_acts,
             reward_shaping=False,
+            reward_config=None,
+            curriculum_context=curriculum_context,
+            output_dir=output_dir,
         ),
         mask_fn,
     )
@@ -330,7 +470,10 @@ def evaluate(
 
     mode = "MCTS" if mcts_config is not None else "PPO"
     print(f"Episodes:    {n_episodes} ({mode})")
-    print(f"Acts:        {encounter_acts}")
+    if curriculum_context is not None:
+        print(f"Curriculum:  {curriculum_context['stage'].name}")
+    else:
+        print(f"Acts:        {encounter_acts}")
     if character_ids is not None:
         print(f"Characters:  {character_ids}")
     else:
@@ -490,6 +633,30 @@ def main():
         "--block-scale", type=float, default=0.001,
         help="Micro-reward per HP blocked from enemy attacks (default: 0.001)",
     )
+    parser.add_argument(
+        "--curriculum", type=str, default=None,
+        help="Curriculum preset: stage name (easy_pair, act1_weak, ...) or 'full'",
+    )
+    parser.add_argument(
+        "--curriculum-stage", type=str, default=None,
+        help="Start at a curriculum stage name or index (for manual resume)",
+    )
+    parser.add_argument(
+        "--auto-promote", action="store_true",
+        help="Automatically advance curriculum stages when gate metrics pass",
+    )
+    parser.add_argument(
+        "--hard-start-frac", type=float, default=None,
+        help="Override curriculum stage hard-start episode fraction",
+    )
+    parser.add_argument(
+        "--include-tiers", type=str, default=None,
+        help="Non-curriculum tier filter: weak,normal,elite,boss",
+    )
+    parser.add_argument(
+        "--encounters", type=str, default=None,
+        help="Pin encounters by alias: fuzzy_wurm,cultists",
+    )
     args = parser.parse_args()
 
     from sts2_env.training.checkpointing import resolve_resume_args
@@ -499,8 +666,13 @@ def main():
 
     encounter_acts = parse_acts(args.acts)
     character_id, character_ids = resolve_training_characters(args)
+    curriculum_context = resolve_curriculum_context(args)
 
     if args.total_timesteps is None:
+        if args.curriculum == "full" and args.auto_promote:
+            args.total_timesteps = 5_000_000
+        elif curriculum_context is not None:
+            args.total_timesteps = 500_000
         if character_ids is not None:
             args.total_timesteps = MIXED_CHARS_DEFAULT_TIMESTEPS
         elif len(encounter_acts) > 1 or any(a > 0 for a in encounter_acts):
@@ -519,30 +691,41 @@ def main():
             return env.action_masks()
 
         dummy_env = ActionMasker(
-            STS2CombatEnv(
-                encounter_acts=encounter_acts,
-                act1_biome=args.act1_biome,
-                character_id=character_id or DEFAULT_CHARACTER,
+            build_combat_env(
+                args,
+                character_id=character_id,
                 character_ids=character_ids,
+                encounter_acts=encounter_acts,
+                reward_shaping=True,
+                reward_config=None,
+                curriculum_context=curriculum_context,
+                output_dir=Path(args.output_dir) if args.output_dir else None,
             ),
             mask_fn,
         )
         model = MaskablePPO.load(args.load_model, env=dummy_env)
         evaluate(
             model,
+            args=args,
             encounter_acts=encounter_acts,
             act1_biome=args.act1_biome,
             character_id=character_id,
             character_ids=character_ids,
+            curriculum_context=curriculum_context,
+            output_dir=Path(args.output_dir) if args.output_dir else None,
             n_episodes=args.eval_episodes,
             mcts_config=build_mcts_config(args),
         )
         return
 
     if args.output_dir is None:
-        args.output_dir = default_output_dir(
-            encounter_acts, character_id, character_ids, policy=args.policy,
-        )
+        if curriculum_context is not None:
+            stage_name = curriculum_context["stage"].name
+            args.output_dir = f"output/curriculum/{stage_name}"
+        else:
+            args.output_dir = default_output_dir(
+                encounter_acts, character_id, character_ids, policy=args.policy,
+            )
 
     train(args)
 

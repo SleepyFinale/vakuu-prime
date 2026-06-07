@@ -55,6 +55,74 @@ Steps/sec:      28101
 
 Train an agent to play single combat encounters. Default character is Ironclad; all five characters are supported.
 
+**Recommended for new agents:** use the staged combat curriculum instead of dropping an untrained policy into the full random encounter pool. Start on easy Act 1 fights (Jaw Worm / Cultists) with Ironclad and Regent starter decks, then widen tiers and deck complexity only after HP-retention gates pass.
+
+### Command (curriculum — recommended starting point)
+
+Stage 1 trains exclusively on **Fuzzy Wurm Crawler** (Overgrowth weak) and **Cultists** (Underdocks normal) with Ironclad/Regent starters:
+
+```bash
+python scripts/train_combat.py \
+    --curriculum easy_pair \
+    --characters Ironclad,Regent \
+    --total-timesteps 500000 \
+    --n-envs 8 \
+    --output-dir output/curriculum/s1_easy
+```
+
+Manual promotion (check TensorBoard `curriculum/gate_win_rate` and `curriculum/gate_hp_ratio`, then fine-tune into the next stage):
+
+```bash
+python scripts/train_combat.py --curriculum act1_weak \
+    --load-model output/curriculum/s1_easy/best_model/best_model.zip \
+    --characters Ironclad,Regent --output-dir output/curriculum/s2_weak
+
+python scripts/train_combat.py --curriculum act1_normal \
+    --load-model output/curriculum/s2_weak/best_model/best_model.zip \
+    --characters Ironclad,Regent --output-dir output/curriculum/s3_normal
+
+python scripts/train_combat.py --curriculum act1_elite \
+    --load-model output/curriculum/s3_normal/best_model/best_model.zip \
+    --characters Ironclad,Regent --output-dir output/curriculum/s4_elite
+
+python scripts/train_combat.py --curriculum complex_decks \
+    --load-model output/curriculum/s4_elite/best_model/best_model.zip \
+    --output-dir output/curriculum/s5_complex
+
+python scripts/train_combat.py --curriculum mixed_acts \
+    --load-model output/curriculum/s5_complex/best_model/best_model.zip \
+    --total-timesteps 3000000 --output-dir output/curriculum/s6_mixed
+```
+
+Optional recovery fine-tune (hard-start: low HP, stripped deck, elites/bosses):
+
+```bash
+python scripts/train_combat.py --curriculum recovery \
+    --load-model output/curriculum/s5_complex/best_model/best_model.zip \
+    --characters Ironclad,Regent --total-timesteps 500000 \
+    --output-dir output/curriculum/s7_recovery
+```
+
+Hands-off auto-promotion through all stages (except `recovery`):
+
+```bash
+python scripts/train_combat.py --curriculum full --auto-promote \
+    --characters Ironclad,Regent --total-timesteps 5000000 \
+    --output-dir output/curriculum/auto
+```
+
+Curriculum stages are defined in [`sts2_env/training/combat_curriculum.py`](../sts2_env/training/combat_curriculum.py). Gate metrics use a fixed easy encounter subset so promotion is not gamed by harder training samples.
+
+| Stage | Encounters | Characters | Notes |
+| ----- | ---------- | ---------- | ----- |
+| `easy_pair` | Jaw Worm + Cultists | Ironclad, Regent | Starter decks only |
+| `act1_weak` | All Act 1 weak | Ironclad, Regent | |
+| `act1_normal` | Weak + normal | Ironclad, Regent | |
+| `act1_elite` | + elites | Ironclad, Regent | 10% hard-start |
+| `complex_decks` | Act 1 all tiers | + Necrobinder | Exhaust / Osty decks |
+| `mixed_acts` | Acts 0–2 | All five | Full-run delegate prep |
+| `recovery` | Elites + bosses | Ironclad, Regent | 100% compromised starts |
+
 ### Command (Act 1 only, Ironclad)
 
 ```bash
@@ -81,7 +149,7 @@ python scripts/train_combat.py \
     --output-dir output/combat_ppo_mixed_chars
 ```
 
-### Command (acts 0–2 mixed, recommended for full-run delegate)
+### Command (acts 0–2 mixed, full-run delegate after curriculum)
 
 ```bash
 python scripts/train_combat.py \
@@ -157,8 +225,14 @@ Boss encounters are excluded from the RL pool (they are scripted in full runs).
 | `--vulnerable-scale` | 0.02 | Micro-reward per Vulnerable stack on enemies |
 | `--weak-scale` | 0.02 | Micro-reward per Weak stack on enemies |
 | `--block-scale` | 0.001 | Micro-reward per HP blocked from enemy attacks |
+| `--curriculum` | — | Curriculum preset: stage name or `full` |
+| `--curriculum-stage` | — | Start at stage name or index (manual resume) |
+| `--auto-promote` | off | Advance curriculum when gate metrics pass |
+| `--hard-start-frac` | stage default | Override compromised-state episode fraction |
+| `--include-tiers` | — | Non-curriculum tier filter: `weak,normal,elite,boss` |
+| `--encounters` | — | Pin encounters: `fuzzy_wurm,cultists` |
 
-Evaluation during training uses **sparse rewards** (`--no-reward-shaping` on the eval env) so `eval/mean_reward` stays near ±1.
+Evaluation during training uses **sparse rewards** (`--no-reward-shaping` on the eval env) so `eval/mean_reward` stays near ±1. Curriculum runs also log `curriculum/gate_win_rate` and `curriculum/gate_hp_ratio` for promotion decisions.
 
 ### Expected Results
 
@@ -459,7 +533,7 @@ Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
 
 4. **Population-based training (PBT):** Use Ray RLlib to train multiple agents with different hyperparameters in parallel, automatically tuning learning rate, entropy, and gamma.
 
-5. **Self-play against harder encounters:** Start with weak encounters, progressively introduce harder ones as the agent improves.
+5. **Combat curriculum:** Implemented — staged encounter/deck widening with HP-retention gates (`--curriculum`, `--auto-promote`) in [`combat_curriculum.py`](../sts2_env/training/combat_curriculum.py).
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 

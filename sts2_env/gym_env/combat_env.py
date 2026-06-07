@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import gymnasium
 import numpy as np
 from gymnasium import spaces
+
+if TYPE_CHECKING:
+    from sts2_env.training.combat_curriculum import (
+        CombatCurriculumStage,
+        EpisodeInitSample,
+    )
 
 from sts2_env.cards.base import reset_instance_counter
 from sts2_env.characters.all import (
@@ -58,6 +66,10 @@ class STS2CombatEnv(gymnasium.Env):
         render_mode: str | None = None,
         reward_shaping: bool = True,
         reward_config: CombatRewardConfig | None = None,
+        curriculum_stage: CombatCurriculumStage | None = None,
+        curriculum_sequence: tuple[CombatCurriculumStage, ...] | None = None,
+        curriculum_state_path: str | Path | None = None,
+        hard_start_fraction: float | None = None,
     ):
         super().__init__()
         self.observation_space = spaces.Box(
@@ -87,8 +99,16 @@ class STS2CombatEnv(gymnasium.Env):
         self.reward_shaping = reward_shaping
         self._reward_config = reward_config or CombatRewardConfig()
 
+        self.curriculum_stage = curriculum_stage
+        self.curriculum_sequence = curriculum_sequence
+        self.curriculum_state_path = (
+            Path(curriculum_state_path) if curriculum_state_path is not None else None
+        )
+        self.hard_start_fraction = hard_start_fraction
+
         self.combat: CombatState | None = None
         self._last_character_id: str | None = None
+        self._last_episode_init: EpisodeInitSample | None = None
         self._event_cursor = CombatEventCursor()
 
     def _resolve_character_pool(self) -> tuple[str, ...]:
@@ -96,54 +116,125 @@ class STS2CombatEnv(gymnasium.Env):
             return self.character_ids
         return (self.character_id,)
 
+    def _resolve_curriculum_stage(self) -> CombatCurriculumStage | None:
+        if self.curriculum_stage is not None:
+            return self.curriculum_stage
+        if self.curriculum_state_path is None or self.curriculum_sequence is None:
+            return None
+        from sts2_env.training.curriculum_env import read_curriculum_stage_index
+
+        index = read_curriculum_stage_index(self.curriculum_state_path)
+        if index < 0 or index >= len(self.curriculum_sequence):
+            index = 0
+        return self.curriculum_sequence[index]
+
+    def _apply_episode_init(self, episode_init: EpisodeInitSample, rng_seed: int) -> None:
+        char_cfg = get_character(episode_init.character_id)
+        self._last_character_id = episode_init.character_id
+        self._last_episode_init = episode_init
+        self.combat = CombatState(
+            player_hp=episode_init.player_hp,
+            player_max_hp=episode_init.player_max_hp,
+            deck=list(episode_init.deck),
+            rng_seed=rng_seed,
+            character_id=episode_init.character_id,
+            relics=[char_cfg.starting_relic],
+        )
+        rng = Rng(rng_seed)
+        episode_init.encounter_setup(self.combat, rng)
+        self.combat.start_combat()
+
+    def _build_episode_info(self) -> dict:
+        from sts2_env.training.combat_curriculum import encounter_setup_name
+
+        info: dict = {
+            "action_mask": get_action_mask(self.combat),
+            "character_id": self._last_character_id,
+        }
+        if self._last_episode_init is not None:
+            info.update(
+                is_hard_start=self._last_episode_init.is_hard_start,
+                deck_template=self._last_episode_init.deck_template,
+                encounter_id=encounter_setup_name(
+                    self._last_episode_init.encounter_setup
+                ),
+            )
+        return info
+
+    def _episode_outcome_info(self) -> dict:
+        assert self.combat is not None
+        max_hp = max(self.combat.player.max_hp, 1)
+        hp_remaining = self.combat.player.current_hp
+        won = self.combat.player.is_alive and all(
+            not enemy.is_alive for enemy in self.combat.enemies
+        )
+        return {
+            "won": won,
+            "hp_remaining": hp_remaining,
+            "hp_ratio_end": hp_remaining / max_hp,
+        }
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         reset_instance_counter()
+        options = options or {}
 
         rng_seed = int(self.np_random.integers(0, INT_MAX_EXCLUSIVE))
         rng = Rng(rng_seed)
 
-        char_id = resolve_character_for_episode(
-            self.np_random,
-            self._resolve_character_pool(),
-        )
-        self._last_character_id = char_id
-        char_cfg = get_character(char_id)
+        if "episode_init" in options:
+            self._apply_episode_init(options["episode_init"], rng_seed)
+        else:
+            stage = self._resolve_curriculum_stage()
+            if stage is not None:
+                from sts2_env.training.combat_curriculum import sample_episode_init
 
-        deck = create_starting_deck(char_id)
-        player_hp = (
-            self._fixed_player_hp
-            if self._fixed_player_hp is not None
-            else char_cfg.starting_hp
-        )
-        player_max_hp = (
-            self._fixed_player_max_hp
-            if self._fixed_player_max_hp is not None
-            else char_cfg.starting_hp
-        )
+                episode_init = sample_episode_init(
+                    self.np_random,
+                    stage,
+                    hard_start_fraction=self.hard_start_fraction,
+                    character_ids=self._resolve_character_pool(),
+                )
+                self._apply_episode_init(episode_init, rng_seed)
+            else:
+                char_id = resolve_character_for_episode(
+                    self.np_random,
+                    self._resolve_character_pool(),
+                )
+                self._last_character_id = char_id
+                self._last_episode_init = None
+                char_cfg = get_character(char_id)
 
-        self.combat = CombatState(
-            player_hp=player_hp,
-            player_max_hp=player_max_hp,
-            deck=deck,
-            rng_seed=rng_seed,
-            character_id=char_id,
-            relics=[char_cfg.starting_relic],
-        )
+                deck = create_starting_deck(char_id)
+                player_hp = (
+                    self._fixed_player_hp
+                    if self._fixed_player_hp is not None
+                    else char_cfg.starting_hp
+                )
+                player_max_hp = (
+                    self._fixed_player_max_hp
+                    if self._fixed_player_max_hp is not None
+                    else char_cfg.starting_hp
+                )
 
-        encounter_idx = int(self.np_random.integers(0, len(self.encounter_pool)))
-        encounter_setup = self.encounter_pool[encounter_idx]
-        encounter_setup(self.combat, rng)
+                self.combat = CombatState(
+                    player_hp=player_hp,
+                    player_max_hp=player_max_hp,
+                    deck=deck,
+                    rng_seed=rng_seed,
+                    character_id=char_id,
+                    relics=[char_cfg.starting_relic],
+                )
 
-        self.combat.start_combat()
+                encounter_idx = int(self.np_random.integers(0, len(self.encounter_pool)))
+                encounter_setup = self.encounter_pool[encounter_idx]
+                encounter_setup(self.combat, rng)
+                self.combat.start_combat()
+
         self._event_cursor = CombatEventCursor()
 
         obs = encode_observation(self.combat)
-        info = {
-            "action_mask": get_action_mask(self.combat),
-            "character_id": char_id,
-        }
-        return obs, info
+        return obs, self._build_episode_info()
 
     def step(self, action: int):
         assert self.combat is not None, "Must call reset() first"
@@ -181,10 +272,9 @@ class STS2CombatEnv(gymnasium.Env):
         )
         terminated = self.combat.is_over
         truncated = self.combat.turn_count > self.max_turns
-        info = {
-            "action_mask": get_action_mask(self.combat),
-            "character_id": self._last_character_id,
-        }
+        info = self._build_episode_info()
+        if terminated or truncated:
+            info.update(self._episode_outcome_info())
 
         return obs, reward, terminated, truncated, info
 
