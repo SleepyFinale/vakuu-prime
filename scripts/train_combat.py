@@ -46,21 +46,55 @@ def default_output_dir(
     encounter_acts: tuple[int, ...],
     character_id: str | None,
     character_ids: tuple[str, ...] | None,
+    *,
+    policy: str = "attention",
 ) -> str:
+    if policy == "attention":
+        policy_suffix = "_attn"
+    elif policy == "gnn":
+        policy_suffix = "_gnn"
+    else:
+        policy_suffix = ""
+
     if character_ids is not None:
         if len(character_ids) == len(parse_characters("all")):
-            return "output/combat_ppo_mixed_chars"
+            return f"output/combat_ppo_mixed_chars{policy_suffix}"
         chars_slug = "_".join(c.lower() for c in character_ids)
-        return f"output/combat_ppo_{chars_slug}"
+        return f"output/combat_ppo_{chars_slug}{policy_suffix}"
 
     mixed_acts = len(encounter_acts) > 1 or any(a > 0 for a in encounter_acts)
     if mixed_acts:
-        return "output/combat_ppo_mixed"
+        return f"output/combat_ppo_mixed{policy_suffix}"
 
     if character_id and character_id != DEFAULT_CHARACTER:
-        return f"output/combat_ppo_{character_id.lower()}"
+        return f"output/combat_ppo_{character_id.lower()}{policy_suffix}"
 
-    return "output/combat_ppo"
+    return f"output/combat_ppo{policy_suffix}"
+
+
+def build_policy_kwargs(args) -> dict:
+    """Build MaskablePPO policy_kwargs from CLI args."""
+    if args.policy == "attention":
+        from sts2_env.training.attention_extractor import CombatAttentionExtractor
+
+        extractor_class = CombatAttentionExtractor
+    elif args.policy == "gnn":
+        from sts2_env.training.gnn_extractor import CombatGNNExtractor
+
+        extractor_class = CombatGNNExtractor
+    else:
+        return {}
+
+    return dict(
+        features_extractor_class=extractor_class,
+        features_extractor_kwargs=dict(
+            d_model=args.d_model,
+            n_heads=args.n_heads,
+            n_layers=args.n_layers,
+            features_dim=args.features_dim,
+        ),
+        net_arch=dict(pi=[256, 256], vf=[256, 256]),
+    )
 
 
 def train(args):
@@ -75,8 +109,10 @@ def train(args):
 
     from sts2_env.training.checkpointing import (
         build_ppo_callbacks,
+        handle_training_keyboard_interrupt,
         print_pause_message,
         print_resume_progress,
+        safe_close_vec_envs,
         save_run_config,
     )
 
@@ -94,6 +130,12 @@ def train(args):
     print(f"  total_timesteps: {args.total_timesteps}")
     print(f"  learning_rate:   {args.lr}")
     print(f"  batch_size:      {args.batch_size}")
+    print(f"  policy:          {args.policy}")
+    if args.policy in ("attention", "gnn"):
+        print(f"  d_model:         {args.d_model}")
+        print(f"  n_heads:         {args.n_heads}")
+        print(f"  n_layers:        {args.n_layers}")
+        print(f"  features_dim:    {args.features_dim}")
     print(f"  output_dir:      {args.output_dir}")
     print()
 
@@ -149,6 +191,7 @@ def train(args):
             gae_lambda=0.95,
             clip_range=0.2,
             ent_coef=args.ent_coef,
+            policy_kwargs=build_policy_kwargs(args),
             verbose=1,
             tensorboard_log=str(output_dir / "tb_logs"),
         )
@@ -165,20 +208,22 @@ def train(args):
     )
 
     start = time.perf_counter()
-    model.learn(
-        total_timesteps=args.total_timesteps,
-        callback=callbacks,
-        progress_bar=True,
-        reset_num_timesteps=reset_timesteps,
-    )
+    try:
+        model.learn(
+            total_timesteps=args.total_timesteps,
+            callback=callbacks,
+            progress_bar=True,
+            reset_num_timesteps=reset_timesteps,
+        )
+    except KeyboardInterrupt:
+        handle_training_keyboard_interrupt(model, interrupt_callback)
     elapsed = time.perf_counter() - start
 
     if interrupt_callback.interrupted:
         print(f"\nTraining interrupted after {elapsed:.1f}s")
         print_pause_message("scripts/train_combat.py", args.output_dir, model, args.total_timesteps)
-        train_env.close()
-        eval_env.close()
-        return
+        safe_close_vec_envs(train_env, eval_env)
+        sys.exit(0)
 
     final_path = str(output_dir / "final_model")
     model.save(final_path)
@@ -196,8 +241,7 @@ def train(args):
         n_episodes=100,
     )
 
-    train_env.close()
-    eval_env.close()
+    safe_close_vec_envs(train_env, eval_env)
 
 
 def evaluate(
@@ -334,6 +378,26 @@ def main():
         "--keep-checkpoints", type=int, default=3,
         help="Number of periodic checkpoints to retain (default: 3)",
     )
+    parser.add_argument(
+        "--policy", type=str, default="attention", choices=("mlp", "attention", "gnn"),
+        help="Policy feature extractor: mlp, attention (default), or gnn",
+    )
+    parser.add_argument(
+        "--d-model", type=int, default=128,
+        help="Attention model dimension (default: 128)",
+    )
+    parser.add_argument(
+        "--n-heads", type=int, default=4,
+        help="Attention heads (default: 4)",
+    )
+    parser.add_argument(
+        "--n-layers", type=int, default=2,
+        help="Transformer encoder layers (default: 2)",
+    )
+    parser.add_argument(
+        "--features-dim", type=int, default=256,
+        help="Pooled feature dimension fed to pi/vf heads (default: 256)",
+    )
     args = parser.parse_args()
 
     from sts2_env.training.checkpointing import resolve_resume_args
@@ -353,7 +417,7 @@ def main():
 
     if args.output_dir is None:
         args.output_dir = default_output_dir(
-            encounter_acts, character_id, character_ids,
+            encounter_acts, character_id, character_ids, policy=args.policy,
         )
 
     train(args)

@@ -27,12 +27,17 @@ GPU is recommended for faster training but not strictly required. The simulator 
 git clone <repo-url>
 cd sts2-rl-agent
 
-# Install with training dependencies (PyTorch, SB3, sb3-contrib)
+# Install with training dependencies (PyTorch, SB3, sb3-contrib, torch-geometric)
 pip install -e ".[train]"
 
 # Verify installation
 python scripts/benchmark.py
 ```
+
+On Windows, if `torch-geometric` fails to install from PyPI alone, install PyTorch
+first, then follow the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)
+for a wheel matching your torch/CUDA version. GNN training (`--policy gnn`) requires
+this package; attention and MLP policies do not.
 
 Expected benchmark output:
 
@@ -83,7 +88,41 @@ python scripts/train_combat.py \
     --acts 0,1,2 \
     --total-timesteps 3000000 \
     --n-envs 8 \
-    --output-dir output/combat_ppo_mixed
+    --output-dir output/combat_ppo_mixed_attn
+```
+
+### Command (self-attention policy, default)
+
+Combat training now defaults to a **Transformer feature extractor** over entity
+tokens (player, cards, enemies, relics, piles, character mechanics). Use
+`--policy mlp` for the legacy flat MLP baseline.
+
+```bash
+python scripts/train_combat.py \
+    --acts 0,1,2 \
+    --policy attention \
+    --d-model 128 \
+    --n-heads 4 \
+    --n-layers 2 \
+    --features-dim 256 \
+    --output-dir output/combat_ppo_mixed_attn
+```
+
+### Command (GNN policy)
+
+Graph policy uses the same 268-dim obs v3 tokens with **structural edges**
+(card→enemy from static target metadata, enemy→player on attack intents, relic→player).
+Requires `torch-geometric`.
+
+```bash
+python scripts/train_combat.py \
+    --acts 0,1,2 \
+    --policy gnn \
+    --d-model 128 \
+    --n-heads 4 \
+    --n-layers 2 \
+    --features-dim 256 \
+    --output-dir output/combat_ppo_mixed_gnn
 ```
 
 Boss encounters are excluded from the RL pool (they are scripted in full runs).
@@ -106,7 +145,12 @@ Boss encounters are excluded from the RL pool (they are scripted in full runs).
 | `--ent-coef` | 0.01 | Entropy coefficient (exploration) |
 | `--eval-freq` | 10,000 | Evaluate every N steps |
 | `--eval-episodes` | 20 | Episodes per evaluation |
-| `--output-dir` | `output/combat_ppo` or `combat_ppo_mixed` | Model output directory |
+| `--output-dir` | `output/combat_ppo_attn` or `combat_ppo_mixed_attn` | Model output directory |
+| `--policy` | `attention` | Feature extractor: `attention` (Transformer), `gnn` (DenseGAT), or `mlp` (SB3 default) |
+| `--d-model` | 128 | Token embedding dimension (attention and GNN) |
+| `--n-heads` | 4 | Attention/GAT heads |
+| `--n-layers` | 2 | Transformer encoder or GAT layers |
+| `--features-dim` | 256 | Pooled features fed to pi/vf MLP heads |
 
 ### Expected Results
 
@@ -359,7 +403,9 @@ The agent learns to progress further through Act 1 but does not yet achieve a po
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 
-7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 148 dims (includes orbs, stars, Osty); retrain after upgrading from 131-dim checkpoints.
+7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 268 dims (obs v3: mechanics + relic slots); retrain after upgrading from 148-dim or 131-dim checkpoints.
+
+8. **Entity-based policies:** `--policy attention` (`CombatAttentionExtractor`) and `--policy gnn` (`CombatGNNExtractor`) share tokenization via `sts2_env/training/entity_tokens.py`. GNN uses structural edges from `entity_graph.py`.
 
 ---
 
@@ -387,12 +433,12 @@ After training a character-specific combat model, evaluate it against the real g
    For full-run delegates, pass `--combat-models-by-character` with per-character
    checkpoint paths so combat phases route to the correct model.
 
-The mod emits `character_id`, `stars`, `orb_queue`, and `osty` in combat JSON;
-the Python adapter encodes them into observation dims 131–147. Mismatch between
-`STS2_BRIDGE_CHARACTER` and the loaded model produces incorrect one-hot/mechanics
-features and poor play.
+The mod emits `character_id`, `stars`, `orb_queue`, `osty`, and `relics` in
+combat JSON; the Python adapter encodes them into observation dims 131–267.
+Mismatch between `STS2_BRIDGE_CHARACTER` and the loaded model produces incorrect
+one-hot/mechanics/relic features and poor play.
 
 See [docs/BRIDGE_LIVE_SMOKE.md](BRIDGE_LIVE_SMOKE.md) for the offline smoke gate
 and [docs/AGENT_USAGE_GUIDE.md](AGENT_USAGE_GUIDE.md) for agent runner options.
 
-**Observation v2 note:** Combat `OBS_SIZE` is now **148** (131 base + 17 character-mechanics features). Existing 131-dim PPO checkpoints are incompatible; retrain combat models with the updated encoder.
+**Observation v3 note:** Combat `OBS_SIZE` is now **268** (148 combat v2 + 120 relic slots). Existing 148-dim and 131-dim PPO checkpoints are incompatible. Retrain combat models with the updated encoder and `--policy attention` (or `--policy mlp` for a flat baseline on the new obs size).

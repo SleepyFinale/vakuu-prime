@@ -55,9 +55,13 @@ run/                        Full-run state management (depends on all above)
   events.py                 Event handler
 
 gym_env/                    Gymnasium environments (depends on run/, encounters/)
-  combat_env.py             Single-combat env (Discrete(115), obs 148-dim)
-  run_env.py                Full-run env (Discrete(157), obs 168-dim)
-  observation.py            CombatState -> 148-dim float32 vector
+  combat_env.py             Single-combat env (Discrete(115), obs 268-dim)
+  run_env.py                Full-run env (Discrete(157), obs 288-dim)
+  observation.py            CombatState -> 268-dim float32 vector (obs v3)
+  training/entity_tokens.py       Shared entity token builder (48 nodes)
+  training/entity_graph.py        Structural adjacency for GNN policy
+  training/attention_extractor.py  Transformer feature extractor for MaskablePPO
+  training/gnn_extractor.py        DenseGAT feature extractor for MaskablePPO
   action_space.py           Action encoding + masking
   reward.py                 Reward shaping
 
@@ -346,7 +350,7 @@ The first move is held until `on_move_performed()` is called. After that, `roll_
 
 Single-combat training environment.
 
-- **Observation:** `Box(low=-1, high=10, shape=(148,), dtype=float32)`
+- **Observation:** `Box(low=-1, high=10, shape=(268,), dtype=float32)`
 - **Action space:** `Discrete(115)` = 1 end_turn + 10 untargeted card actions + 50 targeted card actions + 54 potion actions (`9 slots * (1 untargeted + 5 enemy targets)`)
 - **Action masking:** `action_masks()` returns `int8[115]` marking legal actions. Required by `MaskablePPO`.
 
@@ -367,7 +371,7 @@ On `step(action)`:
 
 ### Observation encoding (`gym_env/observation.py`)
 
-148-dimensional flat float32 vector:
+268-dimensional flat float32 vector (obs v3):
 
 | Segment | Dims | Encoding |
 | ------- | ---- | -------- |
@@ -377,8 +381,40 @@ On `step(action)`:
 | Pile summaries | 6 | draw/20, discard/20, exhaust/20, reserved x3 (zeroed for bridge parity) |
 | Enemies (5 slots) | 65 | 13 features per enemy: alive, hp%, block/50, intent_onehot(5), intent_dmg/30, intent_hits/5, vuln/10, weak/10, str/10 |
 | Character mechanics | 17 | one-hot(5), stars/30, orb cap/count, 3 orb slots (type, evoke), Osty alive/hp/block |
+| Relics (30 slots) | 120 | 4 features per relic: relic_id_norm, rarity, enabled, is_used_up |
 
-Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a float in (0, 1).
+Card and relic IDs are normalized as `(index + 1) / (total_ids + 1)` to produce a float in (0, 1).
+
+### Entity tokenization (`training/entity_tokens.py`)
+
+Both attention and GNN policies parse obs v3 into **48 fixed nodes** (player,
+piles, mechanics, 10 cards, 5 enemies, 30 relics) with per-type linear
+projections, entity-type embeddings, and padding masks for empty slots.
+
+### Attention policy (`training/attention_extractor.py`)
+
+`CombatAttentionExtractor` runs a masked `TransformerEncoder` over entity
+tokens and mean-pools into `features_dim`. Wired via `--policy attention`.
+
+### GNN policy (`training/gnn_extractor.py`)
+
+`CombatGNNExtractor` builds a dense 48×48 adjacency from combat structure
+(`training/entity_graph.py`):
+
+| Edge | Condition |
+| ---- | --------- |
+| piles → player | always |
+| relic → player | relic slot valid |
+| enemy → player | alive and attack/multi-attack intent |
+| player → enemy | enemy alive |
+| card → player | card valid and target SELF/NONE |
+| card → enemy | card valid, enemy alive, target ANY/RANDOM/ALL enemies |
+
+Card targets are resolved from `card_id_norm` via static metadata
+(`training/card_target_table.py`). Two `DenseGATConv` layers (PyG) message-pass
+over the graph; output is mean-pooled like attention. Wired via `--policy gnn`.
+
+**Checkpoint note:** `mlp`, `attention`, and `gnn` checkpoints are not interchangeable.
 
 ### Action space (`gym_env/action_space.py`)
 
@@ -394,7 +430,7 @@ Card ID is normalized as `(card_index + 1) / (total_card_ids + 1)` to produce a 
 | Topic | CombatEnv | RunEnv |
 | ----- | --------- | ------ |
 | Scope | Single combat | Full multi-act run |
-| Obs size | 148 | 168 (148 combat + 20 run-level) |
+| Obs size | 268 | 288 (268 combat + 20 run-level) |
 | Action space | Discrete(115) | Discrete(157) |
 | Phases | Combat only | Combat + map + card_reward + boss_relic + shop + rest + event + treasure |
 | Reward | +1 win / -1 loss | +1 run win / -1 death or timeout |

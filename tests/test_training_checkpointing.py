@@ -144,6 +144,166 @@ def test_resolve_resume_exits_without_checkpoint(monkeypatch, tmp_path):
         ckpt.resolve_resume_args(args)
 
 
+def test_safe_close_vec_envs_swallows_broken_pipe():
+    class BrokenEnv:
+        def close(self):
+            raise BrokenPipeError("pipe closed")
+
+    class GoodEnv:
+        closed = False
+
+        def close(self):
+            GoodEnv.closed = True
+
+    ckpt.safe_close_vec_envs(BrokenEnv(), GoodEnv())
+    assert GoodEnv.closed is True
+
+
+def test_save_interrupted_checkpoint_is_idempotent(tmp_path):
+    state = ckpt.InterruptState()
+    saved = []
+
+    model = SimpleNamespace(save=lambda path: saved.append(path))
+
+    path = tmp_path / "interrupted_checkpoint"
+    assert ckpt.save_interrupted_checkpoint(model, path, state, verbose=0) is True
+    assert state.saved is True
+    assert saved == [str(path)]
+    assert ckpt.save_interrupted_checkpoint(model, path, state, verbose=0) is False
+    assert len(saved) == 1
+
+
+def test_handle_training_keyboard_interrupt_saves_once(tmp_path):
+    state = ckpt.InterruptState()
+    saved = []
+
+    model = SimpleNamespace(save=lambda path: saved.append(path))
+    interrupt_callback = SimpleNamespace(
+        interrupt_state=state,
+        save_path=tmp_path / "interrupted_checkpoint",
+        verbose=0,
+    )
+
+    ckpt.handle_training_keyboard_interrupt(model, interrupt_callback)
+    assert state.requested is True
+    assert state.saved is True
+    assert len(saved) == 1
+
+    ckpt.handle_training_keyboard_interrupt(model, interrupt_callback)
+    assert len(saved) == 1
+
+
+def test_interrupt_signal_handler_sets_requested():
+    pytest.importorskip("stable_baselines3")
+    state = ckpt.InterruptState()
+    interrupt_callback = ckpt._build_interrupt_callback(
+        save_path="ignored",
+        interrupt_state=state,
+    )
+    interrupt_callback.verbose = 0
+    interrupt_callback._handle_signal(None, None)
+    assert state.requested is True
+    assert interrupt_callback.interrupted is True
+
+
+def test_interrupt_second_signal_force_quits():
+    pytest.importorskip("stable_baselines3")
+    state = ckpt.InterruptState(requested=True)
+    interrupt_callback = ckpt._build_interrupt_callback(
+        save_path="ignored",
+        interrupt_state=state,
+    )
+    interrupt_callback.verbose = 0
+    with pytest.raises(SystemExit) as exc:
+        interrupt_callback._handle_signal(None, None)
+    assert exc.value.code == 130
+
+
+def test_interrupt_callback_saves_on_step(tmp_path):
+    pytest.importorskip("stable_baselines3")
+    state = ckpt.InterruptState(requested=True)
+    saved = []
+
+    interrupt_callback = ckpt._build_interrupt_callback(
+        save_path=tmp_path / "interrupted_checkpoint",
+        interrupt_state=state,
+    )
+    interrupt_callback.model = SimpleNamespace(
+        save=lambda path: saved.append(path)
+    )
+    interrupt_callback.verbose = 0
+
+    assert interrupt_callback._on_step() is False
+    assert saved == [str(tmp_path / "interrupted_checkpoint")]
+    assert state.saved is True
+
+
+def _minimal_eval_vec_env():
+    """Tiny VecEnv so EvalCallback can be constructed in unit tests."""
+    pytest.importorskip("stable_baselines3")
+    import gymnasium as gym
+    from stable_baselines3.common.vec_env import DummyVecEnv
+
+    class _TrivialEnv(gym.Env):
+        observation_space = gym.spaces.Box(0.0, 1.0, (1,), dtype=float)
+        action_space = gym.spaces.Discrete(1)
+
+        def reset(self, *, seed=None, options=None):
+            return self.observation_space.sample(), {}
+
+        def step(self, action):
+            obs = self.observation_space.sample()
+            return obs, 0.0, True, False, {}
+
+    return DummyVecEnv([_TrivialEnv])
+
+
+def test_interruptible_eval_skips_when_already_requested():
+    state = ckpt.InterruptState(requested=True)
+    eval_callback = ckpt._build_interruptible_eval_callback(
+        eval_env=_minimal_eval_vec_env(),
+        interrupt_state=state,
+        eval_freq=1,
+        n_eval_episodes=1,
+        log_path=None,
+        best_model_save_path=None,
+    )
+    eval_callback.eval_freq = 1
+    eval_callback.n_calls = 1
+
+    assert eval_callback._on_step() is False
+
+
+def test_interruptible_eval_aborts_mid_eval(monkeypatch):
+    from stable_baselines3.common import callbacks as sb3_callbacks
+
+    state = ckpt.InterruptState()
+
+    def fake_evaluate_policy(*args, **kwargs):
+        callback = kwargs.get("callback")
+        assert callback is not None
+        callback({"done": False, "info": {}}, {})
+        state.requested = True
+        callback({"done": False, "info": {}}, {})
+        return ([1.0], [10])
+
+    monkeypatch.setattr(sb3_callbacks, "evaluate_policy", fake_evaluate_policy)
+
+    eval_callback = ckpt._build_interruptible_eval_callback(
+        eval_env=_minimal_eval_vec_env(),
+        interrupt_state=state,
+        eval_freq=1,
+        n_eval_episodes=2,
+        log_path=None,
+        best_model_save_path=None,
+    )
+    eval_callback.eval_freq = 1
+    eval_callback.n_calls = 1
+    eval_callback.model = SimpleNamespace(get_vec_normalize_env=lambda: None)
+
+    assert eval_callback._on_step() is False
+
+
 def test_card_value_training_checkpoint_roundtrip(tmp_path):
     torch = pytest.importorskip("torch")
     from sts2_env.gym_env.card_value import (

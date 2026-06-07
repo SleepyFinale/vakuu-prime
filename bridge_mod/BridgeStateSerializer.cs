@@ -6,6 +6,7 @@ using System.Linq;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Orbs;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
 
 namespace STS2BridgeMod;
@@ -96,5 +97,21 @@ internal static class BridgeStateSerializer
         playerObj["stars"] = pcs?.Stars ?? 0;
         playerObj["orb_queue"] = SerializeOrbQueue(pcs?.OrbQueue);
         playerObj["osty"] = SerializeOsty(player.Osty);
+    }
+
+    public static List<Dictionary<string, object>> SerializeRelics(Player player)
+    {
+        var relics = new List<Dictionary<string, object>>();
+        foreach (RelicModel relic in player.Relics)
+        {
+            relics.Add(new Dictionary<string, object>
+            {
+                ["id"] = relic.Id.Entry,
+                ["rarity"] = relic.Rarity.ToString().ToUpperInvariant(),
+                ["enabled"] = true,
+                ["used_up"] = relic.IsUsedUp,
+            });
+        }
+        return relics;
     }
 }

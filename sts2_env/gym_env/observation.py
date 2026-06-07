@@ -1,6 +1,6 @@
 """Observation space encoding.
 
-Compact flat float32 vector (148 dimensions):
+Compact flat float32 vector (268 dimensions, obs v3):
   Player state:       hp/max_hp, block/50, energy, max_energy       (4)
   Player powers:      str, dex, vuln, weak, frail, artifact         (6)
   Hand (10 cards):    card_id_norm, cost, damage, block, is_attack  (50)
@@ -9,7 +9,8 @@ Compact flat float32 vector (148 dimensions):
   Enemies (5 slots):  alive, hp%, block, intent_onehot(5),
                       intent_dmg, intent_hits, vuln, weak, str      (13 * 5 = 65)
   Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
-Total: 4 + 6 + 50 + 6 + 65 + 17 = 148
+  Relics (30 slots):  relic_id_norm, rarity, enabled, is_used_up     (4 * 30 = 120)
+Total: 4 + 6 + 50 + 6 + 65 + 17 + 120 = 268
 """
 
 from __future__ import annotations
@@ -18,9 +19,10 @@ import numpy as np
 
 from sts2_env.characters.all import SUPPORTED_TRAINING_CHARACTERS
 from sts2_env.core.combat import CombatState
-from sts2_env.core.enums import CardId, IntentType, OrbType, PowerId
+from sts2_env.core.enums import CardId, IntentType, OrbType, PowerId, RelicRarity
 from sts2_env.core.constants import MAX_HAND_SIZE, MAX_ENEMIES
 from sts2_env.orbs.base import OrbQueue
+from sts2_env.relics.base import RelicId, RelicInstance
 
 # Card IDs list for normalised encoding
 CARD_IDS = list(CardId)
@@ -83,8 +85,37 @@ BASE_OBS_SIZE = (
     + MAX_ENEMIES * ENEMY_FEATURES     # enemies (65)
 )  # = 131
 
-# Full observation size
-OBS_SIZE = BASE_OBS_SIZE + CHARACTER_MECHANICS_FEATURES  # = 148
+# Combat observation before relic slots (v2 size)
+COMBAT_OBS_V2_SIZE = BASE_OBS_SIZE + CHARACTER_MECHANICS_FEATURES  # = 148
+
+# Relic slots (obs v3)
+MAX_RELIC_SLOTS = 30
+RELIC_FEATURES = 4  # relic_id_norm, rarity, enabled, is_used_up
+RELIC_IDS = list(RelicId)
+NUM_RELIC_IDS = len(RELIC_IDS)
+_RELIC_ID_TO_IDX = {rid: i for i, rid in enumerate(RELIC_IDS)}
+NUM_RELIC_RARITIES = len(RelicRarity)
+_RELIC_RARITY_TO_IDX = {rarity: i for i, rarity in enumerate(RelicRarity)}
+RELIC_OBS_SIZE = MAX_RELIC_SLOTS * RELIC_FEATURES  # = 120
+
+# Full observation size (obs v3)
+OBS_SIZE = COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE  # = 268
+
+# Token layout for attention feature extractor (start, end indices)
+TOKEN_SLICES: dict[str, tuple[int, int]] = {
+    "player": (0, 4 + NUM_PLAYER_POWERS),
+    "hand": (4 + NUM_PLAYER_POWERS, 4 + NUM_PLAYER_POWERS + MAX_HAND_SIZE * CARD_FEATURES),
+    "piles": (
+        4 + NUM_PLAYER_POWERS + MAX_HAND_SIZE * CARD_FEATURES,
+        4 + NUM_PLAYER_POWERS + MAX_HAND_SIZE * CARD_FEATURES + PILE_FEATURES,
+    ),
+    "enemies": (
+        4 + NUM_PLAYER_POWERS + MAX_HAND_SIZE * CARD_FEATURES + PILE_FEATURES,
+        BASE_OBS_SIZE,
+    ),
+    "mechanics": (BASE_OBS_SIZE, COMBAT_OBS_V2_SIZE),
+    "relics": (COMBAT_OBS_V2_SIZE, OBS_SIZE),
+}
 
 
 def encode_character_mechanics_from_fields(
@@ -138,6 +169,69 @@ def encode_character_mechanics_from_fields(
     idx += OSTY_FEATURES
 
     return idx
+
+
+def encode_relic_features(relic: RelicInstance) -> np.ndarray:
+    """Encode a single relic as a float32 feature vector."""
+    features = np.zeros(RELIC_FEATURES, dtype=np.float32)
+    features[0] = (_RELIC_ID_TO_IDX.get(relic.relic_id, 0) + 1) / (NUM_RELIC_IDS + 1)
+    rarity_index = _RELIC_RARITY_TO_IDX.get(relic.rarity, 0)
+    features[1] = rarity_index / max(NUM_RELIC_RARITIES - 1, 1)
+    features[2] = 1.0 if relic.enabled else 0.0
+    features[3] = 1.0 if relic.is_used_up else 0.0
+    return features
+
+
+def encode_relic_features_from_fields(
+    *,
+    relic_id: str | None = None,
+    rarity: str | int | None = None,
+    enabled: bool = True,
+    is_used_up: bool = False,
+) -> np.ndarray:
+    """Encode relic features from plain fields (simulator or bridge JSON)."""
+    from sts2_env.relics.registry import coerce_relic_id
+
+    features = np.zeros(RELIC_FEATURES, dtype=np.float32)
+    if relic_id:
+        try:
+            relic_enum = coerce_relic_id(relic_id.strip())
+            features[0] = (_RELIC_ID_TO_IDX.get(relic_enum, 0) + 1) / (NUM_RELIC_IDS + 1)
+        except KeyError:
+            pass
+    if rarity is not None:
+        if isinstance(rarity, int):
+            rarity_index = rarity
+        else:
+            rarity_name = str(rarity).strip().upper()
+            rarity_enum = RelicRarity.__members__.get(rarity_name)
+            rarity_index = _RELIC_RARITY_TO_IDX.get(rarity_enum, 0) if rarity_enum else 0
+        features[1] = rarity_index / max(NUM_RELIC_RARITIES - 1, 1)
+    features[2] = 1.0 if enabled else 0.0
+    features[3] = 1.0 if is_used_up else 0.0
+    return features
+
+
+def encode_relics_into_obs(
+    obs: np.ndarray,
+    start_idx: int,
+    relics: list[RelicInstance] | list[dict[str, object]] | None,
+) -> int:
+    """Write up to MAX_RELIC_SLOTS relic feature blocks starting at start_idx."""
+    idx = start_idx
+    if relics:
+        for relic in relics[:MAX_RELIC_SLOTS]:
+            if isinstance(relic, RelicInstance):
+                obs[idx:idx + RELIC_FEATURES] = encode_relic_features(relic)
+            elif isinstance(relic, dict):
+                obs[idx:idx + RELIC_FEATURES] = encode_relic_features_from_fields(
+                    relic_id=str(relic.get("id", "")),
+                    rarity=relic.get("rarity"),
+                    enabled=bool(relic.get("enabled", True)),
+                    is_used_up=bool(relic.get("used_up", relic.get("is_used_up", False))),
+                )
+            idx += RELIC_FEATURES
+    return start_idx + MAX_RELIC_SLOTS * RELIC_FEATURES
 
 
 def _encode_character_mechanics(combat: CombatState, obs: np.ndarray, start_idx: int) -> int:
@@ -237,6 +331,7 @@ def encode_observation(combat: CombatState) -> np.ndarray:
             obs[idx + 3 + NUM_INTENT_TYPES + 4] = enemy.get_power_amount(PowerId.STRENGTH) / 10.0
         idx += ENEMY_FEATURES
 
-    _encode_character_mechanics(combat, obs, idx)
+    idx = _encode_character_mechanics(combat, obs, idx)
+    encode_relics_into_obs(obs, idx, combat.relics)
 
     return obs

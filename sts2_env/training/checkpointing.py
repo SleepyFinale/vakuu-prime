@@ -14,11 +14,55 @@ import json
 import re
 import signal
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 _STEP_RE = re.compile(r"_(\d+)_steps\.zip$")
 _JSON_SCALARS = (str, int, float, bool, type(None))
+
+
+class _EvalAborted(Exception):
+    """Raised from ``evaluate_policy`` when training interrupt is pending."""
+
+
+@dataclass
+class InterruptState:
+    """Shared flag set by the signal handler and polled by eval / save logic."""
+
+    requested: bool = False
+    saved: bool = False
+
+
+def save_interrupted_checkpoint(
+    model,
+    path: str | Path,
+    state: InterruptState,
+    *,
+    verbose: int = 1,
+) -> bool:
+    """Save ``interrupted_checkpoint.zip`` once; return True if a save was written."""
+    if state.saved:
+        return False
+    save_path = Path(path)
+    model.save(str(save_path))
+    state.saved = True
+    if verbose:
+        print(f"Saved interrupted checkpoint to {save_path}.zip")
+    return True
+
+
+def handle_training_keyboard_interrupt(model, interrupt_callback) -> None:
+    """Safety net when ``KeyboardInterrupt`` escapes ``model.learn()``."""
+    state = interrupt_callback.interrupt_state
+    state.requested = True
+    save_interrupted_checkpoint(
+        model,
+        interrupt_callback.save_path,
+        state,
+        verbose=interrupt_callback.verbose,
+    )
 
 
 def _checkpoint_steps(path: Path) -> int:
@@ -165,6 +209,21 @@ def print_pause_message(script: str, output_dir: str | Path, model, total_timest
     print(f"  python {script} --resume --output-dir {output_dir}")
 
 
+def safe_close_vec_envs(*envs) -> None:
+    """Close vectorized envs without raising on broken worker pipes.
+
+    After a mid-rollout interrupt, ``SubprocVecEnv`` workers on Windows may
+    already be gone; ``close()`` can then raise ``BrokenPipeError``.
+    """
+    for env in envs:
+        if env is None:
+            continue
+        try:
+            env.close()
+        except (BrokenPipeError, EOFError, OSError):
+            pass
+
+
 def build_ppo_callbacks(
     *,
     output_dir: str | Path,
@@ -183,11 +242,13 @@ def build_ppo_callbacks(
     ``learn()`` returns. SB3 is imported lazily here so the pure-Python helpers
     above stay importable without the optional ``[train]`` dependencies.
     """
-    from stable_baselines3.common.callbacks import CallbackList, EvalCallback
+    from stable_baselines3.common.callbacks import CallbackList
 
     output_dir = Path(output_dir)
-    eval_callback = EvalCallback(
+    interrupt_state = InterruptState()
+    eval_callback = _build_interruptible_eval_callback(
         eval_env,
+        interrupt_state=interrupt_state,
         best_model_save_path=str(output_dir / "best_model"),
         log_path=str(output_dir / "eval_logs"),
         eval_freq=max(eval_freq // n_envs, 1),
@@ -201,9 +262,49 @@ def build_ppo_callbacks(
     )
     interrupt_callback = _build_interrupt_callback(
         save_path=str(output_dir / "interrupted_checkpoint"),
+        interrupt_state=interrupt_state,
     )
     callbacks = [eval_callback, checkpoint_callback, *extra_callbacks, interrupt_callback]
     return CallbackList(callbacks), interrupt_callback
+
+
+def _build_interruptible_eval_callback(
+    eval_env,
+    *,
+    interrupt_state: InterruptState,
+    **kwargs,
+):
+    from stable_baselines3.common.callbacks import EvalCallback
+
+    class _InterruptibleEvalCallback(EvalCallback):
+        """EvalCallback that aborts promptly when Ctrl+C is pending."""
+
+        def __init__(self, *args, interrupt_state: InterruptState, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._interrupt_state = interrupt_state
+
+        def _log_success_callback(
+            self, locals_: dict[str, Any], globals_: dict[str, Any]
+        ) -> None:
+            if self._interrupt_state.requested:
+                raise _EvalAborted()
+            super()._log_success_callback(locals_, globals_)
+
+        def _on_step(self) -> bool:
+            if (
+                self.eval_freq > 0
+                and self.n_calls % self.eval_freq == 0
+                and self._interrupt_state.requested
+            ):
+                return False
+            try:
+                return super()._on_step()
+            except _EvalAborted:
+                return False
+
+    return _InterruptibleEvalCallback(
+        eval_env, interrupt_state=interrupt_state, **kwargs
+    )
 
 
 def _build_pruning_checkpoint_callback(*, save_freq: int, save_path: str, keep: int):
@@ -226,21 +327,34 @@ def _build_pruning_checkpoint_callback(*, save_freq: int, save_path: str, keep: 
     )
 
 
-def _build_interrupt_callback(*, save_path: str):
+def _build_interrupt_callback(*, save_path: str, interrupt_state: InterruptState):
     from stable_baselines3.common.callbacks import BaseCallback
 
     class StopTrainingOnInterrupt(BaseCallback):
         """Save a checkpoint and stop ``learn()`` cleanly on SIGINT/SIGTERM."""
 
-        def __init__(self, path: str | Path, verbose: int = 1):
+        def __init__(
+            self,
+            path: str | Path,
+            interrupt_state: InterruptState,
+            verbose: int = 1,
+        ):
             super().__init__(verbose)
             self.save_path = Path(path)
-            self.interrupted = False
+            self.interrupt_state = interrupt_state
             self._original_handlers: dict = {}
 
+        @property
+        def interrupted(self) -> bool:
+            return self.interrupt_state.requested
+
         def _handle_signal(self, signum, frame) -> None:
-            self.interrupted = True
-            self._restore_handlers()
+            if self.interrupt_state.requested:
+                if self.verbose:
+                    print("\nForce-quitting...")
+                self._restore_handlers()
+                sys.exit(130)
+            self.interrupt_state.requested = True
             if self.verbose:
                 print(
                     "\nInterrupt received; saving checkpoint and stopping "
@@ -265,18 +379,24 @@ def _build_interrupt_callback(*, save_path: str):
             self._original_handlers.clear()
 
         def _on_training_start(self) -> None:
-            self.interrupted = False
+            self.interrupt_state.requested = False
+            self.interrupt_state.saved = False
             self._install_handlers()
 
         def _on_step(self) -> bool:
-            if self.interrupted:
-                self.model.save(str(self.save_path))
-                if self.verbose:
-                    print(f"Saved interrupted checkpoint to {self.save_path}.zip")
+            if self.interrupt_state.requested:
+                save_interrupted_checkpoint(
+                    self.model,
+                    self.save_path,
+                    self.interrupt_state,
+                    verbose=self.verbose,
+                )
                 return False
             return True
 
         def _on_training_end(self) -> None:
             self._restore_handlers()
 
-    return StopTrainingOnInterrupt(path=save_path)
+    return StopTrainingOnInterrupt(
+        path=save_path, interrupt_state=interrupt_state
+    )

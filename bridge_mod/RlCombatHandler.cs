@@ -478,12 +478,14 @@ public class RlCombatHandler : IRoomHandler, IHandler
             RunState runState = RunManager.Instance.DebugOnlyGetState();
 
             List<Dictionary<string, object>> potions = SerializePotions(player);
+            List<Dictionary<string, object>> relics = BridgeStateSerializer.SerializeRelics(player);
             var state = new Dictionary<string, object>
             {
                 ["type"] = "combat_action",
                 ["player"] = playerObj,
                 ["hand"] = handCards,
                 ["enemies"] = enemies,
+                ["relics"] = relics,
                 ["potions"] = potions,
                 ["available_actions"] = GetAvailableActions(potions),
                 ["draw_pile_count"] = pcs?.DrawPile.Cards.Count ?? 0,

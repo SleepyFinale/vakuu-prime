@@ -339,6 +339,18 @@ def _normalize_action_options(options: list[dict[str, Any]] | None) -> list[dict
     return normalized
 
 
+def _normalize_relics(relics: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for relic in relics or []:
+        normalized.append({
+            "id": str(relic.get("id", "")),
+            "rarity": str(relic.get("rarity", "")),
+            "enabled": bool(relic.get("enabled", True)),
+            "used_up": bool(relic.get("used_up", relic.get("is_used_up", False))),
+        })
+    return normalized
+
+
 def _normalize_card_bundles(bundles: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for idx, bundle in enumerate(bundles or []):
@@ -372,7 +384,7 @@ def normalize_bridge_state(state: dict[str, Any]) -> dict[str, Any]:
             normalized_player["orb_queue"] = _normalize_orb_queue(player.get("orb_queue"))
         if "osty" in player:
             normalized_player["osty"] = _normalize_osty(player.get("osty"))
-        return {
+        normalized_state = {
             "type": STATE_TYPE_COMBAT,
             "player": normalized_player,
             "hand": _normalize_cards(state.get("hand")),
@@ -382,6 +394,9 @@ def normalize_bridge_state(state: dict[str, Any]) -> dict[str, Any]:
             "exhaust_pile_count": int(state.get("exhaust_pile_count", 0)),
             "round": int(state.get("round", 0)),
         }
+        if state.get("relics") is not None:
+            normalized_state["relics"] = _normalize_relics(state.get("relics"))
+        return normalized_state
     if state_type == STATE_TYPE_CARD_SELECT:
         return {
             "type": STATE_TYPE_CARD_SELECT,
@@ -588,6 +603,15 @@ def combat_state_to_bridge_state(combat: CombatState) -> dict[str, Any]:
         "draw_pile_count": len(combat.draw_pile),
         "discard_pile_count": len(combat.discard_pile),
         "exhaust_pile_count": len(combat.exhaust_pile),
+        "relics": [
+            {
+                "id": relic.relic_id.name,
+                "rarity": relic.rarity.name,
+                "enabled": relic.enabled,
+                "used_up": relic.is_used_up,
+            }
+            for relic in combat.relics
+        ],
         "round": combat.round_number,
     })
 

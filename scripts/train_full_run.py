@@ -191,8 +191,10 @@ def train(args):
 
     from sts2_env.training.checkpointing import (
         build_ppo_callbacks,
+        handle_training_keyboard_interrupt,
         print_pause_message,
         print_resume_progress,
+        safe_close_vec_envs,
         save_run_config,
     )
 
@@ -316,20 +318,22 @@ def train(args):
     )
 
     start = time.perf_counter()
-    model.learn(
-        total_timesteps=args.total_timesteps,
-        callback=callbacks,
-        progress_bar=True,
-        reset_num_timesteps=reset_timesteps,
-    )
+    try:
+        model.learn(
+            total_timesteps=args.total_timesteps,
+            callback=callbacks,
+            progress_bar=True,
+            reset_num_timesteps=reset_timesteps,
+        )
+    except KeyboardInterrupt:
+        handle_training_keyboard_interrupt(model, interrupt_callback)
     elapsed = time.perf_counter() - start
 
     if interrupt_callback.interrupted:
         print(f"\nTraining interrupted after {elapsed:.1f}s")
         print_pause_message("scripts/train_full_run.py", args.output_dir, model, args.total_timesteps)
-        train_env.close()
-        eval_env.close()
-        return True
+        safe_close_vec_envs(train_env, eval_env)
+        sys.exit(0)
 
     final_path = str(output_dir / "final_model")
     model.save(final_path)
@@ -352,8 +356,7 @@ def train(args):
         n_episodes=100,
     )
 
-    train_env.close()
-    eval_env.close()
+    safe_close_vec_envs(train_env, eval_env)
     return False
 
 

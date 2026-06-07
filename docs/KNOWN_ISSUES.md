@@ -142,13 +142,13 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 - **Character selection** in [`STS2CombatEnv`](../sts2_env/gym_env/combat_env.py): `--character` (single) and `--characters all` (mixed) in [`scripts/train_combat.py`](../scripts/train_combat.py).
 - **Starter deck, HP, and starting relic** per character via [`sts2_env/characters/all.py`](../sts2_env/characters/all.py).
-- **Observation v2 (148 dims):** character one-hot, stars, orb queue, and Osty features in [`sts2_env/gym_env/observation.py`](../sts2_env/gym_env/observation.py).
+- **Observation v3 (268 dims):** character mechanics (dims 131–147), relic entity slots (dims 148–267), `CombatAttentionExtractor` in [`sts2_env/training/attention_extractor.py`](../sts2_env/training/attention_extractor.py), and optional `CombatGNNExtractor` in [`sts2_env/training/gnn_extractor.py`](../sts2_env/training/gnn_extractor.py).
 - **Full-run wiring:** `--character`, `--characters`, and `--combat-models-by-character` in [`scripts/train_full_run.py`](../scripts/train_full_run.py) and [`scripts/eval_full_run.py`](../scripts/eval_full_run.py).
-- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, and `osty` ([`bridge_mod/BridgeStateSerializer.cs`](../bridge_mod/BridgeStateSerializer.cs)); Python adapter encodes the 148-dim mechanics slice ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
+- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, `osty`, and `relics` ([`bridge_mod/BridgeStateSerializer.cs`](../bridge_mod/BridgeStateSerializer.cs)); Python adapter encodes the full 268-dim vector ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
 
 **Remaining gaps:**
 
-- Pre-existing 131-dim combat checkpoints must be retrained for the new observation size.
+- Pre-existing 131-dim and 148-dim combat checkpoints must be retrained for obs v3 (268 dims). `mlp`, `attention`, and `gnn` checkpoints are also mutually incompatible (different `policy_kwargs` / feature extractors).
 - Live bridge eval requires matching the mod's `STS2_BRIDGE_CHARACTER` to the agent's trained character and `--character` / `--combat-models-by-character` model path.
 
 ### 9. Combat potion actions were missing from the RL action space

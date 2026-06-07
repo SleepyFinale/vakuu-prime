@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sts2_env.bridge.state_adapter import StateAdapter
 from sts2_env.core.constants import POTION_ACTION_START, POTION_TARGET_OPTIONS
+from sts2_env.gym_env.observation import COMBAT_OBS_V2_SIZE, OBS_SIZE, RELIC_FEATURES
 
 
 def _base_state() -> dict:
@@ -28,6 +29,22 @@ def _base_state() -> dict:
         "discard_pile_count": 2,
         "exhaust_pile_count": 1,
     }
+
+
+def test_encode_observation_encodes_relic_slots() -> None:
+    adapter = StateAdapter()
+    state = _base_state()
+    state["relics"] = [
+        {"id": "BurningBlood", "rarity": "STARTER", "enabled": True, "used_up": False},
+        {"id": "Vajra", "rarity": "COMMON", "enabled": True, "used_up": False},
+    ]
+    obs = adapter.encode_observation(state)
+
+    assert obs.shape == (OBS_SIZE,)
+    relic_slice = obs[COMBAT_OBS_V2_SIZE:OBS_SIZE].reshape(-1, RELIC_FEATURES)
+    assert relic_slice[0].sum() > 0
+    assert relic_slice[1].sum() > 0
+    assert relic_slice[2:].sum() == 0.0
 
 
 def test_encode_observation_keeps_reserved_pile_summary_slots_zero() -> None:

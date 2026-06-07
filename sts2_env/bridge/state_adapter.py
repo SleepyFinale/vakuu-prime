@@ -13,7 +13,8 @@ The observation format is defined in gym_env/observation.py:
   - Enemies: alive, hp%, block, intent_onehot(5), intent_dmg,
              intent_hits, vuln, weak, str (5 * 13 = 65)
   - Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
-  Total: 148 dimensions
+  - Relics: relic_id_norm, rarity, enabled, is_used_up (30 * 4 = 120)
+  Total: 268 dimensions
 """
 
 from __future__ import annotations
@@ -42,7 +43,9 @@ from sts2_env.gym_env.observation import (
     NUM_PLAYER_POWERS,
     OBS_SIZE,
     PILE_FEATURES,
+    COMBAT_OBS_V2_SIZE,
     encode_character_mechanics_from_fields,
+    encode_relics_into_obs,
     _CARD_ID_TO_IDX,
 )
 from sts2_env.bridge.protocol import (
@@ -109,7 +112,7 @@ class StateAdapter:
                    Must contain 'combat_state' with player, hand, enemies.
 
         Returns:
-            Float32 numpy array of shape (OBS_SIZE,) = (148,).
+            Float32 numpy array of shape (OBS_SIZE,) = (268,).
             Returns zeros if not in combat.
         """
         obs = np.zeros(OBS_SIZE, dtype=np.float32)
@@ -210,7 +213,7 @@ class StateAdapter:
 
             idx += ENEMY_FEATURES
 
-        encode_character_mechanics_from_fields(
+        idx = encode_character_mechanics_from_fields(
             obs,
             idx,
             character_id=player.get("character_id"),
@@ -223,6 +226,8 @@ class StateAdapter:
             osty_max_hp=int((player.get("osty") or {}).get("max_hp", 0)),
             osty_block=int((player.get("osty") or {}).get("block", 0)),
         )
+        relics = combat.get("relics") or player.get("relics")
+        encode_relics_into_obs(obs, COMBAT_OBS_V2_SIZE, relics)
 
         return obs
 

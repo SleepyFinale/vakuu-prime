@@ -28,9 +28,9 @@ for the current game phase are unmasked:
 
 Observation space
 -----------------
-Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (168).
+Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (288).
 
-* Combat observation (148) -- reuses :func:`encode_observation`.
+* Combat observation (268) -- reuses :func:`encode_observation`.
 * Run-level state (20):
   - current_act, total_floor, and act_floor normalized by run scales (3)
   - player HP ratio and normalized gold                             (2)
@@ -212,7 +212,7 @@ NUM_PHASES = len(_PHASE_INDEX)
 # ---------------------------------------------------------------------------
 
 _RUN_STATE_SIZE = 20   # see module docstring
-RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 148 + 20 = 168
+RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 268 + 20 = 288
 
 DEFAULT_MAX_STEPS = 10_000
 DEFAULT_MAX_COMBAT_TURNS = 200
@@ -787,7 +787,7 @@ class STS2RunEnv(gymnasium.Env):
         if mgr is None:
             return obs
 
-        # ---- Combat observation (131 dims) ----
+        # ---- Combat observation (268 dims) ----
         combat = mgr.get_combat_state()
         if combat is not None:
             combat_obs = encode_observation(combat)
