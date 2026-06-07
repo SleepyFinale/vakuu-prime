@@ -139,7 +139,9 @@ python -m sts2_env.bridge.agent_runner \
   --replay-factory my_module:make_run_manager
 ```
 
-The recorded trace will be written when the run ends or when the runner exits.
+The recorded trace will be written when the run ends or when the runner exits. Replay
+comparison expects bridge JSON fields required for **obs v11 (1985 dims)** parity
+(pile arrays, relic counters, potions, enriched hand cards). See [BRIDGE_LIVE_SMOKE.md](BRIDGE_LIVE_SMOKE.md).
 
 ## Comparing Against the Simulator
 

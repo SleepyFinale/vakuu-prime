@@ -211,3 +211,13 @@ class Rng:
     def fork(self) -> Rng:
         """Create a child RNG with a derived seed."""
         return Rng(self.next_int(0, INT_MAX_EXCLUSIVE))
+
+    def copy(self) -> Rng:
+        """Return an independent RNG at the same counter position."""
+        cloned = object.__new__(Rng)
+        cloned._base_seed = self._base_seed
+        cloned._seed = self._seed
+        cloned._rng = _DotNetCompatRandom(_to_int32(self._seed))
+        cloned._counter = 0
+        cloned.fast_forward_counter(self._counter)
+        return cloned

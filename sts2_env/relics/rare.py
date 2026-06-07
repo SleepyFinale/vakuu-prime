@@ -373,6 +373,10 @@ class Girya(RelicInstance):
         super().__init__(relic_id)
         self._times_lifted: int = 0
 
+    @property
+    def counter(self) -> int:
+        return self._times_lifted
+
     def before_combat_start(self, owner: Creature, combat: CombatState) -> None:
         if self._times_lifted > 0:
             owner.apply_power(PowerId.STRENGTH, self._times_lifted)
@@ -489,6 +493,10 @@ class LastingCandy(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._combats_seen: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._combats_seen % self.COMBATS
 
     def modify_card_reward_options(
         self,

@@ -350,7 +350,7 @@ obs, info = env.reset()  # Start next episode
 
 **Cause:** The observation size changed between training and inference (e.g., new features were added to the observation encoder).
 
-**Solution:** Ensure the same version of `observation.py` is used for both training and inference. The observation size is `OBS_SIZE = 294` dimensions (obs v4). If you modify the observation encoder or policy architecture (`--policy attention` vs `mlp`), retrain the model.
+**Solution:** Ensure the same version of `observation.py` is used for both training and inference. Current combat `OBS_SIZE` is **1985** dimensions (obs **v11**). Checkpoints below v10 are obsolete. Migration chain: v8 (1978) → v9 (1983, draw order) → v10 (1984, ascension) → v11 (1985, turn_count). Navigator checkpoints must use the **166-dim** obs v2 layout. If you modify the observation encoder or policy architecture (`--policy attention` vs `mlp`), retrain the model. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) and [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md) for the full obs history.
 
 ---
 
@@ -368,9 +368,9 @@ obs, info = env.reset()  # Start next episode
 
 **Symptom:** Combat decisions take several seconds per action when `--mcts` is enabled.
 
-**Cause:** MCTS runs many simulations (default 128) with combat `deepcopy` branching. The bridge defaults to a 2s time budget per decision.
+**Cause:** MCTS runs many simulations (default 128) with combat clone branching. Enemy-phase lookahead and an extra player turn roughly double effective tree depth. The bridge defaults to a 2s time budget per decision.
 
-**Solution:** Reduce `--mcts-sims` (e.g. 32–64), set a lower `--mcts-time-budget`, or disable `--mcts` for faster greedy PPO play. MCTS is inference-only and not required for training.
+**Solution:** Reduce `--mcts-sims` (e.g. 32–64), lower `--mcts-max-depth` (default 15), set `--mcts-lookahead-turns 0` to disable turn-2 expansion, set a lower `--mcts-time-budget`, or disable `--mcts` for faster greedy PPO play. MCTS is inference-only and not required for training.
 
 ---
 
@@ -378,6 +378,6 @@ obs, info = env.reset()  # Start next episode
 
 **Symptom:** Training continues at the same stage despite high training win rates.
 
-**Cause:** Promotion gates use a **fixed easy encounter subset** (`curriculum/gate_win_rate`, `curriculum/gate_hp_ratio`), not the harder training distribution. `--auto-promote` may be off, or gate thresholds (98% win, 92% HP) are not yet met.
+**Cause:** Gate metrics (`curriculum/gate_win_rate`, `curriculum/gate_hp_ratio`) use tier-specific encounter pools and thresholds — easy stages gate on Jaw Worm/Cultists (up to 98%/92%); elite stages gate on Act 1 elites (92%/80%). Training win rates on the full encounter pool can look high while gate metrics lag. `--auto-promote` may be off, or consecutive gate evals have not yet passed.
 
-**Solution:** Check TensorBoard `curriculum/gate_win_rate` and `curriculum/gate_hp_ratio`. Enable `--auto-promote` for hands-off progression, or manually promote with `--load-model` into the next stage output directory. See [TRAINING_GUIDE.md](TRAINING_GUIDE.md) and [README.md](../README.md#combat-curriculum-learning).
+**Solution:** Check TensorBoard `curriculum/gate_win_rate`, `curriculum/gate_hp_ratio`, and `curriculum/gate_min_*` thresholds. Enable `--auto-promote` for hands-off progression (stall fallback force-promotes after 3× the median stage budget with `curriculum/forced_promotion=1`), or manually promote with `--load-model` into the next stage output directory. See [TRAINING_GUIDE.md](TRAINING_GUIDE.md) and [README.md](../README.md#combat-curriculum-learning).

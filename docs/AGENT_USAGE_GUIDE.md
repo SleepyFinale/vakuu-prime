@@ -1,12 +1,12 @@
 # Agent Usage Guide
 
-This guide covers training RL agents and running them against the real Slay the Spire 2 game. For the full training reference (curriculum stages, policy architectures, hyperparameters), see [TRAINING_GUIDE.md](TRAINING_GUIDE.md).
+This guide covers training RL agents and running them against the real Slay the Spire 2 game. For the full training reference (curriculum stages, policy architectures, hyperparameters), see [TRAINING_GUIDE.md](TRAINING_GUIDE.md). For observation layout details, see [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md) and [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 ---
 
 ## 1. Training a Combat Agent
 
-The combat environment (`STS2CombatEnv`) trains an agent on single combat encounters. Default policy is a **Transformer self-attention** extractor over 48 entity tokens; observations are **294-dim obs v4** (including draw-pile memory and relic slots).
+The combat environment (`STS2CombatEnv`) trains an agent on single combat encounters. Default policy is a **Transformer self-attention** extractor over **57 entity tokens**; observations are **1985-dim obs v11** (full power grid, draw-pile memory, relic/potion slots, ascension, turn count).
 
 ### Recommended: Curriculum-First Training
 
@@ -96,11 +96,14 @@ tensorboard --logdir output/curriculum/s1_easy/tb_logs
 | `--n-envs` | 4 | Match CPU core count |
 | `--lr` | 3e-4 | Lower for stability, higher for speed |
 | `--mcts` | off | Post-training eval with turn-bounded MCTS |
+| `--eval-only` | off | Run MCTS/post-train eval without training (requires `--load-model`) |
+| `--flawless-bonus` | 0.1 | Bonus on flawless combat wins (no HP lost) |
 
 ### Checkpoint Compatibility
 
-- Combat `OBS_SIZE` is **294** (obs v4). Checkpoints trained on 268-dim (v3) or 131-dim vectors are **obsolete**.
+- Combat `OBS_SIZE` is **1985** (obs v11). Checkpoints below obs v10 are **obsolete** — retrain on v11.
 - Policy type (`mlp` / `attention` / `gnn`) must match at load time. Check `run_config.json` in the output directory.
+- See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the full obs version history.
 
 ---
 
@@ -143,6 +146,7 @@ python scripts/train_navigator.py --preset phase2 \
 | `--combat-models-by-character` | Per-character: `Ironclad:path0,Silent:path1` |
 | `--combat-value-shaping` | Draft pick shaping via combat PPO critic ΔV |
 | `--draft-value-scale` | 0.1 (scale for draft ΔV bonus) |
+| `--flawless-combat-bonus` | 0.003 | Bonus per combat cleared without HP loss |
 | `--act-count` | Acts before win (1 = Act 1, 3 = full game) |
 | `--preset` | `phase1` (2M, Act 1), `phase2` (5M, full), `full` (8M) |
 
@@ -195,8 +199,11 @@ Turn-bounded PUCT search improves combat decisions at inference time. **Not used
 | `--mcts` | off | Enable MCTS |
 | `--mcts-sims` | 128 | Simulations per decision |
 | `--mcts-c-puct` | 1.5 | PUCT exploration constant |
-| `--mcts-max-depth` | 30 | Max actions within one player turn |
+| `--mcts-max-depth` | 15 | Max actions within one player turn |
+| `--mcts-lookahead-turns` | 1 | Extra player turns to expand after enemy phase |
 | `--mcts-time-budget` | 2.0s (bridge) / None (train eval) | Wall-clock cap per decision |
+| `--mcts-dirichlet-alpha` | 0.3 | Dirichlet alpha for root exploration noise |
+| `--mcts-dirichlet-epsilon` | 0.25 | Root prior noise mix weight; 0 disables |
 
 Use MCTS when you want stronger combat play and can tolerate slower decisions (especially in the live game). Reduce `--mcts-sims` or increase `--mcts-time-budget` if decisions feel too slow.
 
@@ -216,7 +223,7 @@ Reports ~1,200 episodes/sec, ~28,000 steps/sec, and random-play win rate.
 
 ### Prerequisites
 
-1. Trained model matching obs v4 and policy type
+1. Trained model matching **obs v11 (1985 dims)** and policy type
 2. Bridge mod installed (see [MOD_BUILD_GUIDE.md](MOD_BUILD_GUIDE.md))
 3. Slay the Spire 2 running with the mod loaded
 4. `STS2_BRIDGE_CHARACTER` set to the same character the model was trained on
@@ -243,6 +250,9 @@ python -m sts2_env.bridge.agent_runner \
 | `--mcts` | off | Turn-bounded MCTS for combat decisions |
 | `--mcts-sims` | 128 | MCTS simulations per decision |
 | `--mcts-time-budget` | 2.0 | Seconds per combat decision |
+| `--mcts-lookahead-turns` | 1 | Extra player turns after enemy phase |
+| `--record-replay` | — | Write bridge replay JSON for parity testing |
+| `--replay-factory` | — | `module:function` to build replay recorder |
 | `--deterministic` | True | Greedy action selection (no randomness) |
 | `--stochastic` | False | Stochastic selection |
 | `--verbose` / `-v` | False | Log every action taken |
@@ -337,7 +347,7 @@ The headless simulator mirrors decompiled game logic, but edge cases may differ.
 
 ### Observation and Policy Mismatch
 
-Loading a model trained with `--policy attention` while the runner expects `mlp` (or using an obs v3 checkpoint) produces poor play or load failures. Always match character, obs version, and policy type.
+Loading a model trained with `--policy attention` while the runner expects `mlp` (or using a pre-v11 checkpoint) produces poor play or load failures. Always match character, obs version (v11 / 1985 dims), and policy type. Navigator checkpoints must use the 166-dim obs v2 layout.
 
 ### Non-Combat Phases
 

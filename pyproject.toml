@@ -17,10 +17,12 @@ train = [
     "tensorboard>=2.0",
     "tqdm>=4.0",
     "rich>=10.0",
+    "filelock>=3.13",
 ]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "filelock>=3.13",
 ]
 
 [tool.setuptools.packages.find]
@@ -30,4 +32,5 @@ include = ["sts2_env*"]
 testpaths = ["tests"]
 markers = [
     "live_bridge: requires a running STS2 game with the bridge mod (skipped unless --run-live-bridge)",
+    "slow: performance or long-running tests",
 ]

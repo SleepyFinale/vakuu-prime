@@ -13,6 +13,7 @@ from sts2_env.gym_env.observation import (
     CHARACTER_MECHANICS_FEATURES,
     COMBAT_OBS_V2_SIZE,
     OBS_SIZE,
+    POTION_OBS_SIZE,
     RELIC_OBS_SIZE,
     encode_observation,
 )
@@ -32,10 +33,9 @@ def _make_combat(deck, character_id: str) -> CombatState:
     return combat
 
 
-def test_obs_size_includes_mechanics_and_relics():
+def test_obs_v6_size_constants():
     assert COMBAT_OBS_V2_SIZE == BASE_OBS_SIZE + CHARACTER_MECHANICS_FEATURES
-    assert OBS_SIZE == COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE
-    assert OBS_SIZE == 294
+    assert OBS_SIZE == COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE + POTION_OBS_SIZE
 
 
 def test_character_one_hot_ironclad():

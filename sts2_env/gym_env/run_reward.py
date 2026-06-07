@@ -1,4 +1,10 @@
-"""Run-level reward shaping for full-run RL training."""
+"""Run-level reward shaping for full-run RL training.
+
+Dense progress bonuses (floor, combat clear, kills) accumulate over long
+episodes.  Defaults are tuned so a maximal ~50-floor run stays under ~0.9
+total progress shaping — keeping terminal +1 / -1 dominant and ensuring
+long deaths cannot outscore short wins.
+"""
 
 from __future__ import annotations
 
@@ -11,15 +17,24 @@ from sts2_env.gym_env.reward_shaping import (
 )
 from sts2_env.run.run_manager import RunManager
 
+REWARD_WIN = 1.0
+REWARD_DEATH = -1.0
+
+
+def _default_run_micro_config() -> CombatMicroRewardConfig:
+    return CombatMicroRewardConfig(kill_scale=0.003)
+
 
 @dataclass(frozen=True)
 class RunRewardConfig:
-    """Tunable shaping scales (kept well below terminal +/-1)."""
+    """Tunable shaping scales (cumulative progress kept below terminal +/-1)."""
 
-    floor_bonus: float = 0.05
-    combat_clear_bonus: float = 0.1
+    floor_bonus: float = 0.01
+    combat_clear_bonus: float = 0.005
+    flawless_combat_bonus: float = 0.003
+    win_hp_bonus_scale: float = 0.15
     hp: HpShapingConfig = field(default_factory=HpShapingConfig)
-    micro: CombatMicroRewardConfig = field(default_factory=CombatMicroRewardConfig)
+    micro: CombatMicroRewardConfig = field(default_factory=_default_run_micro_config)
 
     # Backward-compatible aliases for linear HP fields (deprecated).
     @property
@@ -73,6 +88,8 @@ def compute_run_shaping(
     prev: RunRewardSnapshot,
     curr: RunRewardSnapshot,
     config: RunRewardConfig,
+    *,
+    combat_gross_hp_lost: int | None = None,
 ) -> float:
     """Compute dense shaping reward between two snapshots."""
     reward = 0.0
@@ -87,6 +104,8 @@ def compute_run_shaping(
     )
     if left_combat and curr.last_combat_won is True:
         reward += config.combat_clear_bonus
+        if combat_gross_hp_lost is not None and combat_gross_hp_lost <= 0:
+            reward += config.flawless_combat_bonus
         hp_lost = max(0, int(round((prev.hp_ratio - curr.hp_ratio) * prev.max_hp)))
         if hp_lost > 0:
             reward -= compute_hp_loss_penalty(
@@ -97,6 +116,22 @@ def compute_run_shaping(
             )
 
     return reward
+
+
+def compute_run_terminal_reward(
+    *,
+    player_won: bool,
+    hp_ratio: float,
+    config: RunRewardConfig,
+    shaping_enabled: bool,
+) -> float:
+    """Terminal run reward (+1 / -1, plus optional HP efficiency bonus on win)."""
+    if not player_won:
+        return REWARD_DEATH
+    if not shaping_enabled:
+        return REWARD_WIN
+    clamped_hp = max(0.0, min(1.0, hp_ratio))
+    return REWARD_WIN + config.win_hp_bonus_scale * clamped_hp
 
 
 @dataclass(frozen=True)
@@ -121,9 +156,12 @@ def compute_navigator_shaping(
     config: NavigatorRewardConfig,
     *,
     draft_delta: float = 0.0,
+    combat_gross_hp_lost: int | None = None,
 ) -> float:
     """Macro run shaping plus optional combat-value draft shaping."""
-    reward = compute_run_shaping(prev, curr, config)
+    reward = compute_run_shaping(
+        prev, curr, config, combat_gross_hp_lost=combat_gross_hp_lost,
+    )
     if draft_delta != 0.0:
         reward += compute_draft_value_shaping(draft_delta, config)
     return reward

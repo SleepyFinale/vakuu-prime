@@ -34,3 +34,28 @@ def apply_combat_action(combat: CombatState, action: int) -> bool:
     if hand_idx is None:
         return False
     return combat.play_card(hand_idx, target_idx)
+
+
+def apply_combat_action_for_search(combat: CombatState, action: int) -> bool:
+    """Apply *action* for MCTS branching (player END_TURN stops before enemy phase)."""
+    if combat.pending_choice is not None:
+        if action == ACTION_END_TURN:
+            combat.resolve_pending_choice(None)
+            return True
+        combat.resolve_pending_choice(action - 1)
+        return True
+
+    if action == ACTION_END_TURN:
+        combat.finish_player_turn_only()
+        return True
+
+    if is_potion_action(action):
+        slot_idx, target_idx = action_to_potion_and_target(action)
+        if slot_idx is None:
+            return False
+        return combat.use_potion(slot_idx, target_index=target_idx)
+
+    hand_idx, target_idx = action_to_card_and_target(action)
+    if hand_idx is None:
+        return False
+    return combat.play_card(hand_idx, target_idx)

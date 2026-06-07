@@ -55,13 +55,13 @@ run/                        Full-run state management (depends on all above)
   events.py                 Event handler
 
 gym_env/                    Gymnasium environments (depends on run/, encounters/)
-  combat_env.py             Single-combat env (Discrete(115), obs 294-dim)
-  run_env.py                Full-run env (Discrete(157), obs 314-dim)
-  navigator_env.py          Strategic env (obs 164-dim, combat delegated)
+  combat_env.py             Single-combat env (Discrete(115), obs 1985-dim)
+  run_env.py                Full-run env (Discrete(157), obs 2004-dim)
+  navigator_env.py          Strategic env (obs 166-dim, combat delegated)
   navigator_observation.py  Navigator-specific observation encoder
   hierarchical_run_env.py   Legacy hierarchical wrapper (frozen combat delegate)
-  observation.py            CombatState -> 294-dim float32 vector (obs v4)
-  pile_distribution.py      Draw-pile memory encoding for obs v4
+  observation.py            CombatState -> 1985-dim float32 vector (obs v11)
+  pile_distribution.py      Draw-pile memory encoding (watchlist from PILE_WATCHLIST.json)
   reward_shaping.py         Non-linear HP + micro-reward math
   combat_value.py           Combat-critic draft scoring (PPO value head)
   action_space.py           Action encoding + masking
@@ -69,7 +69,7 @@ gym_env/                    Gymnasium environments (depends on run/, encounters/
   run_reward.py             Full-run / Navigator shaping
 
 training/                   RL policy extractors and curriculum (depends on gym_env/)
-  entity_tokens.py          Shared entity token builder (48 nodes)
+  entity_tokens.py          Shared entity token builder (57 nodes)
   entity_graph.py           Structural adjacency for GNN policy
   attention_extractor.py    Transformer feature extractor for MaskablePPO
   gnn_extractor.py          DenseGAT feature extractor for MaskablePPO
@@ -80,13 +80,13 @@ training/                   RL policy extractors and curriculum (depends on gym_
 search/                     Inference-only MCTS (depends on gym_env/, training/)
   mcts_combat.py            PUCT turn-bounded search
   mcts_agent.py             CLI integration (select_combat_action)
-  combat_clone.py           Combat deepcopy for branching
+  combat_clone.py           Fast CombatState clone for MCTS branching
   policy_guide.py           PPO prior + critic for MCTS leaves
 
 bridge/                     Real-game connection (depends on gym_env/)
   client.py                 TCP client
   protocol.py               Message types, phases
-  state_adapter.py          Game JSON -> 294-dim observation vector
+  state_adapter.py          Game JSON -> 1985-dim observation vector
   combat_hydration.py       Bridge state hydration for MCTS / hydration fallback
   agent_runner.py           Main agent loop (optional MCTS)
 ```
@@ -369,7 +369,7 @@ The first move is held until `on_move_performed()` is called. After that, `roll_
 
 Single-combat training environment.
 
-- **Observation:** `Box(low=-1, high=10, shape=(294,), dtype=float32)`
+- **Observation:** `Box(low=-1, high=10, shape=(1985,), dtype=float32)`
 - **Action space:** `Discrete(115)` = 1 end_turn + 10 untargeted card actions + 50 targeted card actions + 54 potion actions (`9 slots * (1 untargeted + 5 enemy targets)`)
 - **Action masking:** `action_masks()` returns `int8[115]` marking legal actions. Required by `MaskablePPO`.
 
@@ -390,24 +390,44 @@ On `step(action)`:
 
 ### Observation encoding (`gym_env/observation.py`)
 
-294-dimensional flat float32 vector (obs v4):
+1985-dimensional flat float32 vector (obs v11). See also [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the v2–v11 migration history.
 
 | Segment | Dims | Encoding |
 | ------- | ---- | -------- |
-| Player state | 4 | hp/max_hp, block/50, energy/10, max_energy/10 |
-| Player powers | 6 | str/20, dex/20, vuln/20, weak/20, frail/20, artifact/20 |
-| Hand (10 slots) | 50 | 5 features per card: card_id_norm, cost/5, damage/50, block/50, is_attack |
-| Pile summaries | 32 | draw/20, discard/20, exhaust/20; pile memory (26): unseen type fractions, next-draw probabilities, top-5 draw order, shuffle flag, high-value heuristics, watchlist groups; reserved x3 |
-| Enemies (5 slots) | 65 | 13 features per enemy: alive, hp%, block/50, intent_onehot(5), intent_dmg/30, intent_hits/5, vuln/10, weak/10, str/10 |
-| Character mechanics | 17 | one-hot(5), stars/30, orb cap/count, 3 orb slots (type, evoke), Osty alive/hp/block |
-| Relics (30 slots) | 120 | 4 features per relic: relic_id_norm, rarity, enabled, is_used_up |
+| Player state | 6 | hp/max_hp, block/50, energy, max_energy, ascension/20, turn_count/20 |
+| Player powers | 268 | all `PowerId` values, amount/20 |
+| Hand (10 slots) | 90 | 9 features per card: card_id_norm, cost, dmg, block, is_attack, is_power, has_exhaust, has_retain, hit_count |
+| Pile summaries | 37 | draw/discard/exhaust counts; pile memory (31): unseen type fractions, next-draw probabilities, known draw order (card_id_norm + type per top-5 slot), shuffle flag, high-value heuristics, watchlist groups; reserved x3 |
+| Enemies (5 slots) | 1390 | 278 features per enemy: alive, hp%, block/50, intent_onehot(5), intent_dmg/60, intent_hits/min(hits,10)/10, all powers amount/10 |
+| Character mechanics | 17 | one-hot(5), stars, orb cap/count, 3 orb slots (type, evoke), Osty alive/hp/block |
+| Relics (30 slots) | 150 | 5 features per relic: relic_id_norm, rarity, enabled, is_used_up, counter_norm |
+| Potions (9 slots) | 27 | 3 features per potion: potion_id_norm, rarity, can_use_in_combat |
 
-Card and relic IDs are normalized as `(index + 1) / (total_ids + 1)` to produce a float in (0, 1).
+Total: 6 + 268 + 90 + 37 + 1390 + 17 + 150 + 27 = **1985**.
+
+Card and relic IDs are normalized as `(index + 1) / (total_ids + 1)` to produce a float in (0, 1). Empty hand slots use `id=0` and `cost=-0.2` as sentinels.
+
+**Observation version deltas (combat):**
+
+| Version | Size | Added features |
+| ------- | ---- | -------------- |
+| v4 | 294 | Draw-pile memory |
+| v5 | 321 | 9 potion slots |
+| v6 | 1908 | All 268 `PowerId` on player and enemies |
+| v7 | 1948 | Hand cards: 9 features (exhaust, retain, power, hit_count) |
+| v8 | 1978 | Relic slots: 5 features (+ counter_norm) |
+| v9 | 1983 | Known draw order: card_id_norm + type per top-5 slot |
+| v10 | 1984 | ascension/20 in player core |
+| v11 | 1985 | turn_count/20 in player core |
+
+### Draw-pile memory and watchlist (`gym_env/pile_distribution.py`)
+
+Pile memory occupies 31 dims within the 37-dim pile block (`TOKEN_SLICES["piles"]` in `observation.py`). Watchlist groups (power/finisher/setup/aoe card presence) are loaded from [`docs/PILE_WATCHLIST.json`](PILE_WATCHLIST.json), regenerated by the sync `docs` step ([PATCH_SYNC.md](PATCH_SYNC.md)). Restart Python after sync so `@lru_cache` reloads the watchlist.
 
 ### Entity tokenization (`training/entity_tokens.py`)
 
-Both attention and GNN policies parse obs v4 into **48 fixed nodes** (player,
-piles, mechanics, 10 cards, 5 enemies, 30 relics) with per-type linear
+Both attention and GNN policies parse obs v11 into **57 fixed nodes** (player,
+piles, mechanics, 10 cards, 5 enemies, 30 relics, 9 potions) with per-type linear
 projections, entity-type embeddings, and padding masks for empty slots.
 
 ### Attention policy (`training/attention_extractor.py`)
@@ -417,7 +437,7 @@ tokens and mean-pools into `features_dim`. Wired via `--policy attention`.
 
 ### GNN policy (`training/gnn_extractor.py`)
 
-`CombatGNNExtractor` builds a dense 48×48 adjacency from combat structure
+`CombatGNNExtractor` builds a dense 57×57 adjacency from combat structure
 (`training/entity_graph.py`):
 
 | Edge | Condition |
@@ -440,8 +460,13 @@ over the graph; output is mean-pooled like attention. Wired via `--policy gnn`.
 `STS2NavigatorEnv` is the **preferred** strategic training environment. It wraps
 `RunManager` with a dedicated observation encoder
 ([`navigator_observation.py`](../sts2_env/gym_env/navigator_observation.py),
-164 dims) that includes run context, phase one-hot, map options, card-offer features,
-shop state, phase-specific options, and a combat-critic deck value scalar.
+166 dims, obs v2) that includes run context, phase one-hot, map branch options,
+path topology (floors to boss, remaining elites, reachable rests/shops, act index),
+combat-aligned card-offer embeddings (9 features per offer), shop state with gold and
+max shop price, phase-specific options, and a combat-critic deck value scalar.
+
+**Checkpoint note:** Navigator PPO checkpoints trained on the prior 164-dim layout are
+incompatible with obs v2 and must be retrained.
 
 During `PHASE_COMBAT`, the env auto-plays combat via a frozen MaskablePPO loaded from
 `--combat-model`. The Navigator policy never samples combat actions (0–114). Optional
@@ -450,18 +475,17 @@ MCTS can wrap the combat delegate the same way as in `STS2HierarchicalRunEnv`.
 `STS2HierarchicalRunEnv`
 ([`hierarchical_run_env.py`](../sts2_env/gym_env/hierarchical_run_env.py)) is the
 legacy wrapper used by `train_full_run.py`; it shares the combat delegation pattern but
-uses the full 314-dim run observation instead of the Navigator-specific encoder.
+uses the full 2004-dim run observation instead of the Navigator-specific encoder.
 
 ### MCTS search (`search/`)
 
 Turn-bounded PUCT search for **inference only** (not used during PPO training):
 
-1. `combat_clone.clone_combat_state()` snapshots `CombatState` for branching.
-2. `combat_step.apply_combat_action()` steps a clone without gym overhead.
-3. `policy_guide.policy_prior_and_value()` supplies masked PPO action priors and
-   critic leaf values.
-4. `mcts_combat.mcts_search()` runs simulations until the player turn ends or
-   `max_actions_per_turn` is hit.
+1. `combat_clone.clone_combat_state()` fast-clones `CombatState` for branching (avoids raw `deepcopy` on the hot path).
+2. `combat_step.apply_combat_action_for_search()` steps a clone without gym overhead
+   (player END_TURN stops before the enemy phase).
+3. `policy_guide.policy_prior_and_value()` supplies masked PPO action priors (root priors mixed with Dirichlet noise) and critic leaf values.
+4. `mcts_combat.mcts_search()` runs simulations with `--mcts-max-depth` (default 15) per player turn, enemy-phase simulation on END_TURN, and optional extra player-turn expansion (`--mcts-lookahead-turns`, default 1). Truncated turn-0 leaves use `leaf_eval="post_enemy_critic"`.
 5. `mcts_agent.select_combat_action()` is the CLI entry point used by
    `train_combat.py`, `eval_full_run.py`, and `agent_runner.py`.
 
@@ -482,7 +506,7 @@ Integration points: hierarchical/navigator env `_auto_play_combat()`, bridge
 | Topic | CombatEnv | RunEnv |
 | ----- | --------- | ------ |
 | Scope | Single combat | Full multi-act run |
-| Obs size | 294 | 314 (294 combat + 20 run-level) |
+| Obs size | 1985 | 2004 (1985 combat + 20 run-level) |
 | Action space | Discrete(115) | Discrete(157) |
 | Phases | Combat only | Combat + map + card_reward + boss_relic + shop + rest + event + treasure |
 | Reward | +1 win / -1 loss | +1 run win / -1 death or timeout |

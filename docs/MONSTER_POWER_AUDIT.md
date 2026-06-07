@@ -1,5 +1,8 @@
 # Monster power application audit
 
+> **Stale generated audit.** Regenerate after sync or consult [PARITY_GAPS.md](PARITY_GAPS.md)
+> for current parity status. This file may not reflect the latest monster implementations.
+
 Source: `decompiled/MegaCrit.Sts2.Core.Models.Monsters` vs `sts2_env/monsters`.
 Game logic takes precedence over wiki summaries.
 

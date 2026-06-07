@@ -5,7 +5,10 @@ import numpy as np
 from sts2_env.encounters import act1, act4
 from sts2_env.training.combat_curriculum import (
     CURRICULUM_STAGE_BY_NAME,
+    EASY_GATE_ENCOUNTERS,
+    ELITE_GATE_ENCOUNTERS,
     FULL_CURRICULUM_SEQUENCE,
+    PromotionGate,
     resolve_curriculum_spec,
     sample_episode_init,
 )
@@ -44,6 +47,28 @@ def test_promotion_gate_thresholds() -> None:
     assert stage.gate is not None
     assert stage.gate.min_win_rate == 0.98
     assert stage.gate.min_avg_hp_ratio == 0.92
+    assert stage.gate_encounters == EASY_GATE_ENCOUNTERS
+
+
+def test_elite_stage_uses_elite_gate_encounters_and_thresholds() -> None:
+    stage = CURRICULUM_STAGE_BY_NAME["act1_elite"]
+    assert stage.gate is not None
+    assert stage.gate_encounters == ELITE_GATE_ENCOUNTERS
+    assert stage.gate.min_win_rate == 0.92
+    assert stage.gate.min_avg_hp_ratio == 0.80
+
+
+def test_complex_decks_uses_elite_gate_with_relaxed_thresholds() -> None:
+    stage = CURRICULUM_STAGE_BY_NAME["complex_decks"]
+    assert stage.gate is not None
+    assert stage.gate_encounters == ELITE_GATE_ENCOUNTERS
+    assert stage.gate.min_win_rate == 0.88
+    assert stage.gate.min_avg_hp_ratio == 0.75
+
+
+def test_promotion_gate_force_promote_multiplier_defaults_to_three() -> None:
+    gate = PromotionGate(min_win_rate=0.9, min_avg_hp_ratio=0.8)
+    assert gate.force_promote_multiplier == 3.0
 
 
 def test_recovery_stage_is_all_hard_start() -> None:

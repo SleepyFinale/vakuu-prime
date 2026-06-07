@@ -41,7 +41,9 @@ The bridge mod reads `STS2_BRIDGE_CHARACTER` at startup (default `Ironclad`).
 Valid values (case-insensitive): `Ironclad`, `Silent`, `Defect`, `Regent`,
 `Necrobinder`. The mod selects that character on the main menu before the agent
 connects; every combat state JSON includes `player.character_id` plus mechanics
-fields (`stars`, `orb_queue`, `osty`) for the 148-dim observation encoder.
+fields (`stars`, `orb_queue`, `osty`), `relics` (with `counter`), `potions`, pile card
+arrays (`draw_pile`, `discard_pile`, `play_pile`), and enriched hand fields (`keywords`,
+`base_damage`, `base_block`, `retain`, `hit_count`) for the **1985-dim obs v11** encoder.
 
 ```powershell
 $env:STS2_BRIDGE_CHARACTER = "Silent"

@@ -113,6 +113,19 @@ Sent when the game is in the combat play phase and awaiting a card play or end-t
 | `hand[].target` | string | `"Self"`, `"None"`, `"AnyEnemy"`, `"AllEnemies"`, `"RandomEnemy"` |
 | `hand[].playable` | bool | Whether the card can be played right now |
 | `hand[].upgraded` | bool | (optional) Whether the card is upgraded |
+| `hand[].keywords` | array | (optional) Card keywords for obs encoding (e.g. `"Exhaust"`, `"Retain"`) |
+| `hand[].base_damage` | int | (optional) Base damage for obs encoding |
+| `hand[].base_block` | int | (optional) Base block for obs encoding |
+| `hand[].retain` | bool | (optional) Whether the card has Retain |
+| `hand[].hit_count` | int | (optional) Multi-hit count for attacks |
+| `draw_pile` | array | (optional) Card IDs in draw pile order (pile memory parity) |
+| `discard_pile` | array | (optional) Card IDs in discard pile |
+| `play_pile` | array | (optional) Card IDs in play pile |
+| `relics` | array | (optional) Relic slots with `id`, `rarity`, `enabled`, `is_used_up`, `counter` |
+| `potions` | array | (optional) Potion slots with `id`, `rarity`, `can_use_in_combat` |
+| `player.character_id` | string | (optional) Character for mechanics one-hot |
+| `player.ascension` | int | (optional) Ascension level (obs v10+) |
+| `stars` / `orb_queue` / `osty` | various | (optional) Character mechanics for Regent/Defect/Necrobinder |
 | `enemies` | array | All enemy creatures (including dead ones) |
 | `enemies[].id` | string | Monster ID (e.g. `"JAW_WORM"`) |
 | `enemies[].hp` / `max_hp` | int | Current and max HP |

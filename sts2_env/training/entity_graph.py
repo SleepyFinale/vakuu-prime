@@ -11,6 +11,7 @@ from sts2_env.core.enums import TargetType
 from sts2_env.gym_env.observation import (
     CARD_FEATURES,
     ENEMY_FEATURES,
+    MAX_POTION_OBS_SLOTS,
     MAX_RELIC_SLOTS,
     NUM_CARD_IDS,
     TOKEN_SLICES,
@@ -21,6 +22,7 @@ from sts2_env.training.entity_tokens import (
     NODE_ENEMIES_START,
     NODE_PILES,
     NODE_PLAYER,
+    NODE_POTIONS_START,
     NODE_RELICS_START,
     NUM_NODES,
 )
@@ -112,6 +114,12 @@ def build_adjacency(obs: torch.Tensor, valid_mask: torch.Tensor) -> torch.Tensor
         relic_valid = valid_mask[:, relic_node]
         if relic_valid.any():
             adj[relic_valid, relic_node, NODE_PLAYER] = 1.0
+
+    for potion_slot in range(MAX_POTION_OBS_SLOTS):
+        potion_node = NODE_POTIONS_START + potion_slot
+        potion_valid = valid_mask[:, potion_node]
+        if potion_valid.any():
+            adj[potion_valid, potion_node, NODE_PLAYER] = 1.0
 
     adj = adj + adj.transpose(1, 2)
     adj = (adj > 0).to(obs.dtype)

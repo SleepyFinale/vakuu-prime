@@ -28,6 +28,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Random;
@@ -549,6 +550,24 @@ public class RlCombatHandler : IRoomHandler, IHandler
         if (card.IsUpgraded)
             result["upgraded"] = true;
 
+        DynamicVarSet vars = card.DynamicVars;
+        if (vars.ContainsKey("Damage"))
+            result["base_damage"] = (int)vars.Damage.BaseValue;
+        if (vars.ContainsKey("Block"))
+            result["base_block"] = (int)vars.Block.BaseValue;
+        if (vars.ContainsKey("Repeat"))
+            result["hit_count"] = vars.Repeat.IntValue;
+
+        List<string> keywords = card.Keywords
+            .Where(keyword => keyword != CardKeyword.None)
+            .Select(keyword => keyword.ToString().ToLowerInvariant())
+            .ToList();
+        if (keywords.Count > 0)
+            result["keywords"] = keywords;
+
+        if (card.ShouldRetainThisTurn)
+            result["retain"] = true;
+
         return result;
     }
 
@@ -584,24 +603,37 @@ public class RlCombatHandler : IRoomHandler, IHandler
                 var nextMove = enemy.Monster.NextMove;
                 if (nextMove?.Intents != null && nextMove.Intents.Count > 0)
                 {
+                    var intentTypes = new List<string>();
+                    int totalDamage = 0;
+                    int totalHits = 0;
                     AbstractIntent firstIntent = nextMove.Intents[0];
-                    data["intent"] = firstIntent.IntentType.ToString();
-                    data["intent_move_id"] = nextMove.Id;
+                    CombatState cs = enemy.CombatState;
 
-                    if (firstIntent is AttackIntent attackIntent)
+                    foreach (AbstractIntent intent in nextMove.Intents)
                     {
-                        CombatState cs = enemy.CombatState;
-                        if (cs != null)
+                        intentTypes.Add(intent.IntentType.ToString());
+                        if (intent is AttackIntent attackIntent && cs != null)
                         {
                             try
                             {
-                                data["intent_damage"] = attackIntent.GetSingleDamage(
+                                int singleDamage = attackIntent.GetSingleDamage(
                                     cs.PlayerCreatures, enemy);
-                                data["intent_hits"] = attackIntent.Repeats > 0
+                                int repeats = attackIntent.Repeats > 0
                                     ? attackIntent.Repeats : 1;
+                                totalDamage += singleDamage * repeats;
+                                totalHits += repeats;
                             }
                             catch { }
                         }
+                    }
+
+                    data["intent"] = firstIntent.IntentType.ToString();
+                    data["intent_types"] = intentTypes;
+                    data["intent_move_id"] = nextMove.Id;
+                    if (totalDamage > 0 || totalHits > 0)
+                    {
+                        data["intent_damage"] = totalDamage;
+                        data["intent_hits"] = totalHits;
                     }
                 }
             }

@@ -347,6 +347,15 @@ class TestObservationRanges:
         obs, _ = env.reset(seed=42)
         assert obs[2] >= 0.0, f"Energy obs = {obs[2]}"
 
+    def test_obs_ascension_level_from_env(self):
+        """Ascension level (obs[4]) should reflect combat env setting."""
+        from sts2_env.gym_env.combat_env import STS2CombatEnv
+        from sts2_env.gym_env.observation import OBS_ASCENSION_SCALE
+
+        env = STS2CombatEnv(ascension_level=10)
+        obs, _ = env.reset(seed=42)
+        assert obs[4] == pytest.approx(10 / OBS_ASCENSION_SCALE)
+
     def test_obs_throughout_episode(self, env):
         """Observations should stay in valid range throughout an entire episode."""
         obs, info = env.reset(seed=42)

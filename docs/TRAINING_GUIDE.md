@@ -178,7 +178,7 @@ python scripts/train_combat.py \
 
 ### Command (GNN policy)
 
-Graph policy uses the same 294-dim obs v4 tokens with **structural edges**
+Graph policy uses the same 1985-dim obs v11 tokens with **structural edges**
 (card→enemy from static target metadata, enemy→player on attack intents, relic→player).
 Requires `torch-geometric`.
 
@@ -222,9 +222,11 @@ Boss encounters are excluded from the RL pool (they are scripted in full runs).
 | `--reward-shaping` | True | Non-linear HP + combat micro-rewards (see `reward_shaping.py`) |
 | `--no-reward-shaping` | - | Sparse terminal reward only (+1 / -1) |
 | `--hp-steepness` | 3.0 | Exponential HP penalty steepness (higher = more fear at low HP) |
-| `--vulnerable-scale` | 0.02 | Micro-reward per Vulnerable stack on enemies |
-| `--weak-scale` | 0.02 | Micro-reward per Weak stack on enemies |
+| `--vulnerable-scale` | 0.02 | Micro-reward scale for Vulnerable on enemies (sublinear marginal `Δ**0.6`) |
+| `--weak-scale` | 0.02 | Micro-reward scale for Weak on enemies (sublinear marginal `Δ**0.6`) |
 | `--block-scale` | 0.001 | Micro-reward per HP blocked from enemy attacks |
+| `--flawless-bonus` | 0.1 | Bonus on flawless combat wins (no HP lost) |
+| `--eval-only` | off | Run MCTS/post-train eval without training (requires `--load-model`) |
 | `--curriculum` | — | Curriculum preset: stage name or `full` |
 | `--curriculum-stage` | — | Start at stage name or index (manual resume) |
 | `--auto-promote` | off | Advance curriculum when gate metrics pass |
@@ -272,14 +274,14 @@ decisions at **inference time only** — MCTS is not used during PPO gradient up
 1. Root = `deepcopy` of current `CombatState`.
 2. Each simulation: select child via PUCT (`c_puct`), expand with masked PPO action
    priors ([`policy_guide.py`](../sts2_env/search/policy_guide.py)), roll out with
-   `apply_combat_action()` until the player turn ends (`ACTION_END_TURN` / enemy phase)
-   or `--mcts-max-depth` is reached.
-3. Leaf value from PPO critic (`predict_combat_values()`, `leaf_eval="post_enemy_critic"`).
-4. Backpropagate visit counts and values; pick highest visit-count root child
+   `apply_combat_action_for_search()` until `--mcts-max-depth` actions are played in
+   the current player turn.
+3. On `END_TURN`: run the enemy phase via `advance_enemy_phase()`, then expand up to
+   `--mcts-lookahead-turns` extra player turns (default 1). Turn-0 depth limits
+   fast-forward through END_TURN + enemy before critic eval (`leaf_eval="post_enemy_critic"`).
+4. Leaf value from PPO critic (`predict_combat_values()`).
+5. Backpropagate visit counts and values; pick highest visit-count root child
    (temperature 0).
-
-Search does **not** cross into the next player turn — it is model-predictive control
-within a single turn.
 
 **Post-training combat eval:**
 
@@ -310,8 +312,11 @@ python -m sts2_env.bridge.agent_runner \
 | `--mcts` | off | Enable turn-bounded search |
 | `--mcts-sims` | 128 | Simulations per decision |
 | `--mcts-c-puct` | 1.5 | PUCT exploration constant |
-| `--mcts-max-depth` | 30 | Max actions within one player turn |
+| `--mcts-max-depth` | 15 | Max actions per player turn segment |
+| `--mcts-lookahead-turns` | 1 | Extra player turns after enemy phase |
 | `--mcts-time-budget` | None (train/eval) / 2.0s (bridge) | Wall-clock cap per decision |
+| `--mcts-dirichlet-alpha` | 0.3 | Dirichlet alpha for root exploration noise |
+| `--mcts-dirichlet-epsilon` | 0.25 | Root prior noise mix weight; 0 disables |
 
 See [`tests/test_mcts_combat.py`](../tests/test_mcts_combat.py) for behavioral tests
 (e.g. preferring Inflame before Strike). For the full RL feature overview, see the
@@ -434,11 +439,13 @@ The meta-policy uses a larger network (256x256 pi/vf) than default combat traini
 
 | Signal | Scale |
 | ------ | ----- |
-| Floor advanced | +0.05 per floor |
-| Combat cleared | +0.10 |
+| Floor advanced | +0.01 per floor |
+| Combat cleared | +0.005 |
+| Kill (run env) | +0.003 per enemy |
+| HP efficiency (win only) | up to +0.15 (`hp_ratio × --win-hp-bonus-scale`) |
 | HP lost after combat | non-linear, up to -0.20 per event (`--hp-steepness`) |
-| Vulnerable on enemy | +0.02 per stack (combat steps) |
-| Weak on enemy | +0.02 per stack (combat steps) |
+| Vulnerable on enemy | +0.02 × sublinear marginal stacks (`Δ**0.6`; first stack unchanged) |
+| Weak on enemy | +0.02 × sublinear marginal stacks (`Δ**0.6`; first stack unchanged) |
 | Block vs enemy attack | +0.001 per HP blocked (combat steps) |
 | Run win / death | +1 / -1 |
 
@@ -547,7 +554,7 @@ The legacy supervised [`CardValueNet`](../sts2_env/gym_env/card_value.py) remain
 
 ### Phase 2 — Navigator PPO
 
-Train the Navigator on all non-combat phases with dedicated observations ([`navigator_observation.py`](../sts2_env/gym_env/navigator_observation.py)):
+Train the Navigator on all non-combat phases with dedicated observations ([`navigator_observation.py`](../sts2_env/gym_env/navigator_observation.py), 166 dims obs v2):
 
 ```bash
 python scripts/train_navigator.py --preset phase1 \
@@ -555,10 +562,14 @@ python scripts/train_navigator.py --preset phase1 \
     --combat-value-shaping --output-dir output/navigator_ppo
 ```
 
+**Checkpoint note:** Navigator checkpoints from before obs v2 (164 dims) will not load;
+retrain from scratch after upgrading.
+
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `--combat-value-shaping` | off | Add `draft_value_scale * ΔV` shaping on card picks |
 | `--draft-value-scale` | 0.1 | Scale for combat-critic draft shaping |
+| `--flawless-combat-bonus` | 0.003 | Bonus per combat cleared without HP loss |
 | `--no-combat-value-shaping` | - | Ablation: macro shaping only |
 
 Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
@@ -592,7 +603,7 @@ Curriculum matches full-run presets (`phase1` → `phase2` with `--load-model`).
 
 6. **Imitation learning:** If expert human replays become available, pre-train the policy with behavioral cloning before RL fine-tuning.
 
-7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 294 dims (obs v4: pile memory + relic slots); retrain after upgrading from 268-dim or earlier checkpoints.
+7. **Multi-character support:** Implemented via `--character` / `--characters all` in `train_combat.py` and `--combat-models-by-character` in `train_full_run.py`. Combat observation is 1985 dims (obs v11: full power tracking + pile memory with card-id draw order + relic/potion slots with counter_norm + 9-feature hand cards + ascension + turn_count); retrain after upgrading from obs v10 or earlier checkpoints.
 
 8. **Entity-based policies:** `--policy attention` (`CombatAttentionExtractor`) and `--policy gnn` (`CombatGNNExtractor`) share tokenization via `sts2_env/training/entity_tokens.py`. GNN uses structural edges from `entity_graph.py`.
 
@@ -622,12 +633,14 @@ After training a character-specific combat model, evaluate it against the real g
    For full-run delegates, pass `--combat-models-by-character` with per-character
    checkpoint paths so combat phases route to the correct model.
 
-The mod emits `character_id`, `stars`, `orb_queue`, `osty`, and `relics` in
-combat JSON; the Python adapter encodes them into observation dims 131–267.
-Mismatch between `STS2_BRIDGE_CHARACTER` and the loaded model produces incorrect
-one-hot/mechanics/relic features and poor play.
+The mod emits `character_id`, `stars`, `orb_queue`, `osty`, `relics` (with `counter`),
+`potions`, pile card arrays, and enriched hand-card fields in combat JSON; the Python
+adapter encodes them via the same layout as [`observation.py`](../sts2_env/gym_env/observation.py)
+(`TOKEN_SLICES`: player core 0–5, mechanics slice, relic/potion blocks). Mismatch between
+`STS2_BRIDGE_CHARACTER` and the loaded model produces incorrect one-hot/mechanics/relic
+features and poor play.
 
 See [docs/BRIDGE_LIVE_SMOKE.md](BRIDGE_LIVE_SMOKE.md) for the offline smoke gate
 and [docs/AGENT_USAGE_GUIDE.md](AGENT_USAGE_GUIDE.md) for agent runner options.
 
-**Observation v4 note:** Combat `OBS_SIZE` is now **294** (157 combat base + 17 mechanics + 120 relic slots). Pile memory (dims 63–88) encodes draw-pile composition and next-turn draw probabilities via `pile_distribution.py`. Existing 268-dim (obs v3) and earlier PPO checkpoints are incompatible. Retrain combat models with the updated encoder and `--policy attention` (or `--policy mlp` for a flat baseline on the new obs size).
+**Observation v11 note:** Combat `OBS_SIZE` is now **1985** (1791 combat base + 17 mechanics + 150 relic slots + 27 potion slots). Obs v10 added `ascension/20`; obs v11 added `turn_count/20` in the player core. Pile memory known draw order encodes `card_id_norm` plus type for each of the top 5 draw-pile slots. Obs v10 and earlier PPO checkpoints are incompatible. Retrain combat models with the updated encoder and `--policy attention` (or `--policy mlp` for a flat baseline). See [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md) for the full layout table.

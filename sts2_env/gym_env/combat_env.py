@@ -70,6 +70,7 @@ class STS2CombatEnv(gymnasium.Env):
         curriculum_sequence: tuple[CombatCurriculumStage, ...] | None = None,
         curriculum_state_path: str | Path | None = None,
         hard_start_fraction: float | None = None,
+        ascension_level: int = 0,
     ):
         super().__init__()
         self.observation_space = spaces.Box(
@@ -105,11 +106,13 @@ class STS2CombatEnv(gymnasium.Env):
             Path(curriculum_state_path) if curriculum_state_path is not None else None
         )
         self.hard_start_fraction = hard_start_fraction
+        self._ascension_level = ascension_level
 
         self.combat: CombatState | None = None
         self._last_character_id: str | None = None
         self._last_episode_init: EpisodeInitSample | None = None
         self._event_cursor = CombatEventCursor()
+        self._combat_gross_hp_lost = 0
 
     def _resolve_character_pool(self) -> tuple[str, ...]:
         if self.character_ids is not None:
@@ -139,6 +142,7 @@ class STS2CombatEnv(gymnasium.Env):
             rng_seed=rng_seed,
             character_id=episode_init.character_id,
             relics=[char_cfg.starting_relic],
+            ascension_level=self._ascension_level,
         )
         rng = Rng(rng_seed)
         episode_init.encounter_setup(self.combat, rng)
@@ -224,6 +228,7 @@ class STS2CombatEnv(gymnasium.Env):
                     rng_seed=rng_seed,
                     character_id=char_id,
                     relics=[char_cfg.starting_relic],
+                    ascension_level=self._ascension_level,
                 )
 
                 encounter_idx = int(self.np_random.integers(0, len(self.encounter_pool)))
@@ -232,6 +237,7 @@ class STS2CombatEnv(gymnasium.Env):
                 self.combat.start_combat()
 
         self._event_cursor = CombatEventCursor()
+        self._combat_gross_hp_lost = 0
 
         obs = encode_observation(self.combat)
         return obs, self._build_episode_info()
@@ -240,6 +246,7 @@ class STS2CombatEnv(gymnasium.Env):
         assert self.combat is not None, "Must call reset() first"
 
         prev_hp = self.combat.player.current_hp
+        prev_alive_count = len(self.combat.alive_enemies)
         if self.combat.pending_choice is not None:
             if action == ACTION_END_TURN:
                 self.combat.resolve_pending_choice(None)
@@ -262,6 +269,9 @@ class STS2CombatEnv(gymnasium.Env):
                 if not success:
                     logger.debug("Ignored invalid card action %d", action)
 
+        self._combat_gross_hp_lost += max(
+            0, prev_hp - self.combat.player.current_hp,
+        )
         obs = encode_observation(self.combat)
         reward, self._event_cursor = compute_reward(
             self.combat,
@@ -269,6 +279,8 @@ class STS2CombatEnv(gymnasium.Env):
             reward_shaping=self.reward_shaping,
             reward_config=self._reward_config,
             event_cursor=self._event_cursor,
+            prev_alive_count=prev_alive_count,
+            combat_gross_hp_lost=self._combat_gross_hp_lost,
         )
         terminated = self.combat.is_over
         truncated = self.combat.turn_count > self.max_turns

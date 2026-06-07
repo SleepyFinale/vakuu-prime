@@ -2,9 +2,9 @@
 
 Current known issues, bugs, and limitations of the STS2 RL Agent project.
 
-For the current RL architecture (obs v4, attention policies, curriculum, Navigator,
-MCTS, reward shaping), see the [README RL Feature Overview](../README.md#rl-feature-overview)
-and [TRAINING_GUIDE.md](TRAINING_GUIDE.md).
+For the current RL architecture (obs v11 / 1985 dims, attention policies, curriculum, Navigator,
+MCTS, reward shaping), see the [README RL Feature Overview](../README.md#rl-feature-overview),
+[TRAINING_GUIDE.md](TRAINING_GUIDE.md), and [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md).
 
 ---
 
@@ -117,7 +117,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Mitigation (implemented):**
 
-- **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py) and [`reward_shaping.py`](../sts2_env/gym_env/reward_shaping.py): floor progress, combat clear, **non-linear HP penalties** (damage near 0 HP costs much more than at full HP), and combat **micro-rewards** for Vulnerable/Weak on enemies and block vs attacks (`--reward-shaping`, default on).
+- **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py) and [`reward_shaping.py`](../sts2_env/gym_env/reward_shaping.py): floor progress (+0.01/floor), combat clear (+0.005), run-end HP efficiency bonus on win (up to +0.15), **non-linear HP penalties** (damage near 0 HP costs much more than at full HP), and combat **micro-rewards** for Vulnerable/Weak on enemies and block vs attacks (`--reward-shaping`, default on). Progress scales were rebalanced so cumulative dense shaping on a long death stays negative — earlier defaults (+0.05/floor, +0.10/combat clear, +0.05/kill) could make a floor-50 loss outscore a short win.
 - **Act-count curriculum** via `RunManager.max_acts` and `--act-count` (train Act 1 before full game).
 - **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; legacy meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
 - **Navigator agent** via [`STS2NavigatorEnv`](../sts2_env/gym_env/navigator_env.py): dedicated strategic observations; all non-combat phases (`--combat-model`, [`scripts/train_navigator.py`](../scripts/train_navigator.py)).
@@ -150,13 +150,16 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 
 - **Character selection** in [`STS2CombatEnv`](../sts2_env/gym_env/combat_env.py): `--character` (single) and `--characters all` (mixed) in [`scripts/train_combat.py`](../scripts/train_combat.py).
 - **Starter deck, HP, and starting relic** per character via [`sts2_env/characters/all.py`](../sts2_env/characters/all.py).
-- **Observation v4 (294 dims):** pile memory (dims 63–88), character mechanics (dims 157–173), relic entity slots (dims 174–293), `CombatAttentionExtractor` in [`sts2_env/training/attention_extractor.py`](../sts2_env/training/attention_extractor.py), and optional `CombatGNNExtractor` in [`sts2_env/training/gnn_extractor.py`](../sts2_env/training/gnn_extractor.py).
+- **Observation v11 (1985 dims):** obs v10 plus normalized `turn_count/20` in the player core block (1 dim). Pre-existing obs v10 checkpoints must be retrained.
+- **Observation v8 (1978 dims):** obs v7 plus relic `counter_norm` (5 features per relic slot). See `TOKEN_SLICES` in [`sts2_env/gym_env/observation.py`](../sts2_env/gym_env/observation.py).
+- **Observation v7 (1948 dims):** obs v6 plus 9 hand-card features per slot (exhaust, retain, is_power, hit_count).
+- **Observation v6 (1908 dims):** all 268 `PowerId` values on player (amount/20) and each enemy slot (amount/10), plus pile memory, character mechanics, relic entity slots, and potion entity slots.
 - **Full-run wiring:** `--character`, `--characters`, and `--combat-models-by-character` in [`scripts/train_full_run.py`](../scripts/train_full_run.py) and [`scripts/eval_full_run.py`](../scripts/eval_full_run.py).
-- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, `osty`, `relics`, and pile card lists ([`bridge_mod/RlCombatHandler.cs`](../bridge_mod/RlCombatHandler.cs)); Python adapter encodes the full 294-dim vector ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
+- **Bridge mod:** character selection via `STS2_BRIDGE_CHARACTER` env var ([`bridge_mod/BridgeConfig.cs`](../bridge_mod/BridgeConfig.cs)); combat JSON includes `character_id`, `stars`, `orb_queue`, `osty`, `relics` (with `counter`), `potions`, pile card lists, and enriched hand-card fields (`keywords`, `base_damage`, `base_block`, `retain`, `hit_count`) ([`bridge_mod/RlCombatHandler.cs`](../bridge_mod/RlCombatHandler.cs)); Python adapter encodes the full **1985-dim** vector ([`sts2_env/bridge/state_adapter.py`](../sts2_env/bridge/state_adapter.py)).
 
 **Remaining gaps:**
 
-- Pre-existing 268-dim (obs v3) and earlier combat checkpoints must be retrained for obs v4 (294 dims). `mlp`, `attention`, and `gnn` checkpoints are also mutually incompatible (different `policy_kwargs` / feature extractors).
+- Pre-existing obs v10 and earlier combat checkpoints must be retrained for **obs v11 (1985 dims)**. `mlp`, `attention`, and `gnn` checkpoints are also mutually incompatible (different `policy_kwargs` / feature extractors).
 - Live bridge eval requires matching the mod's `STS2_BRIDGE_CHARACTER` to the agent's trained character and `--character` / `--combat-models-by-character` model path.
 
 ### 9. Combat potion actions were missing from the RL action space
@@ -168,6 +171,36 @@ Remaining work: achieving a positive full-run win rate still depends on running 
 **Fix:** The combat action space now includes fixed-width potion actions, `CombatState` can execute potion uses directly, and the bridge path serializes and decodes potion actions as explicit `POTION` commands.
 
 **Location:** `sts2_env/core/constants.py`, `sts2_env/core/combat.py`, `sts2_env/gym_env/action_space.py`, `sts2_env/gym_env/combat_env.py`, `sts2_env/bridge/state_adapter.py`, `bridge_mod/RlCombatHandler.cs`
+
+### 9b. Potion slots were missing from the combat observation vector
+
+**Status:** Fixed
+
+**Problem:** The action space exposed 9 potion slots (actions 61–114), but the 294-dim observation encoded zero potion identity. The agent could infer slot usability from the action mask alone, not potion type, rarity, or combat-usability.
+
+**Fix:** Obs v5 adds a 27-dim potion block (9 slots × 3 features: `potion_id_norm`, `rarity_norm`, `can_use_in_combat_flag`) after relics. `TOKEN_SLICES`, entity tokenization, GNN adjacency, and the bridge state adapter were updated accordingly.
+
+**Location:** `sts2_env/gym_env/observation.py`, `sts2_env/training/entity_tokens.py`, `sts2_env/training/entity_graph.py`, `sts2_env/bridge/state_adapter.py`
+
+### 9c. Only 6 player powers and 3 enemy powers were tracked in combat observations
+
+**Status:** Fixed
+
+**Problem:** The combat observation encoded only six player powers (Strength, Dexterity, Vulnerable, Weak, Frail, Artifact) and three per-enemy powers (Vulnerable, Weak, Strength). Game-critical buffs like Barricade, Corruption, Echo Form, Ritual, Poison, and Doom were invisible to the policy.
+
+**Fix:** Obs v6 expands power encoding to all 268 `PowerId` values (excluding legacy aliases and the `GENERIC` placeholder), derived programmatically from the enum. Player powers use amount/20; enemy powers use amount/10 per slot. `ENEMY_POWERS`, `ENEMY_CORE_FEATURES`, and shared bridge tracking lists keep simulator and live-game encoders aligned.
+
+**Location:** `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`, `tests/test_observation_powers.py`
+
+### 9d. No turn counter in the combat observation vector
+
+**Status:** Fixed
+
+**Problem:** Relics and powers that scale with combat duration (e.g. Demon Form Strength, Malleable block requirement) were ambiguous without a turn-count signal — the agent could not distinguish turn 1 from turn 10 at the same power amounts.
+
+**Fix:** Obs v11 adds `min(turn_count, 20) / 20.0` as the sixth player-core feature. The bridge adapter derives the same value from the serialized `round` field.
+
+**Location:** `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`, `tests/test_observation_turn_count.py`
 
 ### 10. Some card effects may not match the real game exactly
 
@@ -242,3 +275,27 @@ except Exception:
 **Fix:** Obs v4 adds 26 pile-memory features (unseen deck composition, next-draw probabilities, known top-of-deck order, high-value heuristics, watchlist groups). The bridge now serializes `draw_pile`, `discard_pile`, and `play_pile` card arrays; simulator and adapter share `encode_pile_memory()` from `pile_distribution.py`.
 
 **Location:** `sts2_env/gym_env/pile_distribution.py`, `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`, `bridge_mod/RlCombatHandler.cs`
+
+### 15. Multi-step enemy intents only encoded the first component
+
+**Status:** Fixed
+
+**Problem:** Enemy observation encoding read only `move.intents[0]`. Moves that combine attack with buff/debuff/defend (e.g. attack + gain Strength) exposed only the first intent type and could under-report damage when attack was not first. Bridge serialization had the same first-intent-only limitation.
+
+**Fix:** All intents on the current move are folded into the enemy obs slot: tracked intent types are OR'd into the 5-bit one-hot, and ATTACK/MULTI_ATTACK damage/hits are summed. Normalization changed to total damage `/60` and hits `min(hits, 10) / 10`. Bridge payloads now include `intent_types` alongside aggregated `intent_damage` / `intent_hits`.
+
+**Retrain required:** Existing checkpoints trained on per-hit damage `/30` and hits `/5` need retraining.
+
+**Location:** `sts2_env/gym_env/observation.py`, `sts2_env/bridge/state_adapter.py`, `sts2_env/parity/bridge_replay.py`, `bridge_mod/RlCombatHandler.cs`, `tests/test_observation_enemy_intents.py`
+
+### 16. Hardcoded pile watchlist groups
+
+**Status:** Fixed
+
+**Problem:** `WATCHLIST_GROUPS` in `pile_distribution.py` was a static dict of `CardId` values. New cards added by game patches never appeared in the four binary watchlist features (finisher/setup/aoe/power presence), degrading pile memory for new content.
+
+**Fix:** Watchlists live in [`docs/PILE_WATCHLIST.json`](PILE_WATCHLIST.json), loaded at runtime via `load_watchlist_groups()`. The sync `docs` step regenerates the file, validates card names, auto-appends **newly introduced** `CardId` values to `finisher`/`aoe` when they match conservative metadata rules, and reports unlisted cards for manual `power`/`setup` curation. Cache clears on sync alongside card factory metadata.
+
+**Retrain required:** After a patch sync auto-adds watchlist entries, retrain combat policies if watchlist group features change (four binary dims in the pile-memory block; see `TOKEN_SLICES["piles"]` in `observation.py`).
+
+**Location:** `sts2_env/gym_env/pile_distribution.py`, `scripts/sync/generate_pile_watchlist.py`, `docs/PILE_WATCHLIST.json`

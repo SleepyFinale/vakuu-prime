@@ -32,7 +32,7 @@ python scripts/benchmark.py
 ```text
 sts2_env/           Python package (headless simulator + gym envs + bridge)
   core/             Combat engine (no content dependencies)
-  cards/            Card definitions (577 cards)
+  cards/            Card definitions (578 cards)
   powers/           Status effects (260 powers)
   monsters/         Monster AI (121 monsters)
   relics/           Relic effects (290 relics)
@@ -44,7 +44,7 @@ sts2_env/           Python package (headless simulator + gym envs + bridge)
   bridge/           Real-game connection
 bridge_mod/         C# bridge mod (Godot project)
 scripts/            Training and benchmark scripts
-tests/              Test suite (~140 test files, 5,387 test functions)
+tests/              Test suite (166 test files, 5,387+ test functions)
 docs/               Documentation
 decompiled/         Decompiled C# source from sts2.dll (reference only)
 extracted_pck/      Extracted Godot resources (reference only)
@@ -276,7 +276,7 @@ python scripts/sync_from_game.py docs
 python scripts/sync_from_game.py all --apply
 ```
 
-See [docs/PATCH_SYNC.md](docs/PATCH_SYNC.md) for the full patch sync runbook.
+See [docs/PATCH_SYNC.md](docs/PATCH_SYNC.md) for the full patch sync runbook. Pile watchlists in `docs/PILE_WATCHLIST.json` affect draw-pile memory in combat observations — review diffs after sync.
 
 ### 6. Run tests
 
@@ -293,6 +293,17 @@ If the game's C# API changed:
 - Update Harmony patch targets in `bridge_mod/MainFile.cs`
 - Update state serialization if new fields are needed
 - Rebuild with: `dotnet build bridge_mod/ -c Release`
+
+### Observation encoder changes
+
+If you modify [`sts2_env/gym_env/observation.py`](sts2_env/gym_env/observation.py) or related bridge encoding:
+
+- Update [README.md](README.md), [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md), [docs/SIMULATOR_ARCHITECTURE.md](docs/SIMULATOR_ARCHITECTURE.md), and the obs history in [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
+- Bump the obs version and document checkpoint obsolescence (current baseline: **obs v11 / 1985 dims**).
+- Update [`sts2_env/bridge/state_adapter.py`](sts2_env/bridge/state_adapter.py) and bridge mod serialization if live-game parity is required.
+- All PPO checkpoints trained on earlier obs versions must be retrained.
+
+Parity verification: [docs/PARITY_COVERAGE_BACKLOG.md](docs/PARITY_COVERAGE_BACKLOG.md), [docs/BRIDGE_LIVE_SMOKE.md](docs/BRIDGE_LIVE_SMOKE.md).
 
 ---
 

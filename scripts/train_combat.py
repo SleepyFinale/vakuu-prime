@@ -188,7 +188,9 @@ def build_combat_reward_config(args):
             vulnerable_scale=args.vulnerable_scale,
             weak_scale=args.weak_scale,
             block_scale=args.block_scale,
+            kill_scale=args.kill_scale,
         ),
+        flawless_bonus=args.flawless_bonus,
     )
 
 
@@ -244,6 +246,7 @@ def train(args):
     print(f"  reward_shaping:  {args.reward_shaping}")
     if args.reward_shaping:
         print(f"  hp_steepness:    {args.hp_steepness}")
+        print(f"  flawless_bonus:  {args.flawless_bonus}")
     print()
 
     output_dir = Path(args.output_dir)
@@ -339,6 +342,8 @@ def train(args):
                 eval_freq=args.eval_freq,
                 n_eval_episodes=args.eval_episodes,
                 auto_promote=args.auto_promote,
+                character_ids=character_ids,
+                default_stage_budget=args.total_timesteps,
             ),
         )
 
@@ -610,12 +615,24 @@ def main():
         help="PUCT exploration constant (default: 1.5)",
     )
     parser.add_argument(
-        "--mcts-max-depth", type=int, default=30,
-        help="Max actions within a turn during MCTS (default: 30)",
+        "--mcts-max-depth", type=int, default=15,
+        help="Max actions per player turn during MCTS (default: 15)",
+    )
+    parser.add_argument(
+        "--mcts-lookahead-turns", type=int, default=1,
+        help="Extra player turns to expand after enemy phase (default: 1)",
     )
     parser.add_argument(
         "--mcts-time-budget", type=float, default=None,
         help="Optional wall-clock seconds cap per MCTS decision (bridge)",
+    )
+    parser.add_argument(
+        "--mcts-dirichlet-alpha", type=float, default=0.3,
+        help="Dirichlet alpha for root exploration noise (default: 0.3)",
+    )
+    parser.add_argument(
+        "--mcts-dirichlet-epsilon", type=float, default=0.25,
+        help="Root prior noise mix weight; 0 disables (default: 0.25)",
     )
     parser.add_argument(
         "--hp-steepness", type=float, default=3.0,
@@ -632,6 +649,14 @@ def main():
     parser.add_argument(
         "--block-scale", type=float, default=0.001,
         help="Micro-reward per HP blocked from enemy attacks (default: 0.001)",
+    )
+    parser.add_argument(
+        "--kill-scale", type=float, default=0.05,
+        help="Shaping reward per enemy killed (default: 0.05)",
+    )
+    parser.add_argument(
+        "--flawless-bonus", type=float, default=0.1,
+        help="Bonus for winning combat without losing HP (default: 0.1)",
     )
     parser.add_argument(
         "--curriculum", type=str, default=None,

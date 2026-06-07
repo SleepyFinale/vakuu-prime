@@ -10,23 +10,29 @@ from sts2_env.gym_env.observation import (
     CARD_FEATURES,
     CHARACTER_MECHANICS_FEATURES,
     ENEMY_FEATURES,
+    MAX_POTION_OBS_SLOTS,
     MAX_RELIC_SLOTS,
     NUM_PLAYER_POWERS,
     PILE_FEATURES,
+    PLAYER_CORE_FEATURES,
+    POTION_FEATURES,
     RELIC_FEATURES,
     TOKEN_SLICES,
 )
 
-NUM_ENTITY_TYPES = 6
+NUM_ENTITY_TYPES = 7
 ENTITY_TYPE_PLAYER = 0
 ENTITY_TYPE_PILE = 1
 ENTITY_TYPE_MECHANICS = 2
 ENTITY_TYPE_CARD = 3
 ENTITY_TYPE_ENEMY = 4
 ENTITY_TYPE_RELIC = 5
+ENTITY_TYPE_POTION = 6
 
-PLAYER_TOKEN_FEATURES = 4 + NUM_PLAYER_POWERS
-NUM_NODES = 1 + 1 + 1 + MAX_HAND_SIZE + MAX_ENEMIES + MAX_RELIC_SLOTS
+PLAYER_TOKEN_FEATURES = PLAYER_CORE_FEATURES + NUM_PLAYER_POWERS
+NUM_NODES = (
+    1 + 1 + 1 + MAX_HAND_SIZE + MAX_ENEMIES + MAX_RELIC_SLOTS + MAX_POTION_OBS_SLOTS
+)
 
 NODE_PLAYER = 0
 NODE_PILES = 1
@@ -34,6 +40,7 @@ NODE_MECHANICS = 2
 NODE_CARDS_START = 3
 NODE_ENEMIES_START = NODE_CARDS_START + MAX_HAND_SIZE
 NODE_RELICS_START = NODE_ENEMIES_START + MAX_ENEMIES
+NODE_POTIONS_START = NODE_RELICS_START + MAX_RELIC_SLOTS
 
 NODE_OFFSETS = {
     "player": NODE_PLAYER,
@@ -42,6 +49,7 @@ NODE_OFFSETS = {
     "cards": NODE_CARDS_START,
     "enemies": NODE_ENEMIES_START,
     "relics": NODE_RELICS_START,
+    "potions": NODE_POTIONS_START,
 }
 
 _TYPE_IDS = (
@@ -51,6 +59,7 @@ _TYPE_IDS = (
     + [ENTITY_TYPE_CARD] * MAX_HAND_SIZE
     + [ENTITY_TYPE_ENEMY] * MAX_ENEMIES
     + [ENTITY_TYPE_RELIC] * MAX_RELIC_SLOTS
+    + [ENTITY_TYPE_POTION] * MAX_POTION_OBS_SLOTS
 )
 
 
@@ -66,6 +75,7 @@ class EntityTokenProjections(nn.Module):
         self.card_proj = nn.Linear(CARD_FEATURES, d_model)
         self.enemy_proj = nn.Linear(ENEMY_FEATURES, d_model)
         self.relic_proj = nn.Linear(RELIC_FEATURES, d_model)
+        self.potion_proj = nn.Linear(POTION_FEATURES, d_model)
         self.type_embeddings = nn.Embedding(NUM_ENTITY_TYPES, d_model)
         self.register_buffer(
             "_type_ids",
@@ -97,7 +107,7 @@ class EntityTokenProjections(nn.Module):
         hand_start, hand_end = TOKEN_SLICES["hand"]
         hand = obs[:, hand_start:hand_end].reshape(batch_size, MAX_HAND_SIZE, CARD_FEATURES)
         card_tokens = self.card_proj(hand)
-        card_mask = hand.abs().sum(dim=-1) > 0
+        card_mask = hand[:, :, 0] > 0
         tokens.append(card_tokens)
         masks.append(card_mask)
 
@@ -114,6 +124,15 @@ class EntityTokenProjections(nn.Module):
         relic_mask = relics.abs().sum(dim=-1) > 0
         tokens.append(relic_tokens)
         masks.append(relic_mask)
+
+        potion_start, potion_end = TOKEN_SLICES["potions"]
+        potions = obs[:, potion_start:potion_end].reshape(
+            batch_size, MAX_POTION_OBS_SLOTS, POTION_FEATURES
+        )
+        potion_tokens = self.potion_proj(potions)
+        potion_mask = potions.abs().sum(dim=-1) > 0
+        tokens.append(potion_tokens)
+        masks.append(potion_mask)
 
         token_tensor = torch.cat(tokens, dim=1)
         mask_tensor = torch.cat(masks, dim=1)

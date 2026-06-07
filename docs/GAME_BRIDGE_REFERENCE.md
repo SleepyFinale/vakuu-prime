@@ -7,6 +7,9 @@ Connecting a trained RL agent to the real STS2 game requires two components:
 1. **C# Mod** (game side) — expose game state via Harmony hooks, receive action commands
 2. **Python client** (agent side) — connect to the mod, run model inference
 
+The Python `state_adapter` encodes bridge combat JSON into the same **1985-dim obs v11**
+layout as [`observation.py`](../sts2_env/gym_env/observation.py). See [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md).
+
 ## Architecture
 
 ```text

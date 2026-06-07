@@ -24,16 +24,16 @@ from sts2_env.gym_env.navigator_observation import (
 from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE
 from sts2_env.gym_env.run_env import (
     DEFAULT_MAX_STEPS,
-    REWARD_DEATH,
-    REWARD_WIN,
     STS2RunEnv,
     TOTAL_ACTIONS,
     _LAYOUT,
 )
 from sts2_env.gym_env.run_reward import (
     NavigatorRewardConfig,
+    REWARD_DEATH,
     RunRewardConfig,
     compute_navigator_shaping,
+    compute_run_terminal_reward,
     snapshot_from_manager,
 )
 from sts2_env.run.run_manager import RunManager
@@ -257,14 +257,23 @@ class STS2NavigatorEnv(gymnasium.Env):
                 )
 
         prev_snapshot = snapshot_from_manager(mgr)
+        prev_combat_hp = self._run_env._combat_hp_before_step()
         self._run_env._dispatch_action(action)
-        reward = self._shaping_delta(prev_snapshot, draft_delta=draft_delta)
+        reward = self._shaping_delta(
+            prev_snapshot, prev_combat_hp=prev_combat_hp, draft_delta=draft_delta,
+        )
         reward += self._auto_play_combat()
 
         terminated = mgr.is_over
         truncated = self._meta_step_count >= self.max_steps and not terminated
         if terminated:
-            reward += REWARD_WIN if mgr.player_won else REWARD_DEATH
+            hp_ratio = snapshot_from_manager(mgr).hp_ratio
+            reward += compute_run_terminal_reward(
+                player_won=mgr.player_won,
+                hp_ratio=hp_ratio,
+                config=self._reward_config,
+                shaping_enabled=self.reward_shaping,
+            )
         elif truncated:
             reward += REWARD_DEATH
 
@@ -281,10 +290,12 @@ class STS2NavigatorEnv(gymnasium.Env):
         prev_snapshot,
         *,
         draft_delta: float = 0.0,
+        prev_combat_hp: int | None = None,
     ) -> float:
         if not self.reward_shaping:
             return 0.0
         assert self._run_env._mgr is not None
+        self._run_env._accumulate_combat_hp_lost(prev_combat_hp)
         curr_snapshot = snapshot_from_manager(self._run_env._mgr)
         config = self._reward_config
         if isinstance(config, NavigatorRewardConfig):
@@ -293,11 +304,20 @@ class STS2NavigatorEnv(gymnasium.Env):
                 curr_snapshot,
                 config,
                 draft_delta=draft_delta,
+                combat_gross_hp_lost=self._run_env._combat_gross_hp_lost,
             )
         else:
             from sts2_env.gym_env.run_reward import compute_run_shaping
 
-            delta = compute_run_shaping(prev_snapshot, curr_snapshot, config)
+            delta = compute_run_shaping(
+                prev_snapshot,
+                curr_snapshot,
+                config,
+                combat_gross_hp_lost=self._run_env._combat_gross_hp_lost,
+            )
+        self._run_env._reset_combat_shaping_on_phase_change(
+            prev_snapshot, curr_snapshot,
+        )
         self._run_env._prev_reward_snapshot = curr_snapshot
         return delta
 
@@ -332,8 +352,11 @@ class STS2NavigatorEnv(gymnasium.Env):
                 )
                 action = layout.combat_start + int(local_action)
 
+            prev_combat_hp = self._run_env._combat_hp_before_step()
             self._run_env._dispatch_action(action)
-            total_shaping += self._shaping_delta(prev_snapshot)
+            total_shaping += self._shaping_delta(
+                prev_snapshot, prev_combat_hp=prev_combat_hp,
+            )
 
         return total_shaping
 

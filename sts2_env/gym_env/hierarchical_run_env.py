@@ -17,14 +17,14 @@ from sts2_env.gym_env.noncombat_heuristics import (
 from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE
 from sts2_env.gym_env.run_env import (
     DEFAULT_MAX_STEPS,
-    REWARD_DEATH,
-    REWARD_WIN,
     STS2RunEnv,
     _LAYOUT,
 )
 from sts2_env.gym_env.run_reward import (
+    REWARD_DEATH,
     RunRewardConfig,
     compute_run_shaping,
+    compute_run_terminal_reward,
     snapshot_from_manager,
 )
 from sts2_env.run.run_manager import RunManager
@@ -347,7 +347,13 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         truncated = self._meta_step_count >= self.max_steps and not terminated
 
         if terminated:
-            reward += REWARD_WIN if mgr.player_won else REWARD_DEATH
+            hp_ratio = snapshot_from_manager(mgr).hp_ratio
+            reward += compute_run_terminal_reward(
+                player_won=mgr.player_won,
+                hp_ratio=hp_ratio,
+                config=self._reward_config,
+                shaping_enabled=self.reward_shaping,
+            )
         elif truncated:
             reward += REWARD_DEATH
 
@@ -362,8 +368,9 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
         assert mgr is not None
 
         prev_snapshot = snapshot_from_manager(mgr)
+        prev_combat_hp = self._run_env._combat_hp_before_step()
         self._run_env._dispatch_action(action)
-        reward = self._shaping_delta(prev_snapshot)
+        reward = self._shaping_delta(prev_snapshot, prev_combat_hp=prev_combat_hp)
 
         if self.use_noncombat_heuristic:
             reward += self._auto_resolve_noncombat()
@@ -372,13 +379,25 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
 
         return reward
 
-    def _shaping_delta(self, prev_snapshot) -> float:
+    def _shaping_delta(
+        self,
+        prev_snapshot,
+        *,
+        prev_combat_hp: int | None = None,
+    ) -> float:
         if not self.reward_shaping:
             return 0.0
         assert self._run_env._mgr is not None
+        self._run_env._accumulate_combat_hp_lost(prev_combat_hp)
         curr_snapshot = snapshot_from_manager(self._run_env._mgr)
         delta = compute_run_shaping(
-            prev_snapshot, curr_snapshot, self._reward_config,
+            prev_snapshot,
+            curr_snapshot,
+            self._reward_config,
+            combat_gross_hp_lost=self._run_env._combat_gross_hp_lost,
+        )
+        self._run_env._reset_combat_shaping_on_phase_change(
+            prev_snapshot, curr_snapshot,
         )
         self._run_env._prev_reward_snapshot = curr_snapshot
         return delta
@@ -411,8 +430,11 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
                 break
 
             prev_snapshot = snapshot_from_manager(mgr)
+            prev_combat_hp = self._run_env._combat_hp_before_step()
             self._run_env._dispatch_action(action)
-            total_shaping += self._shaping_delta(prev_snapshot)
+            total_shaping += self._shaping_delta(
+                prev_snapshot, prev_combat_hp=prev_combat_hp,
+            )
 
         return total_shaping
 
@@ -458,8 +480,11 @@ class STS2HierarchicalRunEnv(gymnasium.Env):
                     local_action = int(local_action)
                 action = layout.combat_start + int(local_action)
 
+            prev_combat_hp = self._run_env._combat_hp_before_step()
             self._run_env._dispatch_action(action)
-            total_shaping += self._shaping_delta(prev_snapshot)
+            total_shaping += self._shaping_delta(
+                prev_snapshot, prev_combat_hp=prev_combat_hp,
+            )
 
         return total_shaping
 

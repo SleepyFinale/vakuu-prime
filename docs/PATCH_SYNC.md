@@ -27,7 +27,7 @@ If decompile reports cards without `CardId` (e.g. `NotYet`), run `scaffold --app
 pytest tests/ -q
 ```
 
-Restart any long-running Python process after sync so `create_card()` reloads regenerated `docs/CARDS_REFERENCE.md` (`@lru_cache` in `factory.py`).
+Restart any long-running Python process after sync so `create_card()` reloads regenerated `docs/CARDS_REFERENCE.md` and pile watchlists reload from `docs/PILE_WATCHLIST.json` (`@lru_cache` in `factory.py` and `pile_distribution.py`).
 
 ## Commands
 
@@ -35,7 +35,7 @@ Restart any long-running Python process after sync so `create_card()` reloads re
 | ------- | ----------- |
 | `decompile` | Run `ilspycmd` → `decompiled/`, update `sync_manifest.json` |
 | `extract-pck` | Run GDRE on `sts2.pck` (optional localization) |
-| `docs` | Regenerate `docs/CARDS_REFERENCE.md`, `POWERS_REFERENCE.md`, `RELICS_REFERENCE.md`, `MONSTERS_REFERENCE.md` |
+| `docs` | Regenerate `docs/CARDS_REFERENCE.md`, `POWERS_REFERENCE.md`, `RELICS_REFERENCE.md`, `MONSTERS_REFERENCE.md`, `PILE_WATCHLIST.json` |
 | `report` | Write `sync_report.md` (diff vs `decompiled_prev/`, parity summary) |
 | `scaffold` | Add missing `CardId` entries and card stubs (`# SYNC_STUB`) |
 | `apply-static` | Update `cost`, `base_damage`, `base_block`, `effect_vars` in `make_*` factories |
@@ -50,6 +50,8 @@ Use `--apply` to write scaffold/static changes. Without it, those steps only pri
 **Runtime card stats:** After decompile, `create_card()` overlays cost, rarity, keywords, vars, and related fields from `decompiled/` automatically (see `factory._apply_decompiled_static_metadata`). The post-sync audits should pass without hand-editing hundreds of factories.
 
 **Manual:** card `OnPlay` effects, power/relic hooks, monster AI state machines. Parity audit may still list missing power/relic implementations — that is expected until ported. Use `sync_report.md` and `git diff decompiled/` to prioritize.
+
+After `docs`, review `git diff docs/PILE_WATCHLIST.json` for auto-added finisher/aoe cards and any **New cards not in any group** lines in `sync_report.md`; add high-value engine cards to `power` or `setup` manually when needed. The watchlist drives draw-pile memory **watchlist group** features in combat observations (see [README draw-pile memory](../README.md#draw-pile-memory) and [SIMULATOR_ARCHITECTURE.md](SIMULATOR_ARCHITECTURE.md)).
 
 Mark files that must not receive auto patches with `# SYNC_NO_AUTO` at the top of the module.
 

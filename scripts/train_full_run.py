@@ -116,10 +116,15 @@ def apply_preset(args) -> None:
 
 def build_run_reward_config(args):
     from sts2_env.gym_env.run_reward import RunRewardConfig
-    from sts2_env.gym_env.reward_shaping import HpShapingConfig
+    from sts2_env.gym_env.reward_shaping import CombatMicroRewardConfig, HpShapingConfig
 
     return RunRewardConfig(
+        floor_bonus=args.floor_bonus,
+        combat_clear_bonus=args.combat_clear_bonus,
+        flawless_combat_bonus=args.flawless_combat_bonus,
+        win_hp_bonus_scale=args.win_hp_bonus_scale,
         hp=HpShapingConfig(steepness=args.hp_steepness),
+        micro=CombatMicroRewardConfig(kill_scale=args.kill_scale),
     )
 
 
@@ -239,6 +244,11 @@ def train(args):
     print(f"  reward_shaping:   {args.reward_shaping}")
     if args.reward_shaping:
         print(f"  hp_steepness:     {args.hp_steepness}")
+        print(f"  floor_bonus:      {args.floor_bonus}")
+        print(f"  combat_clear:     {args.combat_clear_bonus}")
+        print(f"  flawless_combat:  {args.flawless_combat_bonus}")
+        print(f"  win_hp_bonus:     {args.win_hp_bonus_scale}")
+        print(f"  kill_scale:       {args.kill_scale}")
     print(f"  delegate_combat:  {args.delegate_combat}")
     print(f"  noncombat_heur:   {args.use_noncombat_heuristic}")
     if combat_models_by_character:
@@ -702,6 +712,26 @@ def main():
     parser.add_argument(
         "--hp-steepness", type=float, default=3.0,
         help="Exponential HP penalty steepness (default: 3.0)",
+    )
+    parser.add_argument(
+        "--floor-bonus", type=float, default=0.01,
+        help="Shaping reward per floor advanced (default: 0.01)",
+    )
+    parser.add_argument(
+        "--combat-clear-bonus", type=float, default=0.005,
+        help="Shaping reward per combat cleared (default: 0.005)",
+    )
+    parser.add_argument(
+        "--flawless-combat-bonus", type=float, default=0.003,
+        help="Extra shaping when combat is cleared without HP loss (default: 0.003)",
+    )
+    parser.add_argument(
+        "--win-hp-bonus-scale", type=float, default=0.15,
+        help="Run-end HP efficiency bonus on win (default: 0.15)",
+    )
+    parser.add_argument(
+        "--kill-scale", type=float, default=0.003,
+        help="Shaping reward per enemy killed in run env (default: 0.003)",
     )
     parser.add_argument(
         "--eval-freq", type=int, default=20_000,

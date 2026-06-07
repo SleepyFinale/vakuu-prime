@@ -14,6 +14,7 @@ from scripts.sync.common import (
     REPO_ROOT,
     SYNC_REPORT_PATH,
 )
+from scripts.sync.generate_pile_watchlist import WatchlistSummary, format_watchlist_report_section
 from scripts.sync.manifest import SyncManifest, current_surface_counts, dll_sha256
 
 
@@ -145,6 +146,7 @@ def write_sync_report(
     dll_path: Path | None = None,
     scaffold_summary: list[str] | None = None,
     static_summary: list[str] | None = None,
+    watchlist_summary: WatchlistSummary | None = None,
     output: Path = SYNC_REPORT_PATH,
 ) -> Path:
     lines: list[str] = ["# STS2 Sync Report", ""]
@@ -257,6 +259,8 @@ def write_sync_report(
         lines.append("")
         lines.extend(f"- {line}" for line in static_summary)
         lines.append("")
+
+    lines.extend(format_watchlist_report_section(watchlist_summary))
 
     lines.append("## Manual work queue")
     lines.append("")

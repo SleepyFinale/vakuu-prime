@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from sts2_env.bridge.protocol import BridgeAction, BridgeStateType
 from sts2_env.core.enums import CardType, TargetType
+from sts2_env.gym_env.observation import fold_move_intents
 
 if TYPE_CHECKING:
     from sts2_env.core.combat import CombatState
@@ -347,6 +348,7 @@ def _normalize_relics(relics: list[dict[str, Any]] | None) -> list[dict[str, Any
             "rarity": str(relic.get("rarity", "")),
             "enabled": bool(relic.get("enabled", True)),
             "used_up": bool(relic.get("used_up", relic.get("is_used_up", False))),
+            "counter": int(relic.get("counter", 0)),
         })
     return normalized
 
@@ -565,10 +567,13 @@ def combat_state_to_bridge_state(combat: CombatState) -> dict[str, Any]:
         if ai is not None:
             intents = ai.current_move.intents
             if intents:
-                first_intent = intents[0]
-                enemy_data["intent"] = first_intent.intent_type.name
-                enemy_data["intent_damage"] = first_intent.damage
-                enemy_data["intent_hits"] = first_intent.hits
+                total_damage, total_hits, _intent_types = fold_move_intents(intents)
+                enemy_data["intent"] = intents[0].intent_type.name
+                enemy_data["intent_types"] = [
+                    intent.intent_type.name for intent in intents
+                ]
+                enemy_data["intent_damage"] = total_damage
+                enemy_data["intent_hits"] = total_hits
         enemies.append(enemy_data)
 
     return normalize_bridge_state({
@@ -609,6 +614,7 @@ def combat_state_to_bridge_state(combat: CombatState) -> dict[str, Any]:
                 "rarity": relic.rarity.name,
                 "enabled": relic.enabled,
                 "used_up": relic.is_used_up,
+                "counter": relic.counter,
             }
             for relic in combat.relics
         ],

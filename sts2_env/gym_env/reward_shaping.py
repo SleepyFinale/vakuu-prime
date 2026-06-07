@@ -25,6 +25,7 @@ class CombatMicroRewardConfig:
     vulnerable_scale: float = 0.02
     weak_scale: float = 0.02
     block_scale: float = 0.001
+    kill_scale: float = 0.05
     max_step_bonus: float = 0.05
 
 
@@ -34,6 +35,7 @@ class CombatRewardConfig:
 
     hp: HpShapingConfig = field(default_factory=HpShapingConfig)
     micro: CombatMicroRewardConfig = field(default_factory=CombatMicroRewardConfig)
+    flawless_bonus: float = 0.1
 
 
 @dataclass
@@ -76,6 +78,13 @@ def _is_enemy_attack(props: ValueProp) -> bool:
     return props.is_powered_attack() or props.is_card_or_monster_move()
 
 
+def debuff_stack_marginal(existing: int, amount: int, *, exponent: float = 0.6) -> float:
+    """Sublinear marginal value for stacking debuffs on a target."""
+    if amount <= 0:
+        return 0.0
+    return max(0.0, (existing + amount) ** exponent - existing ** exponent)
+
+
 def compute_combat_step_shaping(
     combat: CombatState,
     cursor: CombatEventCursor,
@@ -85,7 +94,23 @@ def compute_combat_step_shaping(
     reward = 0.0
 
     power_events = combat._power_events_combat
-    for target, power_id, amount, applier in power_events[cursor.power_events:]:
+    event_slice = power_events[cursor.power_events:]
+
+    slice_delta: dict[tuple[object, PowerId], int] = {}
+    for target, power_id, amount, applier in event_slice:
+        if amount <= 0:
+            continue
+        if applier is None or not _is_player_side(applier):
+            continue
+        if not _is_enemy_side(target):
+            continue
+        if power_id not in (PowerId.VULNERABLE, PowerId.WEAK):
+            continue
+        key = (target, power_id)
+        slice_delta[key] = slice_delta.get(key, 0) + amount
+
+    stack_before: dict[tuple[object, PowerId], int] = {}
+    for target, power_id, amount, applier in event_slice:
         if amount <= 0:
             continue
         if applier is None or not _is_player_side(applier):
@@ -93,14 +118,22 @@ def compute_combat_step_shaping(
         if not _is_enemy_side(target):
             continue
         if power_id == PowerId.VULNERABLE:
-            reward += amount * config.vulnerable_scale
+            scale = config.vulnerable_scale
         elif power_id == PowerId.WEAK:
-            reward += amount * config.weak_scale
+            scale = config.weak_scale
+        else:
+            continue
+
+        key = (target, power_id)
+        if key not in stack_before:
+            stack_before[key] = target.get_power_amount(power_id) - slice_delta[key]
+        existing = stack_before[key]
+        reward += debuff_stack_marginal(existing, amount) * scale
+        stack_before[key] = existing + amount
 
     damage_events = combat._damage_events_combat
     player = combat.primary_player
-    for dealer, target, props, unblocked, blocked in damage_events[cursor.damage_events:]:
-        del unblocked
+    for dealer, target, props, _, blocked in damage_events[cursor.damage_events:]:
         if target is not player or blocked <= 0:
             continue
         if dealer is None or not _is_enemy_side(dealer):
@@ -118,6 +151,16 @@ def compute_combat_step_shaping(
     return reward, new_cursor
 
 
+def compute_combat_kill_reward(
+    prev_alive_count: int,
+    combat: CombatState,
+    config: CombatMicroRewardConfig,
+) -> float:
+    """Reward for enemies killed during a single env step."""
+    kills = max(0, prev_alive_count - len(combat.alive_enemies))
+    return kills * config.kill_scale
+
+
 def compute_combat_hp_step_penalty(
     prev_hp: int,
     combat: CombatState,
@@ -131,3 +174,15 @@ def compute_combat_hp_step_penalty(
     max_hp = max(player.max_hp, 1)
     hp_ratio_before = prev_hp / max_hp
     return compute_hp_loss_penalty(hp_lost, max_hp, hp_ratio_before, config)
+
+
+def compute_combat_flawless_bonus(
+    *,
+    player_won: bool,
+    gross_hp_lost: int,
+    bonus: float,
+) -> float:
+    """Bonus for winning combat without losing any HP during the fight."""
+    if player_won and gross_hp_lost <= 0 and bonus > 0:
+        return bonus
+    return 0.0

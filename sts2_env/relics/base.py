@@ -385,6 +385,11 @@ class RelicInstance:
         return False
 
     @property
+    def counter(self) -> int:
+        """UI counter progress (matches C# DisplayAmount; 0 for non-counter relics)."""
+        return 0
+
+    @property
     def is_tradable(self) -> bool:
         return (
             not self.is_used_up

@@ -6,15 +6,17 @@ ensures the trained model receives inputs in the exact same encoding
 it was trained on.
 
 The observation format is defined in gym_env/observation.py:
-  - Player state: hp/max_hp, block/50, energy/10, max_energy/10 (4)
-  - Player powers: str, dex, vuln, weak, frail, artifact (6)
-  - Hand cards: card_id_norm, cost, damage, block, is_attack (10 * 5 = 50)
-  - Pile sizes: draw, discard, exhaust counts + pile memory (26) + reserved (3) (32)
-  - Enemies: alive, hp%, block, intent_onehot(5), intent_dmg,
-             intent_hits, vuln, weak, str (5 * 13 = 65)
+  - Player state: hp/max_hp, block/50, energy/10, max_energy/10, ascension/20, turn_count/20 (6)
+  - Player powers: all PowerId values (268, amount/20)
+  - Hand cards: card_id_norm, cost, damage, block, is_attack, is_power,
+                has_exhaust, has_retain, hit_count (10 * 9 = 90)
+  - Pile sizes: draw, discard, exhaust counts + pile memory (31) + reserved (3) (37)
+  - Enemies: alive, hp%, block, intent_onehot(5), intent_dmg/60,
+             intent_hits/min(hits,10)/10, all powers (268) (5 * 278 = 1390)
   - Character mechanics: one-hot(5), stars, orb cap/count, orbs(3*2), osty(3) (17)
-  - Relics: relic_id_norm, rarity, enabled, is_used_up (30 * 4 = 120)
-  Total: 294 dimensions
+  - Relics: relic_id_norm, rarity, enabled, is_used_up, counter_norm (30 * 5 = 150)
+  - Potions: potion_id_norm, rarity, can_use_in_combat (9 * 3 = 27)
+  Total: 1985 dimensions
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from sts2_env.core.constants import (
     POTION_ACTION_START,
     POTION_TARGET_OPTIONS,
 )
-from sts2_env.core.enums import CardId, PotionUsageType
+from sts2_env.core.enums import PotionUsageType
 from sts2_env.gym_env.pile_distribution import (
     PILE_FEATURES,
     cards_from_bridge,
@@ -40,41 +42,43 @@ from sts2_env.gym_env.pile_distribution import (
     projected_next_draw_count,
 )
 from sts2_env.gym_env.observation import (
-    BASE_OBS_SIZE,
     CARD_FEATURES,
+    ENEMY_CORE_FEATURES,
     ENEMY_FEATURES,
-    NUM_CARD_IDS,
-    NUM_INTENT_TYPES,
+    ENEMY_POWERS,
     OBS_SIZE,
     COMBAT_OBS_V2_SIZE,
+    OBS_ASCENSION_SCALE,
+    OBS_TURN_COUNT_CAP,
+    PLAYER_CORE_FEATURES,
+    PLAYER_POWERS,
+    RELIC_OBS_SIZE,
+    encode_card_features_from_fields,
     encode_character_mechanics_from_fields,
+    encode_potions_into_obs,
     encode_relics_into_obs,
-    _CARD_ID_TO_IDX,
+    intent_types_from_names,
+    write_enemy_intent_features,
+    write_empty_hand_slot,
 )
 from sts2_env.bridge.protocol import (
-    CardTypeName,
-    IntentName,
     Phase,
     TargetTypeName,
 )
 
-# Mapping from JSON intent strings to our IntentType enum indices.
-# Must match the INTENT_TYPES list in observation.py:
-#   [ATTACK, MULTI_ATTACK, DEFEND, BUFF, DEBUFF]
-_INTENT_STR_TO_IDX: dict[str, int] = {
-    IntentName.ATTACK: 0,
-    IntentName.MULTI_ATTACK: 1,
-    IntentName.DEFEND: 2,
-    IntentName.BUFF: 3,
-    IntentName.DEBUFF: 4,
-}
 
-# Mapping from JSON card ID strings to CardId enum values,
-# for card_id normalised encoding.
-_CARD_STR_TO_ID: dict[str, CardId] = {cid.name: cid for cid in CardId}
+def _bridge_intent_type_names(enemy: dict[str, Any]) -> list[str]:
+    raw = enemy.get("intent_types")
+    if raw:
+        return [str(name) for name in raw]
+    intent = enemy.get("intent")
+    if intent:
+        return [str(intent)]
+    return []
 
-# Power names to track (must match PLAYER_POWERS in observation.py)
-_TRACKED_POWERS = ["STRENGTH", "DEXTERITY", "VULNERABLE", "WEAK", "FRAIL", "ARTIFACT"]
+
+_TRACKED_PLAYER_POWERS = [p.name for p in PLAYER_POWERS]
+_TRACKED_ENEMY_POWERS = [p.name for p in ENEMY_POWERS]
 
 # Target types that need specific enemy targeting (for action masking)
 _TARGETED_TYPES = {TargetTypeName.ANY_ENEMY, "ANY_ENEMY", "RANDOM_ENEMY", TargetTypeName.RANDOM_ENEMY}
@@ -115,7 +119,7 @@ class StateAdapter:
                    Must contain 'combat_state' with player, hand, enemies.
 
         Returns:
-            Float32 numpy array of shape (OBS_SIZE,) = (294,).
+            Float32 numpy array of shape (OBS_SIZE,) = (1985,).
             Returns zeros if not in combat.
         """
         obs = np.zeros(OBS_SIZE, dtype=np.float32)
@@ -139,37 +143,44 @@ class StateAdapter:
 
         idx = 0
 
-        # --- Player state (4) ---
+        # --- Player state (6) ---
         player = combat.get("player", {})
         max_hp = player.get("max_hp", 1)
         obs[idx] = player.get("hp", 0) / max(max_hp, 1)
         obs[idx + 1] = player.get("block", 0) / 50.0
         obs[idx + 2] = player.get("energy", 0) / 10.0
         obs[idx + 3] = player.get("max_energy", 3) / 10.0
-        idx += 4
+        ascension = int(combat.get("ascension_level", state.get("ascension_level", 0)))
+        obs[idx + 4] = ascension / OBS_ASCENSION_SCALE
+        turn = max(1, int(combat.get("round", 1)))
+        obs[idx + 5] = min(turn, OBS_TURN_COUNT_CAP) / OBS_TURN_COUNT_CAP
+        idx += PLAYER_CORE_FEATURES
 
-        # --- Player powers (6) ---
+        # --- Player powers (268) ---
         player_powers = _powers_to_dict(player.get("powers", []))
-        for power_name in _TRACKED_POWERS:
+        for power_name in _TRACKED_PLAYER_POWERS:
             obs[idx] = player_powers.get(power_name, 0) / 20.0
             idx += 1
 
-        # --- Hand cards (10 * 5 = 50) ---
+        # --- Hand cards (10 * 9 = 90) ---
         hand = combat.get("hand", [])
         for i in range(MAX_HAND_SIZE):
             if i < len(hand):
                 card = hand[i]
-                card_id_str = card.get("id", "UNKNOWN")
-                card_enum = _CARD_STR_TO_ID.get(card_id_str)
-                if card_enum is not None and card_enum in _CARD_ID_TO_IDX:
-                    obs[idx] = (_CARD_ID_TO_IDX[card_enum] + 1) / (NUM_CARD_IDS + 1)
-                else:
-                    obs[idx] = 0.0
-
-                obs[idx + 1] = max(0, card.get("cost", 0)) / 5.0
-                obs[idx + 2] = card.get("base_damage", 0) / 50.0
-                obs[idx + 3] = card.get("base_block", 0) / 50.0
-                obs[idx + 4] = 1.0 if card.get("type", "") == CardTypeName.ATTACK else 0.0
+                obs[idx:idx + CARD_FEATURES] = encode_card_features_from_fields(
+                    card_id=str(card.get("id", "")),
+                    cost=int(card.get("cost", 0)),
+                    card_type=str(card.get("type", "")),
+                    base_damage=card.get("base_damage"),
+                    base_block=card.get("base_block"),
+                    keywords=card.get("keywords"),
+                    retain=bool(card.get("retain", False)),
+                    single_turn_retain=bool(card.get("single_turn_retain", False)),
+                    hit_count=card.get("hit_count"),
+                    upgraded=bool(card.get("upgraded", False)),
+                )
+            else:
+                write_empty_hand_slot(obs, idx)
             idx += CARD_FEATURES
 
         # --- Pile summaries (32) ---
@@ -186,7 +197,7 @@ class StateAdapter:
         )
         idx += PILE_FEATURES
 
-        # --- Enemies (5 * 13 = 65) ---
+        # --- Enemies (5 * 278 = 1390) ---
         enemies = combat.get("enemies", [])
         for i in range(MAX_ENEMIES):
             if i < len(enemies):
@@ -198,22 +209,23 @@ class StateAdapter:
                 obs[idx + 1] = enemy.get("hp", 0) / enemy_max_hp
                 obs[idx + 2] = enemy.get("block", 0) / 50.0
 
-                # Intent encoding (one-hot + damage + hits)
+                # Intent encoding (multi-bit one-hot + aggregated damage + hits)
                 if is_alive:
-                    intent_str = enemy.get("intent", "UNKNOWN")
-                    intent_idx = _INTENT_STR_TO_IDX.get(intent_str, -1)
-                    if 0 <= intent_idx < NUM_INTENT_TYPES:
-                        obs[idx + 3 + intent_idx] = 1.0
-                    obs[idx + 3 + NUM_INTENT_TYPES] = enemy.get("intent_damage", 0) / 30.0
-                    obs[idx + 3 + NUM_INTENT_TYPES + 1] = enemy.get("intent_hits", 1) / 5.0
+                    intent_types = intent_types_from_names(_bridge_intent_type_names(enemy))
+                    write_enemy_intent_features(
+                        obs,
+                        idx + 3,
+                        intent_types=intent_types,
+                        total_damage=int(enemy.get("intent_damage", 0) or 0),
+                        total_hits=int(enemy.get("intent_hits", 1) or 1),
+                    )
 
-                # Enemy powers
                 enemy_powers = _powers_to_dict(enemy.get("powers", []))
-                obs[idx + 3 + NUM_INTENT_TYPES + 2] = enemy_powers.get("VULNERABLE", 0) / 10.0
-                obs[idx + 3 + NUM_INTENT_TYPES + 3] = enemy_powers.get("WEAK", 0) / 10.0
-                obs[idx + 3 + NUM_INTENT_TYPES + 4] = enemy_powers.get("STRENGTH", 0) / 10.0
+                power_base = idx + ENEMY_CORE_FEATURES
+                for j, power_name in enumerate(_TRACKED_ENEMY_POWERS):
+                    obs[power_base + j] = enemy_powers.get(power_name, 0) / 10.0
 
-            idx += ENEMY_FEATURES
+            idx += ENEMY_FEATURES  # advance even for empty enemy slots
 
         idx = encode_character_mechanics_from_fields(
             obs,
@@ -230,6 +242,9 @@ class StateAdapter:
         )
         relics = combat.get("relics") or player.get("relics")
         encode_relics_into_obs(obs, COMBAT_OBS_V2_SIZE, relics)
+        potion_start = COMBAT_OBS_V2_SIZE + RELIC_OBS_SIZE
+        potions = combat.get("potions") or state.get("run_state", {}).get("potions", [])
+        encode_potions_into_obs(obs, potion_start, potions)
 
         return obs
 

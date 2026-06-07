@@ -15,6 +15,10 @@ from scripts.sync.decompile import check_ilspycmd, run_decompile, run_extract_pc
 from scripts.sync.game_paths import resolve_game_paths, validate_game_paths  # noqa: E402
 from scripts.sync.generate_cards_reference import generate_cards_reference  # noqa: E402
 from scripts.sync.generate_monsters_reference import generate_monsters_reference  # noqa: E402
+from scripts.sync.generate_pile_watchlist import (  # noqa: E402
+    WatchlistSummary,
+    generate_pile_watchlist,
+)
 from scripts.sync.generate_powers_reference import generate_powers_reference  # noqa: E402
 from scripts.sync.generate_relics_reference import generate_relics_reference  # noqa: E402
 from scripts.sync.manifest import SyncManifest  # noqa: E402
@@ -47,6 +51,9 @@ def _clear_reference_caches() -> None:
     from sts2_env.cards.reference_static_metadata import clear_reference_metadata_caches
 
     clear_reference_metadata_caches()
+    from sts2_env.gym_env.pile_distribution import clear_watchlist_cache
+
+    clear_watchlist_cache()
 
 
 def cmd_decompile(args: argparse.Namespace) -> int:
@@ -96,7 +103,7 @@ def cmd_extract_pck(args: argparse.Namespace) -> int:
     return run_extract_pck(paths)
 
 
-def cmd_docs(_args: argparse.Namespace) -> int:
+def _generate_docs() -> tuple[int, WatchlistSummary | None]:
     paths = [
         generate_cards_reference(),
         generate_powers_reference(),
@@ -105,7 +112,16 @@ def cmd_docs(_args: argparse.Namespace) -> int:
     ]
     for path in paths:
         print(f"Wrote {path.relative_to(REPO_ROOT)}")
-    return 0
+    watchlist_path, watchlist_summary = generate_pile_watchlist()
+    print(f"Wrote {watchlist_path.relative_to(REPO_ROOT)}")
+    for line in watchlist_summary.report_lines():
+        print(f"Pile watchlist: {line}")
+    return 0, watchlist_summary
+
+
+def cmd_docs(_args: argparse.Namespace) -> int:
+    code, _ = _generate_docs()
+    return code
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -152,7 +168,7 @@ def cmd_all(args: argparse.Namespace) -> int:
         print(line)
     if not args.apply and (result.enum_additions or result.card_stubs):
         print("Re-run with --apply to add new CardId entries and stubs")
-    code = cmd_docs(args)
+    code, watchlist_summary = _generate_docs()
     steps.append(("docs", code))
     if code != 0:
         return code
@@ -163,6 +179,7 @@ def cmd_all(args: argparse.Namespace) -> int:
         dll_path=paths.sts2_dll if paths.sts2_dll.is_file() else None,
         scaffold_summary=scaffold_summary(result),
         static_summary=apply_static_summary(static_result, apply=args.apply),
+        watchlist_summary=watchlist_summary,
     )
     print(f"Wrote {report_path.relative_to(REPO_ROOT)}")
     if not args.skip_audits:

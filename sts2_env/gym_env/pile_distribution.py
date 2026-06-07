@@ -6,7 +6,11 @@ order, and high-value card signals so feed-forward policies can count cards.
 
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Protocol, Sequence
 
 import numpy as np
@@ -14,7 +18,9 @@ import numpy as np
 from sts2_env.core.constants import BASE_DRAW, MAX_HAND_SIZE
 from sts2_env.core.enums import CardId, CardRarity, CardTag, CardType
 
-PILE_MEMORY_FEATURES = 26
+_logger = logging.getLogger(__name__)
+
+PILE_MEMORY_FEATURES = 31
 PILE_COUNT_FEATURES = 3
 PILE_RESERVED_FEATURES = 3
 PILE_FEATURES = PILE_COUNT_FEATURES + PILE_MEMORY_FEATURES + PILE_RESERVED_FEATURES
@@ -30,50 +36,122 @@ _TYPE_SKILL = 0.66
 _TYPE_POWER = 0.33
 _TYPE_OTHER = 0.0
 
+_CARD_ID_TO_IDX = {cid: i for i, cid in enumerate(CardId)}
+_NUM_CARD_IDS = len(_CARD_ID_TO_IDX)
+
 _HEAVY_ATTACK_DAMAGE = 8
 _RARE_PLUS = frozenset({CardRarity.RARE, CardRarity.ANCIENT})
 
-WATCHLIST_GROUPS: dict[str, frozenset[CardId]] = {
-    "power": frozenset({
-        CardId.DEMON_FORM_CARD,
-        CardId.CORRUPTION_CARD,
-        CardId.WELL_LAID_PLANS,
-        CardId.CREATIVE_AI_CARD,
-        CardId.AFTERIMAGE_CARD,
-        CardId.FEEL_NO_PAIN_CARD,
-        CardId.STORM_CARD,
-        CardId.CONSUMING_SHADOW,
-    }),
-    "finisher": frozenset({
-        CardId.BASH,
-        CardId.POMMEL_STRIKE,
-        CardId.NEUTRALIZE,
-        CardId.ADRENALINE,
-        CardId.UNLEASH,
-        CardId.DEATH_MARCH,
-        CardId.SOVEREIGN_BLADE,
-        CardId.GRAND_FINALE,
-        CardId.ASSASSINATE,
-        CardId.FIEND_FIRE,
-    }),
-    "setup": frozenset({
-        CardId.FEEL_NO_PAIN_CARD,
-        CardId.STORM_CARD,
-        CardId.CLAW,
-        CardId.CONSUMING_SHADOW,
-        CardId.WELL_LAID_PLANS,
-        CardId.BOOT_SEQUENCE,
-        CardId.HIDDEN_CACHE,
-    }),
-    "aoe": frozenset({
-        CardId.SOUL_STORM,
-        CardId.BONE_SHARDS,
-        CardId.STORM_OF_STEEL,
-        CardId.FIEND_FIRE,
-        CardId.DAGGER_SPRAY,
-        CardId.CELESTIAL_MIGHT,
-    }),
-}
+WATCHLIST_JSON_PATH = Path("docs/PILE_WATCHLIST.json")
+WATCHLIST_GROUP_NAMES: tuple[str, ...] = ("power", "finisher", "setup", "aoe")
+
+
+def seed_watchlist_document() -> dict[str, Any]:
+    """Default watchlist JSON when docs/PILE_WATCHLIST.json is absent."""
+    return {
+        "version": 1,
+        "groups": {
+            "power": {
+                "cards": sorted([
+                    "AFTERIMAGE_CARD",
+                    "CONSUMING_SHADOW",
+                    "CORRUPTION_CARD",
+                    "CREATIVE_AI_CARD",
+                    "DEMON_FORM_CARD",
+                    "FEEL_NO_PAIN_CARD",
+                    "STORM_CARD",
+                    "WELL_LAID_PLANS",
+                ]),
+                "auto": None,
+                "exclude": [],
+            },
+            "finisher": {
+                "cards": sorted([
+                    "ADRENALINE",
+                    "ASSASSINATE",
+                    "BASH",
+                    "DEATH_MARCH",
+                    "FIEND_FIRE",
+                    "GRAND_FINALE",
+                    "NEUTRALIZE",
+                    "POMMEL_STRIKE",
+                    "SOVEREIGN_BLADE",
+                    "UNLEASH",
+                ]),
+                "auto": {
+                    "card_type": "ATTACK",
+                    "min_base_damage": 9,
+                    "rarity_min": "UNCOMMON",
+                },
+                "exclude": [],
+            },
+            "setup": {
+                "cards": sorted([
+                    "BOOT_SEQUENCE",
+                    "CLAW",
+                    "CONSUMING_SHADOW",
+                    "FEEL_NO_PAIN_CARD",
+                    "HIDDEN_CACHE",
+                    "STORM_CARD",
+                    "WELL_LAID_PLANS",
+                ]),
+                "auto": None,
+                "exclude": [],
+            },
+            "aoe": {
+                "cards": sorted([
+                    "BONE_SHARDS",
+                    "CELESTIAL_MIGHT",
+                    "DAGGER_SPRAY",
+                    "FIEND_FIRE",
+                    "SOUL_STORM",
+                    "STORM_OF_STEEL",
+                ]),
+                "auto": {
+                    "card_type": "ATTACK",
+                    "target_type": "ALL_ENEMIES",
+                    "min_base_damage": 4,
+                    "rarity_min": "COMMON",
+                },
+                "exclude": [],
+            },
+        },
+    }
+
+
+def _coerce_watchlist_card_id(card_id_str: str) -> CardId | None:
+    return _coerce_card_id(card_id_str)
+
+
+def _parse_watchlist_groups(document: dict[str, Any]) -> dict[str, frozenset[CardId]]:
+    groups: dict[str, frozenset[CardId]] = {}
+    raw_groups = document.get("groups", {})
+    for group_name in WATCHLIST_GROUP_NAMES:
+        group = raw_groups.get(group_name, {})
+        card_ids: set[CardId] = set()
+        for raw_name in group.get("cards", []):
+            card_id = _coerce_watchlist_card_id(str(raw_name))
+            if card_id is None:
+                _logger.warning("Skipping unknown watchlist card name: %s", raw_name)
+                continue
+            card_ids.add(card_id)
+        groups[group_name] = frozenset(card_ids)
+    return groups
+
+
+@lru_cache(maxsize=1)
+def load_watchlist_groups(path: str | None = None) -> dict[str, frozenset[CardId]]:
+    """Load curated pile watchlist groups from docs/PILE_WATCHLIST.json."""
+    watchlist_path = Path(path) if path is not None else WATCHLIST_JSON_PATH
+    if watchlist_path.is_file():
+        document = json.loads(watchlist_path.read_text(encoding="utf-8"))
+    else:
+        document = seed_watchlist_document()
+    return _parse_watchlist_groups(document)
+
+
+def clear_watchlist_cache() -> None:
+    load_watchlist_groups.cache_clear()
 
 
 class PileCardView(Protocol):
@@ -111,6 +189,7 @@ class SimplePileCard:
         return self.card_type == CardType.POWER
 
 
+@lru_cache(maxsize=8192)
 def hypergeom_at_least_one(n: int, k: int, success_count: int) -> float:
     """P(draw >= 1 success in k draws without replacement from n cards)."""
     if k <= 0 or success_count <= 0 or n <= 0:
@@ -145,6 +224,10 @@ def _type_encoding(card_type: CardType) -> float:
     if card_type == CardType.POWER:
         return _TYPE_POWER
     return _TYPE_OTHER
+
+
+def _card_id_norm(card_id: CardId) -> float:
+    return (_CARD_ID_TO_IDX.get(card_id, 0) + 1) / (_NUM_CARD_IDS + 1)
 
 
 def _card_type_from_name(type_name: str) -> CardType:
@@ -301,20 +384,39 @@ def _count_type(cards: Sequence[PileCardView], card_type: CardType) -> int:
     return sum(1 for card in cards if card.card_type == card_type)
 
 
+def _count_draw_relevant_types(cards: Sequence[PileCardView]) -> tuple[int, int, int]:
+    """Count attack, skill, and power cards in a single pass."""
+    attack = skill = power = 0
+    for card in cards:
+        if card.card_type == CardType.ATTACK:
+            attack += 1
+        elif card.card_type == CardType.SKILL:
+            skill += 1
+        elif card.card_type == CardType.POWER:
+            power += 1
+    return attack, skill, power
+
+
 def _prob_at_least_one_type(
     known_cards: Sequence[PileCardView],
     shuffle_pool: Sequence[PileCardView],
     *,
     remaining_draws: int,
     card_type: CardType,
+    pool_success_count: int | None = None,
+    known_success_count: int | None = None,
 ) -> float:
-    if any(card.card_type == card_type for card in known_cards):
+    if known_success_count is None:
+        if any(card.card_type == card_type for card in known_cards):
+            return 1.0
+    elif known_success_count > 0:
         return 1.0
     if remaining_draws <= 0:
         return 0.0
     pool_size = len(shuffle_pool)
-    success_count = _count_type(shuffle_pool, card_type)
-    return hypergeom_at_least_one(pool_size, remaining_draws, success_count)
+    if pool_success_count is None:
+        pool_success_count = _count_type(shuffle_pool, card_type)
+    return hypergeom_at_least_one(pool_size, remaining_draws, pool_success_count)
 
 
 def _expected_type_draws(
@@ -323,11 +425,17 @@ def _expected_type_draws(
     *,
     remaining_draws: int,
     card_type: CardType,
+    pool_success_count: int | None = None,
+    known_success_count: int | None = None,
 ) -> float:
-    known = sum(1 for card in known_cards if card.card_type == card_type)
+    if known_success_count is None:
+        known_success_count = sum(1 for card in known_cards if card.card_type == card_type)
+    if pool_success_count is None:
+        pool_success_count = _count_type(shuffle_pool, card_type)
     pool_size = len(shuffle_pool)
-    success_count = _count_type(shuffle_pool, card_type)
-    expected = known + hypergeom_expected_count(pool_size, remaining_draws, success_count)
+    expected = known_success_count + hypergeom_expected_count(
+        pool_size, remaining_draws, pool_success_count,
+    )
     return expected / float(BASE_DRAW)
 
 
@@ -349,7 +457,7 @@ def encode_pile_memory(
     *,
     next_draw_count: int | None = None,
 ) -> np.ndarray:
-    """Encode draw-pile memory as a 26-dim float32 vector."""
+    """Encode draw-pile memory as a 31-dim float32 vector."""
     features = np.zeros(PILE_MEMORY_FEATURES, dtype=np.float32)
     if next_draw_count is None:
         next_draw_count = projected_next_draw_count(len(hand))
@@ -367,30 +475,42 @@ def encode_pile_memory(
     known_cards = list(draw[:known_count])
     remaining_draws = max(0, next_draw_count - known_count)
     shuffle_pool = list(draw[known_count:]) + list(discard) + pending_discard
+    pool_attack, pool_skill, pool_power = _count_draw_relevant_types(shuffle_pool)
+    known_attack, known_skill, known_power = _count_draw_relevant_types(known_cards)
+    draw_type_specs = (
+        (CardType.ATTACK, known_attack, pool_attack),
+        (CardType.SKILL, known_skill, pool_skill),
+        (CardType.POWER, known_power, pool_power),
+    )
 
     # Next-turn draw probabilities (5)
-    for card_type in (CardType.ATTACK, CardType.SKILL, CardType.POWER):
+    for card_type, known_count_val, pool_count_val in draw_type_specs:
         features[idx] = _prob_at_least_one_type(
             known_cards,
             shuffle_pool,
             remaining_draws=remaining_draws,
             card_type=card_type,
+            pool_success_count=pool_count_val,
+            known_success_count=known_count_val,
         )
         idx += 1
-    features[idx] = _expected_type_draws(
-        known_cards, shuffle_pool, remaining_draws=remaining_draws, card_type=CardType.ATTACK,
-    )
-    idx += 1
-    features[idx] = _expected_type_draws(
-        known_cards, shuffle_pool, remaining_draws=remaining_draws, card_type=CardType.SKILL,
-    )
-    idx += 1
+    for card_type, known_count_val, pool_count_val in draw_type_specs[:2]:
+        features[idx] = _expected_type_draws(
+            known_cards,
+            shuffle_pool,
+            remaining_draws=remaining_draws,
+            card_type=card_type,
+            pool_success_count=pool_count_val,
+            known_success_count=known_count_val,
+        )
+        idx += 1
 
-    # Known draw order (5)
+    # Known draw order (10): card_id_norm + type per top-5 slot
     for slot in range(5):
         if slot < len(draw):
-            features[idx] = _type_encoding(draw[slot].card_type)
-        idx += 1
+            features[idx] = _card_id_norm(draw[slot].card_id)
+            features[idx + 1] = _type_encoding(draw[slot].card_type)
+        idx += 2
 
     # Shuffle uncertainty (1)
     features[idx] = 1.0 if next_draw_count > len(draw) and len(shuffle_pool) > 0 else 0.0
@@ -414,8 +534,9 @@ def encode_pile_memory(
     idx += 1
 
     # Curated watchlist groups (4)
-    for group_name in ("power", "finisher", "setup", "aoe"):
-        features[idx] = _watchlist_presence(unseen, WATCHLIST_GROUPS[group_name])
+    watchlist_groups = load_watchlist_groups()
+    for group_name in WATCHLIST_GROUP_NAMES:
+        features[idx] = _watchlist_presence(unseen, watchlist_groups[group_name])
         idx += 1
 
     return features

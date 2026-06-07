@@ -28,9 +28,9 @@ for the current game phase are unmasked:
 
 Observation space
 -----------------
-Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (314).
+Flat ``float32`` vector of size ``RUN_OBS_SIZE`` (2004).
 
-* Combat observation (294) -- reuses :func:`encode_observation`.
+* Combat observation (1985) -- reuses :func:`encode_observation`.
 * Run-level state (20):
   - current_act, total_floor, and act_floor normalized by run scales (3)
   - player HP ratio and normalized gold                             (2)
@@ -76,14 +76,18 @@ from sts2_env.gym_env.action_space import (
 )
 from sts2_env.gym_env.observation import OBS_SIZE as COMBAT_OBS_SIZE, encode_observation
 from sts2_env.gym_env.run_reward import (
+    REWARD_DEATH,
+    REWARD_WIN,
     RunRewardConfig,
     RunRewardSnapshot,
     compute_run_shaping,
+    compute_run_terminal_reward,
     snapshot_from_manager,
 )
 from sts2_env.gym_env.reward_shaping import (
     CombatEventCursor,
     compute_combat_hp_step_penalty,
+    compute_combat_kill_reward,
     compute_combat_step_shaping,
 )
 from sts2_env.core.rng import INT_MAX_EXCLUSIVE
@@ -217,7 +221,7 @@ NUM_PHASES = len(_PHASE_INDEX)
 # ---------------------------------------------------------------------------
 
 _RUN_STATE_SIZE = 20   # see module docstring
-RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 294 + 20 = 314
+RUN_OBS_SIZE = COMBAT_OBS_SIZE + _RUN_STATE_SIZE  # 1985 + 20 = 2004
 
 DEFAULT_MAX_STEPS = 10_000
 DEFAULT_MAX_COMBAT_TURNS = 200
@@ -232,13 +236,6 @@ OBS_DECK_SIZE_SCALE = 40.0
 OBS_RELIC_COUNT_SCALE = 30.0
 OBS_MAX_POTION_SLOTS_SCALE = 5.0
 OBS_ASCENSION_SCALE = 20.0
-
-# ---------------------------------------------------------------------------
-# Reward constants
-# ---------------------------------------------------------------------------
-
-REWARD_WIN = 1.0
-REWARD_DEATH = -1.0
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +314,7 @@ class STS2RunEnv(gymnasium.Env):
         self._step_count: int = 0
         self._prev_reward_snapshot: RunRewardSnapshot | None = None
         self._combat_event_cursor = CombatEventCursor()
+        self._combat_gross_hp_lost = 0
 
     @property
     def run_state(self):
@@ -328,6 +326,42 @@ class STS2RunEnv(gymnasium.Env):
     @property
     def layout(self) -> _ActionLayout:
         return _LAYOUT
+
+    def _combat_hp_before_step(self) -> int | None:
+        """Player HP at step start when in active combat, else None."""
+        assert self._mgr is not None
+        combat = self._mgr.get_combat_state()
+        if (
+            self._mgr.phase == RunManager.PHASE_COMBAT
+            and combat is not None
+            and not combat.is_over
+        ):
+            return combat.primary_player.current_hp
+        return None
+
+    def _accumulate_combat_hp_lost(self, prev_combat_hp: int | None) -> None:
+        if prev_combat_hp is None or self._mgr is None:
+            return
+        combat = self._mgr.get_combat_state()
+        if combat is not None:
+            self._combat_gross_hp_lost += max(
+                0, prev_combat_hp - combat.primary_player.current_hp,
+            )
+
+    def _reset_combat_shaping_on_phase_change(
+        self,
+        prev_snapshot: RunRewardSnapshot,
+        curr_snapshot: RunRewardSnapshot,
+    ) -> None:
+        if (
+            prev_snapshot.phase != RunManager.PHASE_COMBAT
+            and curr_snapshot.phase == RunManager.PHASE_COMBAT
+        ) or (
+            prev_snapshot.phase == RunManager.PHASE_COMBAT
+            and curr_snapshot.phase != RunManager.PHASE_COMBAT
+        ):
+            self._combat_event_cursor = CombatEventCursor()
+            self._combat_gross_hp_lost = 0
 
     # ------------------------------------------------------------------
     # Gymnasium API
@@ -363,6 +397,7 @@ class STS2RunEnv(gymnasium.Env):
         self._step_count = 0
         self._prev_reward_snapshot = snapshot_from_manager(self._mgr)
         self._combat_event_cursor = CombatEventCursor()
+        self._combat_gross_hp_lost = 0
 
         obs = self._encode_obs()
         info = self._build_info()
@@ -383,6 +418,7 @@ class STS2RunEnv(gymnasium.Env):
             prev_snapshot = snapshot_from_manager(self._mgr)
 
         prev_combat_hp: int | None = None
+        prev_combat_alive: int | None = None
         combat_before = self._mgr.get_combat_state()
         if (
             self._mgr.phase == RunManager.PHASE_COMBAT
@@ -390,26 +426,30 @@ class STS2RunEnv(gymnasium.Env):
             and not combat_before.is_over
         ):
             prev_combat_hp = combat_before.primary_player.current_hp
+            prev_combat_alive = len(combat_before.alive_enemies)
 
         self._dispatch_action(action)
 
         reward = 0.0
         if self.reward_shaping:
+            self._accumulate_combat_hp_lost(prev_combat_hp)
             curr_snapshot = snapshot_from_manager(self._mgr)
             reward += compute_run_shaping(
-                prev_snapshot, curr_snapshot, self._reward_config,
+                prev_snapshot,
+                curr_snapshot,
+                self._reward_config,
+                combat_gross_hp_lost=self._combat_gross_hp_lost,
             )
 
-            if (
-                prev_snapshot.phase != RunManager.PHASE_COMBAT
-                and curr_snapshot.phase == RunManager.PHASE_COMBAT
-            ) or (
-                prev_snapshot.phase == RunManager.PHASE_COMBAT
-                and curr_snapshot.phase != RunManager.PHASE_COMBAT
-            ):
-                self._combat_event_cursor = CombatEventCursor()
+            self._reset_combat_shaping_on_phase_change(prev_snapshot, curr_snapshot)
 
             combat = self._mgr.get_combat_state()
+            if prev_combat_alive is not None and combat is not None:
+                reward += compute_combat_kill_reward(
+                    prev_combat_alive,
+                    combat,
+                    self._reward_config.micro,
+                )
             if (
                 self._mgr.phase == RunManager.PHASE_COMBAT
                 and combat is not None
@@ -437,7 +477,13 @@ class STS2RunEnv(gymnasium.Env):
             truncated = True
 
         if terminated:
-            reward += REWARD_WIN if self._mgr.player_won else REWARD_DEATH
+            hp_ratio = snapshot_from_manager(self._mgr).hp_ratio
+            reward += compute_run_terminal_reward(
+                player_won=self._mgr.player_won,
+                hp_ratio=hp_ratio,
+                config=self._reward_config,
+                shaping_enabled=self.reward_shaping,
+            )
         elif truncated:
             reward += REWARD_DEATH
 
@@ -832,7 +878,7 @@ class STS2RunEnv(gymnasium.Env):
         if mgr is None:
             return obs
 
-        # ---- Combat observation (294 dims) ----
+        # ---- Combat observation (1985 dims) ----
         combat = mgr.get_combat_state()
         if combat is not None:
             combat_obs = encode_observation(combat)

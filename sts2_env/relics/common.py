@@ -219,6 +219,10 @@ class HappyFlower(RelicInstance):
         super().__init__(relic_id)
         self._turns_seen: int = 0
 
+    @property
+    def counter(self) -> int:
+        return self._turns_seen
+
     def after_side_turn_start(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
         if side == owner.side:
             self._turns_seen = (self._turns_seen + 1) % self.TURNS
@@ -548,6 +552,10 @@ class BookOfFiveRings(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._cards_added: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._cards_added % self.CARDS_THRESHOLD
 
     def on_card_added_to_deck(
         self,

@@ -54,8 +54,20 @@ def main():
         help="PUCT exploration constant (default: 1.5)",
     )
     parser.add_argument(
-        "--mcts-max-depth", type=int, default=30,
-        help="Max actions within a turn during MCTS (default: 30)",
+        "--mcts-max-depth", type=int, default=15,
+        help="Max actions per player turn during MCTS (default: 15)",
+    )
+    parser.add_argument(
+        "--mcts-lookahead-turns", type=int, default=1,
+        help="Extra player turns to expand after enemy phase (default: 1)",
+    )
+    parser.add_argument(
+        "--mcts-dirichlet-alpha", type=float, default=0.3,
+        help="Dirichlet alpha for root exploration noise (default: 0.3)",
+    )
+    parser.add_argument(
+        "--mcts-dirichlet-epsilon", type=float, default=0.25,
+        help="Root prior noise mix weight; 0 disables (default: 0.25)",
     )
     args = parser.parse_args()
 

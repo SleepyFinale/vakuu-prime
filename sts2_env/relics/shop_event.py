@@ -1668,6 +1668,10 @@ class EmberTea(RelicInstance):
         self._combats_left: int = self.COMBATS
 
     @property
+    def counter(self) -> int:
+        return max(0, self._combats_left)
+
+    @property
     def is_used_up(self) -> bool:
         return self._combats_left <= 0
 
@@ -1731,6 +1735,10 @@ class FakeHappyFlower(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._turns_seen: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._turns_seen
 
     def after_side_turn_start(self, owner: Creature, side: CombatSide, combat: CombatState) -> None:
         if side == owner.side:
@@ -2174,6 +2182,10 @@ class IronClub(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._cards_played: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._cards_played % self.CARD_THRESHOLD
 
     def after_card_played(self, owner: Creature, card: object, combat: CombatState) -> None:
         if getattr(card, "owner", None) is not owner:
@@ -2995,6 +3007,10 @@ class PaelsWing(RelicInstance):
         super().__init__(relic_id)
         self._rewards_sacrificed: int = 0
 
+    @property
+    def counter(self) -> int:
+        return self._rewards_sacrificed % self.SACRIFICES
+
     def sacrifice_card_reward(self, owner: Creature) -> str | None:
         self._rewards_sacrificed += 1
         if self._rewards_sacrificed % self.SACRIFICES != 0:
@@ -3057,6 +3073,10 @@ class PollinousCore(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._turns_seen: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._turns_seen
 
     def modify_hand_draw(self, owner: Creature, draw: int, combat: CombatState) -> int:
         if self._turns_seen == self.TURNS:
@@ -3632,6 +3652,10 @@ class SwordOfStone(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._elites_defeated: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._elites_defeated
 
     def after_combat_victory(self, owner: Creature, combat: CombatState) -> None:
         if getattr(combat, "is_elite", False):

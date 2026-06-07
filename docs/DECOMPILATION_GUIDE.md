@@ -83,7 +83,7 @@ decompiled/
     ...
   MegaCrit.Sts2.Core.Hooks/
     Hook.cs                             # Central event dispatch
-  MegaCrit.Sts2.Core.Models.Cards/      # 577 card implementations
+  MegaCrit.Sts2.Core.Models.Cards/      # 578 card implementations
   MegaCrit.Sts2.Core.Models.Monsters/   # 121 monster AI
   MegaCrit.Sts2.Core.Models.Powers/     # 260 status effects
   MegaCrit.Sts2.Core.Models.Relics/     # 290 relics
@@ -168,7 +168,7 @@ The decompiled source is organized by namespace. Here is a guide to the most imp
 
 | Namespace | Files | Purpose |
 | --------- | ----- | ------- |
-| `MegaCrit.Sts2.Core.Models.Cards` | ~577 | One file per card |
+| `MegaCrit.Sts2.Core.Models.Cards` | ~578 | One file per card |
 | `MegaCrit.Sts2.Core.Models.Powers` | ~260 | One file per status effect |
 | `MegaCrit.Sts2.Core.Models.Monsters` | ~121 | One file per monster |
 | `MegaCrit.Sts2.Core.Models.Relics` | ~290 | One file per relic |

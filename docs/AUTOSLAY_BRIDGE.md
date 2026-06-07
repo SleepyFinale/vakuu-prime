@@ -1,5 +1,9 @@
 # AutoSlay Bridge — RL Agent Integration via Built-in Automation
 
+> **Design notes only.** The production bridge is the TCP + JSON mod documented in
+> [GAME_BRIDGE_REFERENCE.md](GAME_BRIDGE_REFERENCE.md) and [MOD_BUILD_GUIDE.md](MOD_BUILD_GUIDE.md).
+> Do not use `CardCmd.AutoPlay` for live combat — see [KNOWN_ISSUES.md](KNOWN_ISSUES.md) #1.
+
 ## Discovery
 
 STS2 includes a built-in `AutoSlay` system (`MegaCrit.Sts2.Core.AutoSlay`), a full automation framework

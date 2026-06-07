@@ -16,11 +16,15 @@ from sts2_env.encounters.pools import (
 from sts2_env.encounters.registry import EncounterSetup
 from sts2_env.training.deck_templates import build_deck_template, sample_deck_template
 
-# Fixed gate-eval encounters (easy subset) so promotion is not gamed by hard training samples.
+# Fixed gate-eval encounters (easy subset) so early-stage promotion is not gamed
+# by harder training samples. Elite-profile stages use ELITE_GATE_ENCOUNTERS instead.
 GATE_EVAL_ENCOUNTERS: list[EncounterSetup] = [
     act1.setup_fuzzy_wurm_crawler_weak,
     act4.setup_cultists_normal,
 ]
+
+EASY_GATE_ENCOUNTERS: tuple[EncounterSetup, ...] = tuple(GATE_EVAL_ENCOUNTERS)
+ELITE_GATE_ENCOUNTERS: tuple[EncounterSetup, ...] = tuple(act1.ELITE_ENCOUNTERS)
 
 NAMED_ENCOUNTERS: dict[str, EncounterSetup] = {
     "fuzzy_wurm": act1.setup_fuzzy_wurm_crawler_weak,
@@ -37,6 +41,15 @@ class PromotionGate:
     min_avg_hp_ratio: float
     min_episodes: int = 20
     consecutive_passes: int = 2
+    force_promote_multiplier: float = 3.0
+    step_budget: int | None = None
+
+
+EASY_PAIR_GATE = PromotionGate(min_win_rate=0.98, min_avg_hp_ratio=0.92)
+ACT1_WEAK_GATE = PromotionGate(min_win_rate=0.95, min_avg_hp_ratio=0.88)
+ACT1_NORMAL_GATE = PromotionGate(min_win_rate=0.90, min_avg_hp_ratio=0.82)
+ACT1_ELITE_GATE = PromotionGate(min_win_rate=0.92, min_avg_hp_ratio=0.80)
+COMPLEX_DECKS_GATE = PromotionGate(min_win_rate=0.88, min_avg_hp_ratio=0.75)
 
 
 @dataclass(frozen=True)
@@ -53,7 +66,7 @@ class CombatCurriculumStage:
     hard_start_hp_range: tuple[int, int] = (15, 25)
     gate: PromotionGate | None = None
     gate_encounters: tuple[EncounterSetup, ...] = field(
-        default_factory=lambda: tuple(GATE_EVAL_ENCOUNTERS)
+        default_factory=lambda: EASY_GATE_ENCOUNTERS
     )
 
 
@@ -130,7 +143,8 @@ CURRICULUM_STAGES: tuple[CombatCurriculumStage, ...] = (
         character_ids=("Ironclad", "Regent"),
         deck_templates=("starter",),
         hard_start_fraction=0.0,
-        gate=PromotionGate(min_win_rate=0.98, min_avg_hp_ratio=0.92),
+        gate=EASY_PAIR_GATE,
+        gate_encounters=EASY_GATE_ENCOUNTERS,
     ),
     CombatCurriculumStage(
         name="act1_weak",
@@ -138,7 +152,8 @@ CURRICULUM_STAGES: tuple[CombatCurriculumStage, ...] = (
         character_ids=("Ironclad", "Regent"),
         deck_templates=("starter",),
         hard_start_fraction=0.0,
-        gate=PromotionGate(min_win_rate=0.95, min_avg_hp_ratio=0.88),
+        gate=ACT1_WEAK_GATE,
+        gate_encounters=EASY_GATE_ENCOUNTERS,
     ),
     CombatCurriculumStage(
         name="act1_normal",
@@ -146,7 +161,8 @@ CURRICULUM_STAGES: tuple[CombatCurriculumStage, ...] = (
         character_ids=("Ironclad", "Regent"),
         deck_templates=("starter",),
         hard_start_fraction=0.0,
-        gate=PromotionGate(min_win_rate=0.90, min_avg_hp_ratio=0.82),
+        gate=ACT1_NORMAL_GATE,
+        gate_encounters=EASY_GATE_ENCOUNTERS,
     ),
     CombatCurriculumStage(
         name="act1_elite",
@@ -155,7 +171,8 @@ CURRICULUM_STAGES: tuple[CombatCurriculumStage, ...] = (
         deck_templates=("starter",),
         hard_start_fraction=0.10,
         hard_start_encounters=_recovery_encounters(),
-        gate=PromotionGate(min_win_rate=0.85, min_avg_hp_ratio=0.75),
+        gate=ACT1_ELITE_GATE,
+        gate_encounters=ELITE_GATE_ENCOUNTERS,
     ),
     CombatCurriculumStage(
         name="complex_decks",
@@ -164,7 +181,8 @@ CURRICULUM_STAGES: tuple[CombatCurriculumStage, ...] = (
         deck_templates=("starter", "ironclad_exhaust", "necrobinder_starter"),
         hard_start_fraction=0.20,
         hard_start_encounters=_recovery_encounters(),
-        gate=PromotionGate(min_win_rate=0.80, min_avg_hp_ratio=0.70),
+        gate=COMPLEX_DECKS_GATE,
+        gate_encounters=ELITE_GATE_ENCOUNTERS,
     ),
     CombatCurriculumStage(
         name="mixed_acts",

@@ -108,3 +108,72 @@ def test_game_paths_default():
     paths = resolve_game_paths()
     assert paths.game_root.name == "Slay the Spire 2"
     assert paths.sts2_dll.name == "sts2.dll"
+
+
+def test_generate_pile_watchlist_auto_append(tmp_path) -> None:
+    from sts2_env.core.enums import CardId
+    from scripts.sync.generate_pile_watchlist import generate_pile_watchlist
+
+    known_without_thunderclap = sorted(
+        name for name in CardId.__members__ if name != "THUNDERCLAP"
+    )
+    payload = {
+        "version": 1,
+        "known_card_ids": known_without_thunderclap,
+        "groups": {
+            "power": {"cards": [], "auto": None, "exclude": []},
+            "finisher": {"cards": [], "auto": None, "exclude": []},
+            "setup": {"cards": [], "auto": None, "exclude": []},
+            "aoe": {
+                "cards": [],
+                "auto": {
+                    "card_type": "ATTACK",
+                    "target_type": "ALL_ENEMIES",
+                    "min_base_damage": 4,
+                    "rarity_min": "COMMON",
+                },
+                "exclude": [],
+            },
+        },
+    }
+    watchlist_path = tmp_path / "PILE_WATCHLIST.json"
+    watchlist_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, summary = generate_pile_watchlist(output=watchlist_path)
+
+    assert "THUNDERCLAP" in summary.added.get("aoe", [])
+    written = json.loads(watchlist_path.read_text(encoding="utf-8"))
+    assert "THUNDERCLAP" in written["groups"]["aoe"]["cards"]
+
+
+def test_generate_pile_watchlist_setup_manual_only(tmp_path) -> None:
+    from sts2_env.core.enums import CardId
+    from scripts.sync.generate_pile_watchlist import generate_pile_watchlist
+
+    known_without_claw = sorted(name for name in CardId.__members__ if name != "CLAW")
+    payload = {
+        "version": 1,
+        "known_card_ids": known_without_claw,
+        "groups": {
+            "power": {"cards": [], "auto": None, "exclude": []},
+            "finisher": {
+                "cards": [],
+                "auto": {
+                    "card_type": "ATTACK",
+                    "min_base_damage": 9,
+                    "rarity_min": "UNCOMMON",
+                },
+                "exclude": [],
+            },
+            "setup": {"cards": [], "auto": None, "exclude": []},
+            "aoe": {"cards": [], "auto": None, "exclude": []},
+        },
+    }
+    watchlist_path = tmp_path / "PILE_WATCHLIST.json"
+    watchlist_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, summary = generate_pile_watchlist(output=watchlist_path)
+
+    assert "CLAW" in summary.unlisted_new
+    assert "CLAW" not in summary.added.get("setup", [])
+    assert "CLAW" not in summary.added.get("finisher", [])

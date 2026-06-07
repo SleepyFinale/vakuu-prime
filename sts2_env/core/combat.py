@@ -1536,17 +1536,22 @@ class CombatState:
         key = (self.round_number, owner)
         self._card_play_round_counts[key] = self._card_play_round_counts.get(key, 0) + 1
 
-    def end_player_turn(self) -> None:
-        """End player turn, execute enemy turn, then start the next player turn."""
-        from sts2_env.core.hooks import fire_after_turn_end, fire_before_turn_end
+    def finish_player_turn_only(self) -> bool:
+        """Run player end-of-turn cleanup. Return True if an extra player turn was granted."""
+        from sts2_env.core.hooks import (
+            fire_after_taking_extra_turn,
+            fire_after_turn_end,
+            fire_before_turn_end,
+            should_take_extra_turn,
+        )
 
         if self.is_over:
-            return
+            return False
 
         fire_before_turn_end(CombatSide.PLAYER, self)
         self._check_combat_end()
         if self.is_over:
-            return
+            return False
 
         for state in self.combat_player_states:
             if state.orb_queue is not None:
@@ -1554,33 +1559,47 @@ class CombatState:
                     state.orb_queue.trigger_before_turn_end(self)
                 self._check_combat_end()
                 if self.is_over:
-                    return
+                    return False
 
         self._resolve_end_of_turn_hand()
         self._check_combat_end()
         if self.is_over:
-            return
+            return False
 
         self._cleanup_cards_end_of_turn()
         fire_after_turn_end(CombatSide.PLAYER, self)
         self._apply_card_after_turn_end(CombatSide.PLAYER)
         self._check_combat_end()
         if self.is_over:
-            return
+            return False
 
-        from sts2_env.core.hooks import fire_after_taking_extra_turn, should_take_extra_turn
         if should_take_extra_turn(self):
             self.round_number += 1
             fire_after_taking_extra_turn(self)
             self._start_player_turn()
+            return True
+        return False
+
+    def advance_enemy_phase(self, *, resume_player_turn: bool = False) -> None:
+        """Execute the enemy turn; optionally start the next player turn."""
+        if self.is_over:
             return
 
         self._execute_enemy_turn()
         if self.is_over or self.pending_choice is not None:
             return
 
-        self.round_number += 1
-        self._start_player_turn()
+        if resume_player_turn:
+            self.round_number += 1
+            self._start_player_turn()
+
+    def end_player_turn(self) -> None:
+        """End player turn, execute enemy turn, then start the next player turn."""
+        if self.is_over:
+            return
+        if self.finish_player_turn_only():
+            return
+        self.advance_enemy_phase(resume_player_turn=True)
 
     def _resolve_end_of_turn_hand(self) -> None:
         from sts2_env.core.hooks import (

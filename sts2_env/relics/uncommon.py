@@ -191,6 +191,10 @@ class GalacticDust(RelicInstance):
         super().__init__(relic_id)
         self._stars_spent: int = 0
 
+    @property
+    def counter(self) -> int:
+        return self._stars_spent % self.STARS_THRESHOLD
+
     def on_stars_spent(self, owner: Creature, amount: int, combat: CombatState) -> None:
         self._stars_spent += amount
         blocks = self._stars_spent // self.STARS_THRESHOLD
@@ -272,6 +276,10 @@ class JossPaper(RelicInstance):
         super().__init__(relic_id)
         self._cards_exhausted: int = 0
         self._ethereal_exhausted_this_turn: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._cards_exhausted
 
     def _draw_if_threshold_met(self, owner: Creature, combat: CombatState) -> None:
         if self._cards_exhausted < self.EXHAUST_THRESHOLD:
@@ -436,6 +444,10 @@ class Nunchaku(RelicInstance):
         super().__init__(relic_id)
         self._attacks_played: int = 0
 
+    @property
+    def counter(self) -> int:
+        return self._attacks_played % self.ATTACK_THRESHOLD
+
     def after_card_played(self, owner: Creature, card: object, combat: CombatState) -> None:
         if (getattr(card, "owner", None) is owner
                 and hasattr(card, "card_type") and card.card_type == CardType.ATTACK):
@@ -584,6 +596,12 @@ class PenNib(RelicInstance):
         super().__init__(relic_id)
         self._attacks_played: int = 0
         self._is_active: bool = False
+
+    @property
+    def counter(self) -> int:
+        if self._is_active:
+            return self.THRESHOLD
+        return self._attacks_played % self.THRESHOLD
 
     def before_card_played(self, owner: Creature, card: object, combat: CombatState) -> None:
         if (getattr(card, "owner", None) is owner
@@ -795,6 +813,10 @@ class TuningFork(RelicInstance):
     def __init__(self, relic_id: RelicId):
         super().__init__(relic_id)
         self._skills_played: int = 0
+
+    @property
+    def counter(self) -> int:
+        return self._skills_played % self.SKILL_THRESHOLD
 
     def after_card_played(self, owner: Creature, card: object, combat: CombatState) -> None:
         if (getattr(card, "owner", None) is owner

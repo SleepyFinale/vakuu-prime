@@ -25,6 +25,8 @@ class CombatCurriculumEvalCallback(BaseCallback):
         eval_freq: int,
         n_eval_episodes: int,
         auto_promote: bool = False,
+        character_ids: tuple[str, ...] | None = None,
+        default_stage_budget: int = 500_000,
         verbose: int = 1,
     ):
         super().__init__(verbose)
@@ -35,7 +37,14 @@ class CombatCurriculumEvalCallback(BaseCallback):
         self.eval_freq = max(eval_freq, 1)
         self.n_eval_episodes = n_eval_episodes
         self.auto_promote = auto_promote
+        self.character_ids = character_ids
+        self.default_stage_budget = default_stage_budget
         self._consecutive_passes = 0
+        self._stage_enter_timestep = 0
+        self._stage_step_deltas: list[int] = []
+
+    def _on_training_start(self) -> None:
+        self._stage_enter_timestep = self.num_timesteps
 
     def _current_stage(self) -> CombatCurriculumStage:
         return stage_at_index(self.stage_index, self.stage_sequence)
@@ -64,9 +73,35 @@ class CombatCurriculumEvalCallback(BaseCallback):
         avg_hp = float(np.mean(hp_ratios)) if hp_ratios else 0.0
         return win_rate, avg_hp
 
-    def _promote_stage(self) -> bool:
+    def _rebuild_gate_env(self) -> None:
+        stage = self._current_stage()
+        self.gate_env = build_gate_eval_env(
+            stage,
+            character_ids=self.character_ids,
+        )
+
+    def _stall_limit(self, gate) -> int:
+        budget = gate.step_budget or self.default_stage_budget
+        if self._stage_step_deltas:
+            median_budget = int(np.median(self._stage_step_deltas))
+        else:
+            median_budget = budget
+        return int(gate.force_promote_multiplier * median_budget)
+
+    def _promote_stage(self, *, force: bool = False) -> bool:
         if self.stage_index + 1 >= len(self.stage_sequence):
             return False
+
+        leaving_stage = self._current_stage()
+        steps_on_stage = self.num_timesteps - self._stage_enter_timestep
+        stall_limit = (
+            self._stall_limit(leaving_stage.gate)
+            if force and leaving_stage.gate is not None
+            else 0
+        )
+        if steps_on_stage > 0:
+            self._stage_step_deltas.append(steps_on_stage)
+
         self.stage_index += 1
         stage = self._current_stage()
         write_curriculum_state(
@@ -76,12 +111,26 @@ class CombatCurriculumEvalCallback(BaseCallback):
         )
         checkpoint = self.output_dir / f"curriculum_stage_{self.stage_index}.zip"
         self.model.save(str(checkpoint))
-        if self.verbose:
+
+        if force:
+            self.logger.record("curriculum/forced_promotion", 1.0)
+            self.logger.record("curriculum/steps_on_stage", float(steps_on_stage))
+            self.logger.record("curriculum/stall_limit", float(stall_limit))
+            if self.verbose:
+                print(
+                    f"\nCurriculum force-promoted to stage {self.stage_index}: "
+                    f"{stage.name} after {steps_on_stage} steps "
+                    f"(stall limit {stall_limit}; saved {checkpoint})"
+                )
+        elif self.verbose:
             print(
                 f"\nCurriculum promoted to stage {self.stage_index}: "
                 f"{stage.name} (saved {checkpoint})"
             )
+
         self._consecutive_passes = 0
+        self._stage_enter_timestep = self.num_timesteps
+        self._rebuild_gate_env()
         return True
 
     def _on_step(self) -> bool:
@@ -98,6 +147,9 @@ class CombatCurriculumEvalCallback(BaseCallback):
         if gate is None:
             return True
 
+        self.logger.record("curriculum/gate_min_win_rate", gate.min_win_rate)
+        self.logger.record("curriculum/gate_min_hp_ratio", gate.min_avg_hp_ratio)
+
         passed = (
             win_rate >= gate.min_win_rate
             and avg_hp >= gate.min_avg_hp_ratio
@@ -113,6 +165,16 @@ class CombatCurriculumEvalCallback(BaseCallback):
             and self._consecutive_passes >= gate.consecutive_passes
         ):
             self._promote_stage()
+            return True
+
+        if self.auto_promote and not passed:
+            steps_on_stage = self.num_timesteps - self._stage_enter_timestep
+            stall_limit = self._stall_limit(gate)
+            self.logger.record("curriculum/steps_on_stage", float(steps_on_stage))
+            self.logger.record("curriculum/stall_limit", float(stall_limit))
+            if steps_on_stage >= stall_limit:
+                self._promote_stage(force=True)
+
         return True
 
 

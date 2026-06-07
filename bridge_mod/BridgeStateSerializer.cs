@@ -110,6 +110,7 @@ internal static class BridgeStateSerializer
                 ["rarity"] = relic.Rarity.ToString().ToUpperInvariant(),
                 ["enabled"] = true,
                 ["used_up"] = relic.IsUsedUp,
+                ["counter"] = relic.DisplayAmount,
             });
         }
         return relics;

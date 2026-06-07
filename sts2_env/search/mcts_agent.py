@@ -23,8 +23,11 @@ def build_mcts_config(args: Any) -> MCTSConfig | None:
     return MCTSConfig(
         n_simulations=int(getattr(args, "mcts_sims", 128)),
         c_puct=float(getattr(args, "mcts_c_puct", 1.5)),
-        max_actions_per_turn=int(getattr(args, "mcts_max_depth", 30)),
+        max_actions_per_turn=int(getattr(args, "mcts_max_depth", 15)),
+        lookahead_player_turns=int(getattr(args, "mcts_lookahead_turns", 1)),
         time_budget_s=time_budget,
+        dirichlet_alpha=float(getattr(args, "mcts_dirichlet_alpha", 0.3)),
+        dirichlet_epsilon=float(getattr(args, "mcts_dirichlet_epsilon", 0.25)),
     )
 
 
