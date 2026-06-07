@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from sts2_env.gym_env.reward_shaping import (
+    CombatMicroRewardConfig,
+    HpShapingConfig,
+    compute_hp_loss_penalty,
+)
 from sts2_env.run.run_manager import RunManager
 
 
@@ -13,8 +18,17 @@ class RunRewardConfig:
 
     floor_bonus: float = 0.05
     combat_clear_bonus: float = 0.1
-    hp_loss_penalty_scale: float = 0.2
-    max_hp_loss_penalty: float = 0.2
+    hp: HpShapingConfig = field(default_factory=HpShapingConfig)
+    micro: CombatMicroRewardConfig = field(default_factory=CombatMicroRewardConfig)
+
+    # Backward-compatible aliases for linear HP fields (deprecated).
+    @property
+    def hp_loss_penalty_scale(self) -> float:
+        return self.hp.penalty_scale
+
+    @property
+    def max_hp_loss_penalty(self) -> float:
+        return self.hp.max_penalty
 
 
 @dataclass
@@ -23,6 +37,7 @@ class RunRewardSnapshot:
 
     total_floor: int
     hp_ratio: float
+    max_hp: int
     phase: str
     combat_active: bool
     last_combat_won: bool | None = None
@@ -47,6 +62,7 @@ def snapshot_from_manager(mgr: RunManager) -> RunRewardSnapshot:
     return RunRewardSnapshot(
         total_floor=rs.total_floor,
         hp_ratio=_hp_ratio(rs.player),
+        max_hp=rs.player.max_hp,
         phase=mgr.phase,
         combat_active=combat_active,
         last_combat_won=last_combat_won,
@@ -71,9 +87,13 @@ def compute_run_shaping(
     )
     if left_combat and curr.last_combat_won is True:
         reward += config.combat_clear_bonus
-        hp_drop = max(0.0, prev.hp_ratio - curr.hp_ratio)
-        if hp_drop > 0.0:
-            penalty = config.hp_loss_penalty_scale * hp_drop
-            reward -= min(penalty, config.max_hp_loss_penalty)
+        hp_lost = max(0, int(round((prev.hp_ratio - curr.hp_ratio) * prev.max_hp)))
+        if hp_lost > 0:
+            reward -= compute_hp_loss_penalty(
+                hp_lost,
+                prev.max_hp,
+                prev.hp_ratio,
+                config.hp,
+            )
 
     return reward

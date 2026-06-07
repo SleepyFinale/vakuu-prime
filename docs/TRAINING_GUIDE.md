@@ -151,6 +151,14 @@ Boss encounters are excluded from the RL pool (they are scripted in full runs).
 | `--n-heads` | 4 | Attention/GAT heads |
 | `--n-layers` | 2 | Transformer encoder or GAT layers |
 | `--features-dim` | 256 | Pooled features fed to pi/vf MLP heads |
+| `--reward-shaping` | True | Non-linear HP + combat micro-rewards (see `reward_shaping.py`) |
+| `--no-reward-shaping` | - | Sparse terminal reward only (+1 / -1) |
+| `--hp-steepness` | 3.0 | Exponential HP penalty steepness (higher = more fear at low HP) |
+| `--vulnerable-scale` | 0.02 | Micro-reward per Vulnerable stack on enemies |
+| `--weak-scale` | 0.02 | Micro-reward per Weak stack on enemies |
+| `--block-scale` | 0.001 | Micro-reward per HP blocked from enemy attacks |
+
+Evaluation during training uses **sparse rewards** (`--no-reward-shaping` on the eval env) so `eval/mean_reward` stays near ±1.
 
 ### Expected Results
 
@@ -277,7 +285,8 @@ python scripts/train_full_run.py --preset phase1 \
 | `--characters` | - | Mixed-character runs: `all` or comma-separated list |
 | `--act-count` | 1 | Acts before curriculum win (1 = Act 1, 3 = full game) |
 | `--act1-biome` | random | Act 1 biome: random, overgrowth, or underdocks (full-run training) |
-| `--reward-shaping` | True | Floor/combat-clear/HP shaping (see `run_reward.py`) |
+| `--reward-shaping` | True | Floor/combat-clear/non-linear HP + combat micro-rewards |
+| `--hp-steepness` | 3.0 | Exponential HP penalty steepness |
 | `--no-reward-shaping` | - | Sparse terminal reward only |
 | `--no-noncombat-heuristic` | - | Disable auto card/boss/rest picks (on by default) |
 | `--card-value-model` | - | Learned card picker (`.pt` from `train_card_value.py`) |
@@ -298,7 +307,10 @@ The meta-policy uses a larger network (256x256 pi/vf) than default combat traini
 | ------ | ----- |
 | Floor advanced | +0.05 per floor |
 | Combat cleared | +0.10 |
-| HP lost after combat | up to -0.20 |
+| HP lost after combat | non-linear, up to -0.20 per event (`--hp-steepness`) |
+| Vulnerable on enemy | +0.02 per stack (combat steps) |
+| Weak on enemy | +0.02 per stack (combat steps) |
+| Block vs enemy attack | +0.001 per HP blocked (combat steps) |
 | Run win / death | +1 / -1 |
 
 ### Non-combat heuristics and card-value network

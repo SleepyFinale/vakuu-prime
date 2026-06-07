@@ -179,7 +179,8 @@ class CombatState:
         self._end_turn_after_play: bool = False
         self.in_play_phase: bool = False
         self._damage_events_this_turn: list[tuple[Creature | None, Creature, ValueProp]] = []
-        self._damage_events_combat: list[tuple[Creature | None, Creature, ValueProp, int]] = []
+        self._damage_events_combat: list[tuple[Creature | None, Creature, ValueProp, int, int]] = []
+        self._power_events_combat: list[tuple[Creature, PowerId, int, Creature | None]] = []
         self._block_events_this_turn: list[tuple[Creature, ValueProp, object | None]] = []
         self._draw_events_this_turn: list[tuple[Creature, CardInstance, bool]] = []
         self._draw_events_combat: list[Creature] = []
@@ -830,6 +831,7 @@ class CombatState:
         self.primary_player.stars = 0
         self._pending_retain_count = {}
         self._damage_events_combat = []
+        self._power_events_combat = []
         self._draw_events_combat = []
         self._generated_cards_combat = []
         self._orb_channel_events_combat = []
@@ -2085,6 +2087,7 @@ class CombatState:
                     self,
                 )
         self._power_events_this_turn.append((target, power_id, amount, applier))
+        self._power_events_combat.append((target, power_id, amount, applier))
 
     def request_retain(self, owner: Creature, count: int) -> None:
         if self.combat_player_state_for(owner) is not None and count > 0:
@@ -2296,9 +2299,12 @@ class CombatState:
         target: Creature,
         props: ValueProp,
         unblocked_damage: int = 0,
+        blocked: int = 0,
     ) -> None:
         self._damage_events_this_turn.append((dealer, target, props))
-        self._damage_events_combat.append((dealer, target, props, unblocked_damage))
+        self._damage_events_combat.append(
+            (dealer, target, props, unblocked_damage, blocked),
+        )
 
     def count_powered_hits_this_turn(self, dealer: Creature, target: Creature) -> int:
         return sum(
@@ -2328,7 +2334,7 @@ class CombatState:
     def count_unblocked_hits_received_this_combat(self, target: Creature) -> int:
         return sum(
             1
-            for _, logged_target, _, unblocked in self._damage_events_combat
+            for _, logged_target, _, unblocked, _ in self._damage_events_combat
             if logged_target is target and unblocked > 0
         )
 
@@ -3320,7 +3326,7 @@ class CombatState:
         current_turn_events = self._damage_events_combat[-event_count:] if event_count else ()
         return any(
             logged_target is target and unblocked > 0
-            for _, logged_target, _, unblocked in current_turn_events
+            for _, logged_target, _, unblocked, _ in current_turn_events
         )
 
     def last_finished_attack_or_skill_from_previous_round(self, owner: Creature) -> CardInstance | None:

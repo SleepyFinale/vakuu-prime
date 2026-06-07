@@ -113,7 +113,7 @@ _UNTARGETED_TYPES = {TargetTypeName.SELF, TargetTypeName.NONE, TargetTypeName.AL
 
 **Mitigation (implemented):**
 
-- **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py): floor progress, combat clear, and HP preservation bonuses (`--reward-shaping`, default on).
+- **Reward shaping** in [`sts2_env/gym_env/run_reward.py`](../sts2_env/gym_env/run_reward.py) and [`reward_shaping.py`](../sts2_env/gym_env/reward_shaping.py): floor progress, combat clear, **non-linear HP penalties** (damage near 0 HP costs much more than at full HP), and combat **micro-rewards** for Vulnerable/Weak on enemies and block vs attacks (`--reward-shaping`, default on).
 - **Act-count curriculum** via `RunManager.max_acts` and `--act-count` (train Act 1 before full game).
 - **Hierarchical training** via [`STS2HierarchicalRunEnv`](../sts2_env/gym_env/hierarchical_run_env.py): frozen combat PPO handles fights; meta PPO trains on map/rewards/shop (`--combat-model`, [`scripts/train_full_run.py`](../scripts/train_full_run.py)).
 - **Curriculum fine-tune:** `--load-model` to fine-tune from a Phase 1 checkpoint into a new output dir.

@@ -81,6 +81,11 @@ from sts2_env.gym_env.run_reward import (
     compute_run_shaping,
     snapshot_from_manager,
 )
+from sts2_env.gym_env.reward_shaping import (
+    CombatEventCursor,
+    compute_combat_hp_step_penalty,
+    compute_combat_step_shaping,
+)
 from sts2_env.core.rng import INT_MAX_EXCLUSIVE
 from sts2_env.run.run_manager import RunManager
 
@@ -311,6 +316,7 @@ class STS2RunEnv(gymnasium.Env):
         self._mgr: RunManager | None = None
         self._step_count: int = 0
         self._prev_reward_snapshot: RunRewardSnapshot | None = None
+        self._combat_event_cursor = CombatEventCursor()
 
     @property
     def run_state(self):
@@ -356,6 +362,7 @@ class STS2RunEnv(gymnasium.Env):
         )
         self._step_count = 0
         self._prev_reward_snapshot = snapshot_from_manager(self._mgr)
+        self._combat_event_cursor = CombatEventCursor()
 
         obs = self._encode_obs()
         info = self._build_info()
@@ -375,6 +382,15 @@ class STS2RunEnv(gymnasium.Env):
         if prev_snapshot is None:
             prev_snapshot = snapshot_from_manager(self._mgr)
 
+        prev_combat_hp: int | None = None
+        combat_before = self._mgr.get_combat_state()
+        if (
+            self._mgr.phase == RunManager.PHASE_COMBAT
+            and combat_before is not None
+            and not combat_before.is_over
+        ):
+            prev_combat_hp = combat_before.primary_player.current_hp
+
         self._dispatch_action(action)
 
         reward = 0.0
@@ -383,6 +399,35 @@ class STS2RunEnv(gymnasium.Env):
             reward += compute_run_shaping(
                 prev_snapshot, curr_snapshot, self._reward_config,
             )
+
+            if (
+                prev_snapshot.phase != RunManager.PHASE_COMBAT
+                and curr_snapshot.phase == RunManager.PHASE_COMBAT
+            ) or (
+                prev_snapshot.phase == RunManager.PHASE_COMBAT
+                and curr_snapshot.phase != RunManager.PHASE_COMBAT
+            ):
+                self._combat_event_cursor = CombatEventCursor()
+
+            combat = self._mgr.get_combat_state()
+            if (
+                self._mgr.phase == RunManager.PHASE_COMBAT
+                and combat is not None
+                and not combat.is_over
+                and prev_combat_hp is not None
+            ):
+                micro_reward, self._combat_event_cursor = compute_combat_step_shaping(
+                    combat,
+                    self._combat_event_cursor,
+                    self._reward_config.micro,
+                )
+                reward += micro_reward
+                reward -= compute_combat_hp_step_penalty(
+                    prev_combat_hp,
+                    combat,
+                    self._reward_config.hp,
+                )
+
             self._prev_reward_snapshot = curr_snapshot
 
         terminated = self._mgr.is_over

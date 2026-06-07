@@ -30,6 +30,7 @@ from sts2_env.gym_env.action_space import (
 )
 from sts2_env.gym_env.observation import OBS_SIZE, encode_observation
 from sts2_env.gym_env.reward import compute_reward
+from sts2_env.gym_env.reward_shaping import CombatEventCursor, CombatRewardConfig
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,8 @@ class STS2CombatEnv(gymnasium.Env):
         player_max_hp: int | None = None,
         max_turns: int = 200,
         render_mode: str | None = None,
+        reward_shaping: bool = True,
+        reward_config: CombatRewardConfig | None = None,
     ):
         super().__init__()
         self.observation_space = spaces.Box(
@@ -81,9 +84,12 @@ class STS2CombatEnv(gymnasium.Env):
         self._fixed_player_max_hp = player_max_hp
         self.max_turns = max_turns
         self.render_mode = render_mode
+        self.reward_shaping = reward_shaping
+        self._reward_config = reward_config or CombatRewardConfig()
 
         self.combat: CombatState | None = None
         self._last_character_id: str | None = None
+        self._event_cursor = CombatEventCursor()
 
     def _resolve_character_pool(self) -> tuple[str, ...]:
         if self.character_ids is not None:
@@ -130,6 +136,7 @@ class STS2CombatEnv(gymnasium.Env):
         encounter_setup(self.combat, rng)
 
         self.combat.start_combat()
+        self._event_cursor = CombatEventCursor()
 
         obs = encode_observation(self.combat)
         info = {
@@ -165,7 +172,13 @@ class STS2CombatEnv(gymnasium.Env):
                     logger.debug("Ignored invalid card action %d", action)
 
         obs = encode_observation(self.combat)
-        reward = compute_reward(self.combat, prev_hp)
+        reward, self._event_cursor = compute_reward(
+            self.combat,
+            prev_hp,
+            reward_shaping=self.reward_shaping,
+            reward_config=self._reward_config,
+            event_cursor=self._event_cursor,
+        )
         terminated = self.combat.is_over
         truncated = self.combat.turn_count > self.max_turns
         info = {

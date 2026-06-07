@@ -97,6 +97,23 @@ def build_policy_kwargs(args) -> dict:
     )
 
 
+def build_combat_reward_config(args):
+    from sts2_env.gym_env.reward_shaping import (
+        CombatMicroRewardConfig,
+        CombatRewardConfig,
+        HpShapingConfig,
+    )
+
+    return CombatRewardConfig(
+        hp=HpShapingConfig(steepness=args.hp_steepness),
+        micro=CombatMicroRewardConfig(
+            vulnerable_scale=args.vulnerable_scale,
+            weak_scale=args.weak_scale,
+            block_scale=args.block_scale,
+        ),
+    )
+
+
 def train(args):
     try:
         from sb3_contrib import MaskablePPO
@@ -137,6 +154,9 @@ def train(args):
         print(f"  n_layers:        {args.n_layers}")
         print(f"  features_dim:    {args.features_dim}")
     print(f"  output_dir:      {args.output_dir}")
+    print(f"  reward_shaping:  {args.reward_shaping}")
+    if args.reward_shaping:
+        print(f"  hp_steepness:    {args.hp_steepness}")
     print()
 
     output_dir = Path(args.output_dir)
@@ -148,7 +168,11 @@ def train(args):
     def mask_fn(env):
         return env.action_masks()
 
-    def make_masked_env(seed: int):
+    reward_config = build_combat_reward_config(args) if args.reward_shaping else None
+
+    def make_masked_env(seed: int, *, shaping: bool | None = None):
+        use_shaping = args.reward_shaping if shaping is None else shaping
+
         def _init():
             from sts2_env.gym_env.combat_env import STS2CombatEnv
 
@@ -157,6 +181,8 @@ def train(args):
                 act1_biome=args.act1_biome,
                 character_id=character_id or DEFAULT_CHARACTER,
                 character_ids=character_ids,
+                reward_shaping=use_shaping,
+                reward_config=reward_config if use_shaping else None,
             )
             env = ActionMasker(env, mask_fn)
             return env
@@ -169,7 +195,7 @@ def train(args):
     else:
         train_env = DummyVecEnv([make_masked_env(0)])
 
-    eval_env = DummyVecEnv([make_masked_env(9999)])
+    eval_env = DummyVecEnv([make_masked_env(9999, shaping=False)])
 
     if args.load_model:
         model = MaskablePPO.load(
@@ -265,6 +291,7 @@ def evaluate(
             act1_biome=act1_biome,
             character_id=character_id or DEFAULT_CHARACTER,
             character_ids=character_ids,
+            reward_shaping=False,
         ),
         mask_fn,
     )
@@ -397,6 +424,30 @@ def main():
     parser.add_argument(
         "--features-dim", type=int, default=256,
         help="Pooled feature dimension fed to pi/vf heads (default: 256)",
+    )
+    parser.add_argument(
+        "--reward-shaping", action="store_true", default=True,
+        help="Use non-linear HP and combat micro-reward shaping (default: True)",
+    )
+    parser.add_argument(
+        "--no-reward-shaping", action="store_false", dest="reward_shaping",
+        help="Sparse terminal reward only (+1 win / -1 loss)",
+    )
+    parser.add_argument(
+        "--hp-steepness", type=float, default=3.0,
+        help="Exponential HP penalty steepness (default: 3.0)",
+    )
+    parser.add_argument(
+        "--vulnerable-scale", type=float, default=0.02,
+        help="Micro-reward per Vulnerable stack applied to enemies (default: 0.02)",
+    )
+    parser.add_argument(
+        "--weak-scale", type=float, default=0.02,
+        help="Micro-reward per Weak stack applied to enemies (default: 0.02)",
+    )
+    parser.add_argument(
+        "--block-scale", type=float, default=0.001,
+        help="Micro-reward per HP blocked from enemy attacks (default: 0.001)",
     )
     args = parser.parse_args()
 

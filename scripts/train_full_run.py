@@ -111,11 +111,21 @@ def apply_preset(args) -> None:
         )
 
 
+def build_run_reward_config(args):
+    from sts2_env.gym_env.run_reward import RunRewardConfig
+    from sts2_env.gym_env.reward_shaping import HpShapingConfig
+
+    return RunRewardConfig(
+        hp=HpShapingConfig(steepness=args.hp_steepness),
+    )
+
+
 def make_masked_env(
     seed: int,
     *,
     act_count: int = 1,
     reward_shaping: bool = True,
+    reward_config=None,
     combat_model: str | None = None,
     combat_models: dict[int, str] | None = None,
     combat_models_by_character: dict[str, str] | None = None,
@@ -155,6 +165,7 @@ def make_masked_env(
                 character_ids=character_ids,
                 act_count=act_count,
                 reward_shaping=reward_shaping,
+                reward_config=reward_config,
                 max_steps=max_steps,
                 act1_biome=act1_biome,
                 underdocks_unlocked=underdocks_unlocked,
@@ -168,6 +179,7 @@ def make_masked_env(
                 character_ids=character_ids,
                 act_count=act_count,
                 reward_shaping=reward_shaping,
+                reward_config=reward_config,
                 max_steps=max_steps,
                 act1_biome=act1_biome,
                 underdocks_unlocked=underdocks_unlocked,
@@ -220,6 +232,8 @@ def train(args):
     print(f"  learning_rate:    {args.lr}")
     print(f"  batch_size:       {args.batch_size}")
     print(f"  reward_shaping:   {args.reward_shaping}")
+    if args.reward_shaping:
+        print(f"  hp_steepness:     {args.hp_steepness}")
     print(f"  delegate_combat:  {args.delegate_combat}")
     print(f"  noncombat_heur:   {args.use_noncombat_heuristic}")
     if combat_models_by_character:
@@ -242,9 +256,11 @@ def train(args):
     if not getattr(args, "resume", False):
         save_run_config(output_dir, args)
 
+    reward_config = build_run_reward_config(args) if args.reward_shaping else None
     env_kwargs = dict(
         act_count=args.act_count,
         reward_shaping=args.reward_shaping,
+        reward_config=reward_config,
         combat_model=combat_model,
         combat_models=combat_models,
         combat_models_by_character=combat_models_by_character,
@@ -670,6 +686,10 @@ def main():
     parser.add_argument(
         "--no-reward-shaping", action="store_false", dest="reward_shaping",
         help="Disable reward shaping (sparse only)",
+    )
+    parser.add_argument(
+        "--hp-steepness", type=float, default=3.0,
+        help="Exponential HP penalty steepness (default: 3.0)",
     )
     parser.add_argument(
         "--eval-freq", type=int, default=20_000,
